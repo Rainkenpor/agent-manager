@@ -6,25 +6,12 @@ export class ListAgentsUseCase {
 
 	constructor(private readonly agentRepository: IAgentRepository) {}
 
-	async execute({
-		showOnlyByChat,
-	}: {
-		showOnlyByChat?: boolean;
-	}): Promise<
+	async execute(): Promise<
 		| { success: true; data: Partial<AgentWithSubagents>[] }
 		| { success: false; error: string }
 	> {
 		try {
-			const agents = showOnlyByChat
-				? (
-						await this.agentRepository.findAll({ useByChat: showOnlyByChat })
-					).map((m) => ({
-						id: m.id,
-						name: m.name,
-						description: m.description,
-						slug: m.slug,
-					}))
-				: await this.agentRepository.findAll();
+			const agents = await this.agentRepository.findAll();
 			this.agentes = agents;
 			return { success: true, data: agents };
 		} catch (error) {

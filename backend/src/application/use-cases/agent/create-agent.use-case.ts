@@ -1,9 +1,8 @@
-import type { IAgentRepository } from "@domain/repositories/agent.repository.interface.js";
+import type { IAgentRepository } from "@domain/repositories/agent.repository.js";
 import type {
 	AgentWithSubagents,
 	CreateAgentDTO,
 } from "@domain/entities/agent.entity.js";
-import { AgentSyncService } from "@applicationService/agent-sync.service.js";
 
 export class CreateAgentUseCase {
 	constructor(private readonly agentRepository: IAgentRepository) {}
@@ -24,7 +23,6 @@ export class CreateAgentUseCase {
 			}
 
 			const agent = await this.agentRepository.create(input);
-			await AgentSyncService.syncAgentToFile(agent);
 
 			return { success: true, data: agent };
 		} catch (error) {

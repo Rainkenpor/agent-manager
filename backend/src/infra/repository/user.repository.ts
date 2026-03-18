@@ -17,7 +17,6 @@ import type {
 } from "@domain/entities/user.entity.js";
 import { randomUUID } from "crypto";
 import bcrypt from "bcryptjs";
-import { getSocketService } from "@infra/service/socket.service.js";
 
 export class UserRepository implements IUserRepository {
 	async create(data: CreateUser): Promise<User> {
@@ -59,30 +58,14 @@ export class UserRepository implements IUserRepository {
 
 	async findAll(filters?: {
 		active?: boolean;
-	}): Promise<(User & { isActive: boolean; isConnectedToSocket: boolean })[]> {
+	}): Promise<(User & { isActive: boolean })[]> {
 		const results = await (filters?.active !== undefined
 			? db.select().from(users).where(eq(users.active, filters.active))
 			: db.select().from(users));
 
-		// Obtener estado de conexión de socket para todos los usuarios
-		const userIds = results.map((user) => user.id);
-		let socketStatus = new Map<string, boolean>();
-
-		try {
-			const socketService = getSocketService();
-			socketStatus = await socketService.getUsersConnectionStatus(userIds);
-		} catch {
-			// Socket service no está inicializado aún o falló
-			// Asignar todos como no conectados
-			for (const id of userIds) {
-				socketStatus.set(id, false);
-			}
-		}
-
 		const usersWithStatus = results.map((user) => ({
 			...this.mapToEntity(user),
 			isActive: user.active,
-			isConnectedToSocket: socketStatus.get(user.id) || false,
 		}));
 
 		return usersWithStatus;

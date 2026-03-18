@@ -11,7 +11,7 @@ export interface IUserRepository {
 	findByUsername(username: string): Promise<User | null>;
 	findAll(filters?: {
 		active?: boolean;
-	}): Promise<(User & { isActive: boolean; isConnectedToSocket: boolean })[]>;
+	}): Promise<(User & { isActive: boolean })[]>;
 	update(id: string, data: UpdateUser): Promise<User>;
 	delete(id: string): Promise<void>;
 	updateLastLogin(id: string): Promise<void>;

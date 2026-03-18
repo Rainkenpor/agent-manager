@@ -39,17 +39,7 @@ const updateAgentSchema = z.object({
 
 const getAgentSchema = z.object({ id: z.string() });
 const deleteAgentSchema = z.object({ id: z.string() });
-const getAgent = z.object({
-  showOnlyByChat: z
-    .union([z.boolean(), z.string()])
-    .optional()
-    .transform((val) => {
-      if (typeof val === "string") {
-        return val === "true";
-      }
-      return val;
-    }),
-});
+const getAgent = z.object({});
 
 export function registerAgentRoutes(): void {
 	// ==========================================

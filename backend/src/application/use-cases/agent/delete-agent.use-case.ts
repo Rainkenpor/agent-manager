@@ -1,5 +1,4 @@
-import type { IAgentRepository } from "@domain/repositories/agent.repository.interface.js";
-import { AgentSyncService } from "@applicationService/agent-sync.service.js";
+import type { IAgentRepository } from "@domain/repositories/agent.repository.js";
 
 export class DeleteAgentUseCase {
 	constructor(private readonly agentRepository: IAgentRepository) {}
@@ -14,7 +13,6 @@ export class DeleteAgentUseCase {
 			}
 
 			await this.agentRepository.delete(id);
-			await AgentSyncService.deleteAgentFile(existing);
 
 			return { success: true };
 		} catch (error) {

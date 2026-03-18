@@ -1,9 +1,8 @@
-import type { IAgentRepository } from "@domain/repositories/agent.repository.interface.js";
+import type { IAgentRepository } from "@domain/repositories/agent.repository.js";
 import type {
 	AgentWithSubagents,
 	UpdateAgentDTO,
 } from "@domain/entities/agent.entity.js";
-import { AgentSyncService } from "@applicationService/agent-sync.service.js";
 
 export class UpdateAgentUseCase {
 	constructor(private readonly agentRepository: IAgentRepository) {}
@@ -28,16 +27,12 @@ export class UpdateAgentUseCase {
 						error: `Ya existe un agente con el slug '${input.slug}'`,
 					};
 				}
-				// Eliminar archivo anterior si el slug cambió
-				await AgentSyncService.deleteAgentFile(existing);
 			}
 
 			const updated = await this.agentRepository.update(input);
 			if (!updated) {
 				return { success: false, error: "No se pudo actualizar el agente" };
 			}
-
-			await AgentSyncService.syncAgentToFile(updated);
 
 			return { success: true, data: updated };
 		} catch (error) {

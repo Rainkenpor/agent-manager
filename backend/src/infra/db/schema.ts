@@ -91,9 +91,6 @@ export const agents = sqliteTable("agents", {
 		.notNull()
 		.$default(() => ({})), // Record<string, boolean>
 	content: text("content").notNull().default(""), // Cuerpo markdown sin frontmatter
-	useByChat: integer("use_by_chat", { mode: "boolean" })
-		.notNull()
-		.default(false), // Indica si el agente puede ser usado directamente en chats (true para primary agents, false para subagents)
 	isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
 	createdAt: text("created_at")
 		.notNull()

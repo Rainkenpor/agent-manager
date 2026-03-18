@@ -1,3 +1,4 @@
+import { envs } from "./envs.js";
 import express from "express";
 import { createServer } from "node:http";
 import cors from "cors";
@@ -23,8 +24,8 @@ import { mcpExternalManager } from "@infra/service/mcp-external.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const API_PORT = process.env.API_PORT || 3001;
-const MCP_PORT = process.env.MCP_PORT || 3002;
+const API_PORT = envs.SERVER_PORT;
+const MCP_PORT = envs.MCP_PORT;
 const UI_PATH = join(__dirname, "../../UI/dist");
 
 // extraer parametros
