@@ -6,6 +6,7 @@ async function seed() {
 	try {
 		// 1. Crear permisos por defecto
 		console.log("📜 Creando permisos...");
+    console.log('all',await container.userRepository.findAll())
 		await container.permissionRepository.seedDefaultPermissions();
 		console.log("✅ Permisos creados\n");
 
@@ -105,16 +106,16 @@ async function seed() {
 
 		if (!existingAdmin) {
 			const adminUser = await container.createUserUseCase.execute({
-				email: "admin@clarify.com",
+				email: "admin@agent.com",
 				username: "admin",
 				password: "admin123",
 				firstName: "Admin",
-				lastName: "Clarify",
+				lastName: "Agent",
 			});
 
 			await container.userRepository.assignRole(adminUser.id, adminRole.id);
 			console.log("✅ Usuario admin creado");
-			console.log("   Email: admin@clarify.com");
+			console.log("   Email: admin@agent.com");
 			console.log("   Password: admin123\n");
 		} else {
 			console.log("✅ Usuario admin ya existe\n");

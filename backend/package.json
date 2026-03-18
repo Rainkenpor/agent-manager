@@ -1,0 +1,5 @@
+{
+  "scripts": {
+    "db:seed": "tsx ./src/infra/db/seed-auth.ts"
+  }
+}

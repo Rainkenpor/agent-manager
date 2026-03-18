@@ -26,7 +26,7 @@ const __dirname = dirname(__filename);
 
 const API_PORT = envs.SERVER_PORT;
 const MCP_PORT = envs.MCP_PORT;
-const UI_PATH = join(__dirname, "../../UI/dist");
+const UI_PATH = join(__dirname, "../../frontend/dist");
 
 // extraer parametros
 const isUI = process.argv.includes("--ui");
