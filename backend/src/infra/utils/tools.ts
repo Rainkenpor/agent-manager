@@ -5,7 +5,7 @@ import { registry } from "@applicationService/registry.service.js";
 import nodePath from "node:path";
 import fs from "node:fs";
 import { agentLogger } from "../service/logger.service.js";
-import type { mcpExternalManager } from "./mcp-external.js";
+import type { mcpExternalManager } from "../service/mcp-external.js";
 
 interface Tool {
 	type: "function";

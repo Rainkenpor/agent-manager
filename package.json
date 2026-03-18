@@ -4,12 +4,17 @@
   "description": "A project management tool for AI agents.",
   "type": "module",
   "scripts": {
+    "server:dev": "tsx -p ./backend/tsconfig.json watch backend/src/index.ts --ui --api",
+    "server:build": "tsc -p ./backend/tsconfig.json",
+    "server:start": "node ./backend/dist/index.js --ui --api",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.8.0",
+    "connect-history-api-fallback": "^2.0.0",
+    "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "drizzle-kit": "^0.31.10",
     "drizzle-orm": "^0.45.1",
@@ -22,6 +27,8 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@types/connect-history-api-fallback": "^1.5.4",
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/passport": "^1.0.17"

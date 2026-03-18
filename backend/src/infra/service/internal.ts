@@ -25,7 +25,7 @@ import type {
 import { envs } from "../../envs.js";
 import { agentLogger } from "./logger.service.js";
 import { buildToolDefinitions, executeToolCall } from "../utils/tools.js";
-import { mcpExternalManager } from "../utils/mcp-external.js";
+import { mcpExternalManager } from "./mcp-external.js";
 
 // ── Local types ───────────────────────────────────────────────────────────────
 

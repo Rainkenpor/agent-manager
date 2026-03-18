@@ -1,36 +1,30 @@
 {
-    "compilerOptions": {
-        "target": "ES2022",
-        "module": "NodeNext",
-        "moduleResolution": "NodeNext",
-        "esModuleInterop": true,
-        "strict": true,
-        "skipLibCheck": true,
-        "outDir": "./dist",
-        "rootDir": ".",
-        "declaration": true,
-        "resolveJsonModule": true,
-        "paths": {
-          "@application/*":["./src/application/*"],
-          "@shared/*":["./shared/*"],
-          "@services/*":["./src/services/*"],
-          "@helper/*":["./src/helper/*"],
-          "@infra/*":["./src/infra/*"],
-          "@db/*":["./src/infra/db/*"],
-          "@repository/*":["./src/infra/repository/*"],
-          "@boundedContext/*":["./shared/boundedContext/*"],
-          "@applicationService/*":["./src/application/services/*"],
-          "@domainService/*":["./src/domain/services/*"],
-          "@domain/*":["./src/domain/*"],
-          "@useCases/*":["./src/application/use-cases/*"]
-        }
-    },
-    "include": [
-        "src/**/*",
-        "shared/**/*"
-    ],
-    "exclude": [
-        "node_modules",
-        "dist"
-    ]
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "esModuleInterop": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "outDir": "./dist",
+    "rootDir": ".",
+    "declaration": true,
+    "resolveJsonModule": true,
+    "paths": {
+      "@application/*": ["./src/application/*"],
+      "@shared/*": ["./shared/*"],
+      "@services/*": ["./src/services/*"],
+      "@helper/*": ["./src/helper/*"],
+      "@infra/*": ["./src/infra/*"],
+      "@db/*": ["./src/infra/db/*"],
+      "@repository/*": ["./src/infra/repository/*"],
+      "@boundedContext/*": ["./shared/boundedContext/*"],
+      "@applicationService/*": ["./src/application/services/*"],
+      "@domainService/*": ["./src/domain/services/*"],
+      "@domain/*": ["./src/domain/*"],
+      "@useCases/*": ["./src/application/use-cases/*"]
+    }
+  },
+  "include": ["src/**/*", "shared/**/*"],
+  "exclude": ["node_modules", "dist"]
 }
