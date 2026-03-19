@@ -925,7 +925,6 @@ export class InternalAgentService implements IAgentService {
 		config: RequestConfig,
 		messages: MessageParam[],
 		tools: Tool[],
-		basePath: string,
 		originalParams: IAgentServiceExecute,
 		maxIterations = 60,
 		mcpExternal?: typeof mcpExternalManager,
@@ -979,7 +978,6 @@ export class InternalAgentService implements IAgentService {
 					() => new InternalAgentService(),
 					toolCall.function.name,
 					toolArgs,
-					basePath,
 					originalParams,
 					mcpExternal,
 				);
@@ -1008,7 +1006,6 @@ export class InternalAgentService implements IAgentService {
 		config: RequestConfig,
 		messages: MessageParam[],
 		tools: Tool[],
-		basePath: string,
 		originalParams: IAgentServiceExecute,
 		maxIterations = 60,
 		mcpExternal?: typeof mcpExternalManager,
@@ -1077,7 +1074,6 @@ export class InternalAgentService implements IAgentService {
 					() => new InternalAgentService(),
 					toolCall.function.name,
 					toolArgs,
-					basePath,
 					originalParams,
 					mcpExternal,
 				);
@@ -1102,22 +1098,14 @@ export class InternalAgentService implements IAgentService {
 	// ── Public API ────────────────────────────────────────────────────────────
 
 	async executeAgent(params: IAgentServiceExecute): Promise<unknown> {
-		const { dirPath, query, agentType, artifacts } = params;
-
-		const basePath = dirPath.startsWith(".")
-			? nodePath.join(process.cwd(), dirPath)
-			: dirPath;
+		const { query, agentSlug: agentType, systemPrompt, allowedTools } = params;
 
 		agentLogger.info(`[InternalAgent] ══════ START agent=${agentType} ══════`);
-		agentLogger.info(`[InternalAgent] basePath=${basePath}`);
 		agentLogger.info(`[InternalAgent] model=${envs.AGENT_MODEL}`);
 		agentLogger.info(`[InternalAgent] query=${query.slice(0, 120)}`);
 
 		const parsed = this.parseModel(envs.AGENT_MODEL);
 		const config = this.buildRequestConfig(parsed);
-
-		const systemPrompt = this.loadSystemPrompt(basePath, agentType);
-		const allowedTools = this.loadAllowedTools(basePath, agentType);
 
 		const tools = buildToolDefinitions(
 			mcpExternalManager,
@@ -1126,15 +1114,9 @@ export class InternalAgentService implements IAgentService {
 
 		// Build user message, embedding artifacts inline when present
 		let userContent = query;
-		if (artifacts?.length) {
-			const artifactBlock = artifacts
-				.map((a) => `### Artifact: ${a.name}\n\`\`\`\n${a.content}\n\`\`\``)
-				.join("\n\n");
-			userContent = `${query}\n\n---\n## Context artifacts\n${artifactBlock}`;
-		}
 
 		const messages: MessageParam[] = [
-			{ role: "system", content: systemPrompt },
+			{ role: "system", content: systemPrompt || "" },
 			{ role: "user", content: userContent },
 		];
 
@@ -1144,7 +1126,6 @@ export class InternalAgentService implements IAgentService {
 				config,
 				messages,
 				tools,
-				basePath,
 				params,
 				60,
 				mcpExternalManager,
@@ -1162,23 +1143,23 @@ export class InternalAgentService implements IAgentService {
 	async *executeAgentStream(
 		params: IAgentServiceExecute,
 	): AsyncGenerator<string> {
-		const { dirPath, query, agentType, artifacts, history } = params;
-
-		const basePath = dirPath.startsWith(".")
-			? nodePath.join(process.cwd(), dirPath)
-			: dirPath;
+		const {
+			query,
+			agentSlug: agentType,
+			artifacts,
+			history,
+			systemPrompt,
+			allowedTools,
+		} = params;
 
 		agentLogger.info(
 			`[InternalAgent] ══════ START stream agent=${agentType} ══════`,
 		);
-		agentLogger.info(`[InternalAgent] basePath=${basePath}`);
 		agentLogger.info(`[InternalAgent] model=${envs.AGENT_MODEL}`);
 		agentLogger.info(`[InternalAgent] query=${query.slice(0, 120)}`);
 
 		const parsed = this.parseModel(envs.AGENT_MODEL);
 		const config = this.buildRequestConfig(parsed);
-		const systemPrompt = this.loadSystemPrompt(basePath, agentType);
-		const allowedTools = this.loadAllowedTools(basePath, agentType);
 
 		const tools = buildToolDefinitions(
 			mcpExternalManager,
@@ -1194,7 +1175,7 @@ export class InternalAgentService implements IAgentService {
 		}
 
 		const messages: MessageParam[] = [
-			{ role: "system", content: systemPrompt },
+			{ role: "system", content: systemPrompt || "" },
 			...(history?.map((h) => ({ role: h.role, content: h.content })) ?? []),
 			{ role: "user", content: userContent },
 		];
@@ -1205,7 +1186,6 @@ export class InternalAgentService implements IAgentService {
 				config,
 				messages,
 				tools,
-				basePath,
 				params,
 				60,
 				mcpExternalManager,

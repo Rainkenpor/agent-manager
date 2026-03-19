@@ -20,6 +20,7 @@
     "db:seed": "tsx --tsconfig ./backend/tsconfig.json ./backend/src/infra/db/seed-auth.ts"
   },
   "dependencies": {
+    "@biomejs/biome": "^2.4.8",
     "@modelcontextprotocol/sdk": "^1.27.1",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.8.0",

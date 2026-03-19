@@ -13,7 +13,7 @@ import type { McpOAuthService } from "@infra/service/mcp-oauth.service.js";
 import { mcpTokenAuthMiddleware } from "./middlewares/mcp-token-auth.middleware.js";
 import type { HttpContext } from "@application/interfaces/route.interface.js";
 import { mcpExternalManager } from "@infra/service/mcp-external.js";
-import { envs } from "../../envs.js";
+import { AgentService } from "@infra/service/agent.service.js";
 
 let oauthService: McpOAuthService | null = null;
 
@@ -51,9 +51,7 @@ function jsonSchemaPropertyToZod(
 			: z.unknown();
 		schema = z.array(itemSchema);
 	} else if (type === "object" || prop.properties) {
-		const nestedShape = jsonSchemaToZodShape(
-			prop as Record<string, unknown>,
-		);
+		const nestedShape = jsonSchemaToZodShape(prop as Record<string, unknown>);
 		schema = z.object(nestedShape);
 	} else {
 		schema = z.unknown();
@@ -74,9 +72,7 @@ function jsonSchemaToZodShape(
 		Record<string, unknown>
 	>;
 	const required = new Set<string>(
-		Array.isArray(jsonSchema.required)
-			? (jsonSchema.required as string[])
-			: [],
+		Array.isArray(jsonSchema.required) ? (jsonSchema.required as string[]) : [],
 	);
 
 	const shape: ZodRawShape = {};
@@ -109,7 +105,17 @@ async function applyRoleBasedTools(
 	// Accumulate MCP tools and agents across all roles (union)
 	const serverToolMap = new Map<
 		string,
-		{ mcpServer: { name: string; type: "http" | "stdio"; url?: string | null; command?: string | null; args?: string[] | null; headers?: Record<string, string> | null }; allowedTools: Set<string> }
+		{
+			mcpServer: {
+				name: string;
+				type: "http" | "stdio";
+				url?: string | null;
+				command?: string | null;
+				args?: string[] | null;
+				headers?: Record<string, string> | null;
+			};
+			allowedTools: Set<string>;
+		}
 	>();
 	const seenAgents = new Set<string>();
 	const agentList: Array<{ id: string; name: string; slug: string }> = [];
@@ -122,11 +128,17 @@ async function applyRoleBasedTools(
 
 		for (const mcp of mcpServers) {
 			if (!mcp.active) continue;
-			const allowed = await container.mcpServerRepository.getRoleMcpTools(roleId, mcp.id);
+			const allowed = await container.mcpServerRepository.getRoleMcpTools(
+				roleId,
+				mcp.id,
+			);
 			if (serverToolMap.has(mcp.id)) {
 				for (const t of allowed) serverToolMap.get(mcp.id)!.allowedTools.add(t);
 			} else {
-				serverToolMap.set(mcp.id, { mcpServer: mcp, allowedTools: new Set(allowed) });
+				serverToolMap.set(mcp.id, {
+					mcpServer: mcp,
+					allowedTools: new Set(allowed),
+				});
 			}
 		}
 
@@ -141,7 +153,10 @@ async function applyRoleBasedTools(
 	// Register external MCP proxy tools
 	for (const [, { mcpServer, allowedTools }] of serverToolMap) {
 		try {
-			await mcpExternalManager.ensureServerInitialized(mcpServer.name, mcpServer);
+			await mcpExternalManager.ensureServerInitialized(
+				mcpServer.name,
+				mcpServer,
+			);
 			const serverTools = mcpExternalManager.getToolsForServer(mcpServer.name);
 
 			for (const tool of serverTools) {
@@ -172,22 +187,56 @@ async function applyRoleBasedTools(
 		server.tool(
 			`agent_${agent.slug}`,
 			`Platform agent: ${agent.name}. Send it instructions to get assistance.`,
-			{ instruction: z.string().describe("The instruction or task for the agent") },
+			{
+				instruction: z
+					.string()
+					.describe("The instruction or task for the agent"),
+			},
 			async (args: { instruction: string }) => {
 				// Forward to internal agent service (basic invocation — extend for streaming)
 				try {
 					const { container } = await import("@application/container.js");
 					const agentEntity = await container.getAgentUseCase.execute(agent.id);
+					const agentService = new AgentService();
+
+					if (!agentEntity.success) {
+						throw new Error(`Agent not found: ${agent.id}`);
+					}
+
+					const response = await agentService.initAgent({
+						systemPrompt: agentEntity.data.content,
+						agentSlug: agentEntity.data.slug,
+						query: args.instruction,
+						allowedTools: new Set(
+							Object.entries(agentEntity.data.tools)
+								.filter(([_, enabled]) => enabled)
+								.map(([toolName]) => toolName),
+						),
+						history: [],
+					});
+
+					console.log(
+						`[MCP] Agent tool invoked: ${agent.slug} with instruction: ${args.instruction}`,
+						response,
+					);
+
 					return {
 						content: [
 							{
 								type: "text" as const,
-								text: `Agent "${agent.name}" received instruction. Execute via /api/agents/${agent.id} with: ${args.instruction}`,
+								text: response,
 							},
 						],
 					};
 				} catch {
-					return { content: [{ type: "text" as const, text: `Agent ${agent.slug} unavailable` }] };
+					return {
+						content: [
+							{
+								type: "text" as const,
+								text: `Agent ${agent.slug} unavailable`,
+							},
+						],
+					};
 				}
 			},
 		);
@@ -330,7 +379,10 @@ export function registerMCPRoutes(oauth?: McpOAuthService): express.Router {
 		} else {
 			res.status(400).json({
 				jsonrpc: "2.0",
-				error: { code: -32000, message: "Invalid session or missing session ID" },
+				error: {
+					code: -32000,
+					message: "Invalid session or missing session ID",
+				},
 				id: null,
 			});
 			return;

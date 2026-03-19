@@ -13,33 +13,6 @@ export interface AvailableTool {
 
 const BASE_TOOLS: AvailableTool[] = [
 	{
-		name: "read_file",
-		description:
-			"Lee el contenido completo de un archivo del directorio del proyecto.",
-		source: "builtin",
-	},
-	{
-		name: "list_directory",
-		description: "Lista archivos y subdirectorios de un directorio.",
-		source: "builtin",
-	},
-	{
-		name: "write_file",
-		description: "Escribe o sobreescribe un archivo con el contenido dado.",
-		source: "builtin",
-	},
-	{
-		name: "search_files",
-		description:
-			"Busca archivos que coincidan con un patrón glob (ej: **/*.ts).",
-		source: "builtin",
-	},
-	{
-		name: "grep_search",
-		description: "Busca texto o expresión regular en archivos del proyecto.",
-		source: "builtin",
-	},
-	{
 		name: "spawn_subagent",
 		description:
 			"Lanza un sub-agente especializado para completar una tarea de documentación enfocada.",

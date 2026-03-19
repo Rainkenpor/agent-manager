@@ -194,118 +194,6 @@ export function buildToolDefinitions(
 		{
 			type: "function",
 			function: {
-				name: "read_file",
-				description:
-					"Read the full contents of a file in the project directory.",
-				parameters: {
-					type: "object",
-					properties: {
-						path: {
-							type: "string",
-							description:
-								"Path to the file (relative to project dir or absolute).",
-						},
-					},
-					required: ["path"],
-				},
-			},
-		},
-		{
-			type: "function",
-			function: {
-				name: "list_directory",
-				description: "List files and sub-directories in a directory.",
-				parameters: {
-					type: "object",
-					properties: {
-						path: {
-							type: "string",
-							description:
-								"Directory path (relative to project dir or absolute). Defaults to project root.",
-						},
-					},
-					required: [],
-				},
-			},
-		},
-		{
-			type: "function",
-			function: {
-				name: "write_file",
-				description: "Write or overwrite a file with the given content.",
-				parameters: {
-					type: "object",
-					properties: {
-						path: {
-							type: "string",
-							description: "File path (relative to project dir or absolute).",
-						},
-						content: {
-							type: "string",
-							description: "Content to write.",
-						},
-					},
-					required: ["path", "content"],
-				},
-			},
-		},
-		{
-			type: "function",
-			function: {
-				name: "search_files",
-				description:
-					"Find files matching a glob pattern (e.g. **/*.ts, src/**/*.sql).",
-				parameters: {
-					type: "object",
-					properties: {
-						pattern: {
-							type: "string",
-							description: "Glob pattern.",
-						},
-						base_path: {
-							type: "string",
-							description:
-								"Base directory to search (optional, defaults to project root).",
-						},
-					},
-					required: ["pattern"],
-				},
-			},
-		},
-		{
-			type: "function",
-			function: {
-				name: "grep_search",
-				description:
-					"Search for a text pattern or regex across files in the project.",
-				parameters: {
-					type: "object",
-					properties: {
-						pattern: {
-							type: "string",
-							description: "Text or regex to search for.",
-						},
-						path: {
-							type: "string",
-							description:
-								"Directory or file to search in (optional, defaults to project root).",
-						},
-						include: {
-							type: "string",
-							description: "File name pattern to include (e.g. *.ts, *.sql).",
-						},
-						is_regex: {
-							type: "boolean",
-							description: "Whether pattern is a regex (default false).",
-						},
-					},
-					required: ["pattern"],
-				},
-			},
-		},
-		{
-			type: "function",
-			function: {
 				name: "spawn_subagent",
 				description:
 					"Spawn a specialised sub-agent to complete a focused documentation task. The sub-agent runs in the same project directory with its own instructions and tool access.",
@@ -387,67 +275,11 @@ export async function executeToolCall(
 	newAgentService: () => any,
 	toolName: string,
 	args: Record<string, unknown>,
-	basePath: string,
 	originalParams: IAgentServiceExecute,
 	mcpExternal?: typeof mcpExternalManager,
 ): Promise<string> {
 	try {
 		switch (toolName) {
-			case "read_file": {
-				const target = resolvePath(basePath, args.path as string);
-				if (!fs.existsSync(target)) return `Error: File not found: ${target}`;
-				const content = fs.readFileSync(target, "utf-8");
-				return content.length > 80_000
-					? `${content.slice(0, 80_000)}\n…[truncated — file has ${content.length} chars]`
-					: content;
-			}
-
-			case "list_directory": {
-				const target = resolvePath(basePath, (args.path as string) || ".");
-				if (!fs.existsSync(target))
-					return `Error: Directory not found: ${target}`;
-				const entries = fs.readdirSync(target, { withFileTypes: true });
-				return entries
-					.map((e) => (e.isDirectory() ? `${e.name}/` : e.name))
-					.join("\n");
-			}
-
-			case "write_file": {
-				const target = resolvePath(basePath, args.path as string);
-				fs.mkdirSync(nodePath.dirname(target), { recursive: true });
-				fs.writeFileSync(target, args.content as string, "utf-8");
-				return `Written: ${target}`;
-			}
-
-			case "search_files": {
-				const searchBase = args.base_path
-					? resolvePath(basePath, args.base_path as string)
-					: basePath;
-				const found: string[] = [];
-				walkFiles(searchBase, args.pattern as string, found, 200);
-				if (found.length === 0) return "No files found matching the pattern";
-				return found.map((f) => nodePath.relative(basePath, f)).join("\n");
-			}
-
-			case "grep_search": {
-				const searchDir = args.path
-					? resolvePath(basePath, args.path as string)
-					: basePath;
-				const matches: string[] = [];
-				grepDirectory(
-					searchDir,
-					args.pattern as string,
-					args.include as string | undefined,
-					(args.is_regex as boolean) ?? false,
-					matches,
-					100,
-				);
-				if (matches.length === 0) return "No matches found";
-				return matches
-					.map((m) => m.replace(basePath + nodePath.sep, ""))
-					.join("\n");
-			}
-
 			case "spawn_subagent": {
 				const subType = args.agent_type as string;
 				agentLogger.info(`[InternalAgent] Spawning sub-agent: ${subType}`);
@@ -457,8 +289,7 @@ export async function executeToolCall(
 				}
 				const subService = newAgentFactory();
 				const subResult = await subService.executeAgent({
-					dirPath: originalParams.dirPath,
-					agentType: subType as IAgentServiceExecute["agentType"],
+					agentType: subType as IAgentServiceExecute["agentSlug"],
 					query: args.query as string,
 					artifacts: args.artifacts as
 						| { name: string; content: string }[]

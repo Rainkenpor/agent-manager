@@ -7,7 +7,8 @@
       "Bash(npx vue-tsc:*)",
       "Bash(find . -type d -not -path */node_modules/* -not -path */.git/*)",
       "Bash(find /c/Users/WO199/OneDrive/Documents/Proyectos/agent-manager -name .env* -type f)",
-      "mcp__agent-manager__mcp__clarify__list_projects"
+      "mcp__agent-manager__mcp__clarify__list_projects",
+      "mcp__agent-manager__agent_user-story"
     ]
   }
 }

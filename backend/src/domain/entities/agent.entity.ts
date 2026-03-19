@@ -1,20 +1,9 @@
 export interface IAgentServiceExecute {
-	notificationRoom?: string; // Room para notificaciones
-	dirPath: string;
-	/** Primary agent types + any subagent name from the subagents directory */
-	agentType:
-		| "core"
-		| "pending"
-		| "commits"
-		| "deep-search"
-		| "analyzer"
-		| "business-rules"
-		| "diagrams"
-		| "examples"
-		| "technical-concepts"
-		| (string & Record<never, never>); // allow arbitrary subagent names
+	systemPrompt?: string; // Permite pasar un prompt personalizado para este agente
+	agentSlug: string;
 	query: string;
 	history?: Array<{ role: "user" | "assistant"; content: string }>;
+	allowedTools?: Set<string>; // Lista de herramientas permitidas para este agente
 	artifacts?: { name: string; content: string }[];
 	stream?: boolean; // Indica si la respuesta debe ser en formato stream
 }
