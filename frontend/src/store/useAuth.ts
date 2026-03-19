@@ -15,6 +15,12 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.setItem('token', res.token)
   }
 
+  async function loginWithToken(jwtToken: string) {
+    token.value = jwtToken
+    localStorage.setItem('token', jwtToken)
+    await fetchCurrentUser()
+  }
+
   function logout() {
     user.value = null
     token.value = null
@@ -41,6 +47,7 @@ export const useAuthStore = defineStore('auth', () => {
     token,
     isAuthenticated,
     login,
+    loginWithToken,
     logout,
     fetchCurrentUser,
     hasPermission,

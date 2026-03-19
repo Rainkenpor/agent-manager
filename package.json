@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "description": "A project management tool for AI agents.",
   "type": "module",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
   "scripts": {
     "dev": "concurrently \"npm run server:dev\" \"npm run ui:dev\"",
     "server:dev": "tsx watch --tsconfig ./backend/tsconfig.json backend/src/index.ts --ui --api",

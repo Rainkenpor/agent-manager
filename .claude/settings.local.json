@@ -4,7 +4,9 @@
       "Bash(npm run:*)",
       "Bash(npm install:*)",
       "Bash(find /c/Projects/JAVASCRIPT/agent-manager/frontend -maxdepth 3 -type f \\\\\\(-name *.tsx -o -name *.ts -o -name package.json -o -name vite.config.ts \\\\\\))",
-      "Bash(npx vue-tsc:*)"
+      "Bash(npx vue-tsc:*)",
+      "Bash(find . -type d -not -path */node_modules/* -not -path */.git/*)",
+      "Bash(find /c/Users/WO199/OneDrive/Documents/Proyectos/agent-manager -name .env* -type f)"
     ]
   }
 }

@@ -23,6 +23,15 @@ const AGENT_KEY = process.env.AGENT_KEY || "";
 // MCP
 const MCP_PORT = process.env.MCP_PORT || 3002;
 
+// Azure AD OAuth
+const AZURE_CLIENT_ID = process.env.AZURE_CLIENT_ID || "";
+const AZURE_CLIENT_SECRET = process.env.AZURE_CLIENT_SECRET || "";
+const AZURE_TENANT_ID = process.env.AZURE_TENANT_ID || "";
+const AZURE_REDIRECT_URI =
+	process.env.AZURE_REDIRECT_URI ||
+	"http://localhost:3200/api/auth/azure/callback";
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+
 // Server DB Path
 const SERVER_DB_PATH = `${SERVER_DATA_PATH}/agent-manager.db`;
 const SERVER_REPOS_PATH = `${SERVER_DATA_PATH}/repos`;
@@ -44,4 +53,10 @@ export const envs = {
 	AGENT_BASE_URL,
 	AGENT_KEY,
 	AGENT_MODEL,
+
+	AZURE_CLIENT_ID,
+	AZURE_CLIENT_SECRET,
+	AZURE_TENANT_ID,
+	AZURE_REDIRECT_URI,
+	FRONTEND_URL,
 };
