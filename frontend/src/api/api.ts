@@ -84,6 +84,10 @@ export const setRoleMcpTools = (roleId: string, mcpServerId: string, tools: stri
     body: JSON.stringify({ tools }),
   })
 
+// Permissions
+export const getPermissions = () => request<any[]>('/permissions')
+export const getRolePermissions = (roleId: string) => request<any[]>(`/roles/${roleId}/permissions`)
+
 // OAuth clients
 export const getOAuthClients = () => request<{ success: boolean; data: any[] }>('/oauth/clients')
 
@@ -93,8 +97,9 @@ export const oauthAuthorize = (data: {
   redirect_uri: string
   state?: string
   scope?: string
-  username: string
-  password: string
+  username?: string
+  password?: string
+  token?: string
   approved: boolean
 }) =>
   request<{ redirect?: string; error?: string }>('/oauth/authorize', {

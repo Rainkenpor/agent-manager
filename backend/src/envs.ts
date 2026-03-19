@@ -30,7 +30,7 @@ const AZURE_TENANT_ID = process.env.AZURE_TENANT_ID || "";
 const AZURE_REDIRECT_URI =
 	process.env.AZURE_REDIRECT_URI ||
 	"http://localhost:3200/api/auth/azure/callback";
-const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3200";
 
 // Server DB Path
 const SERVER_DB_PATH = `${SERVER_DATA_PATH}/agent-manager.db`;

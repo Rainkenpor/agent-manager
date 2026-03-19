@@ -35,18 +35,42 @@ function scopeLabel(s: string): string {
 // Form state
 const username = ref('')
 const password = ref('')
+const azureToken = ref('')
 const loading = ref(false)
+const azureLoading = ref(false)
 const error = ref('')
 const denied = ref(false)
 
 // Invalid request detection
 const isValid = computed(() => !!clientId.value && !!redirectUri.value)
 
-onMounted(() => {
+onMounted(async () => {
   if (!isValid.value) {
     error.value = 'Invalid OAuth request: missing client_id or redirect_uri.'
+    return
+  }
+  // Handle Azure AD callback: azureToken is appended to this page's URL
+  const token = route.query.azureToken as string | undefined
+  if (token) {
+    azureToken.value = token
+    azureLoading.value = true
+    await authorize(true)
+    azureLoading.value = false
   }
 })
+
+function loginWithAzure() {
+  // Build the return_to URL so Azure callback redirects back here with the OAuth params
+  const oauthParams = new URLSearchParams()
+  oauthParams.set('client_id', clientId.value)
+  oauthParams.set('redirect_uri', redirectUri.value)
+  if (state.value) oauthParams.set('state', state.value)
+  if (scope.value) oauthParams.set('scope', scope.value)
+  const clientNameVal = route.query.client_name as string | undefined
+  if (clientNameVal) oauthParams.set('client_name', clientNameVal)
+  const returnTo = `${window.location.origin}/oauth/authorize/mcp?${oauthParams.toString()}`
+  window.location.href = `/api/auth/azure?return_to=${encodeURIComponent(returnTo)}`
+}
 
 async function authorize(approved: boolean) {
   if (!isValid.value) return
@@ -60,8 +84,9 @@ async function authorize(approved: boolean) {
       redirect_uri: redirectUri.value,
       state: state.value || undefined,
       scope: scope.value || undefined,
-      username: username.value,
-      password: password.value,
+      ...(azureToken.value
+        ? { token: azureToken.value }
+        : { username: username.value, password: password.value }),
       approved,
     })
 
@@ -174,6 +199,39 @@ async function authorize(approved: boolean) {
 
         <!-- Login form -->
         <div class="px-8 py-6">
+
+          <!-- Azure loading overlay -->
+          <div v-if="azureLoading" class="flex flex-col items-center justify-center py-6 gap-3">
+            <svg class="animate-spin h-8 w-8 text-indigo-400" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+            </svg>
+            <p class="text-sm text-slate-400">Completing Microsoft sign-in...</p>
+          </div>
+
+          <template v-else>
+          <!-- Sign in with Microsoft -->
+          <button
+            type="button"
+            @click="loginWithAzure"
+            class="w-full flex items-center justify-center gap-3 border border-white/10 hover:bg-white/5 text-slate-300 hover:text-white font-medium py-2.5 rounded-lg transition-colors text-sm mb-4"
+          >
+            <svg width="18" height="18" viewBox="0 0 21 21" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="1" y="1" width="9" height="9" fill="#F25022"/>
+              <rect x="11" y="1" width="9" height="9" fill="#7FBA00"/>
+              <rect x="1" y="11" width="9" height="9" fill="#00A4EF"/>
+              <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
+            </svg>
+            Sign in with Microsoft
+          </button>
+
+          <!-- Divider -->
+          <div class="flex items-center gap-3 mb-4">
+            <div class="flex-1 h-px bg-white/10"></div>
+            <span class="text-xs text-slate-500">or continue with username</span>
+            <div class="flex-1 h-px bg-white/10"></div>
+          </div>
+
           <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">Your Credentials</p>
 
           <div class="space-y-3">
@@ -224,7 +282,7 @@ async function authorize(approved: boolean) {
               <span v-else>Deny</span>
             </button>
             <button
-              :disabled="loading || !username || !password"
+              :disabled="loading || (!azureToken && (!username || !password))"
               class="flex-1 px-4 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-semibold transition-colors shadow-lg shadow-indigo-500/20"
               @click="authorize(true)"
             >
@@ -242,6 +300,7 @@ async function authorize(approved: boolean) {
           <p class="text-center text-xs text-slate-500 mt-5">
             Your credentials are verified directly with Agent Manager<br/>and never shared with the requesting app.
           </p>
+          </template>
         </div>
       </div>
 

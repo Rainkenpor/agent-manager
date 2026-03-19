@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
@@ -24,7 +24,7 @@ const deleting = ref(false)
 
 // Role associations modal
 const assocModalRole = ref<Role | null>(null)
-const assocTab = ref<'mcps' | 'agents'>('mcps')
+const assocTab = ref<'mcps' | 'agents' | 'permissions'>('mcps')
 const assocLoading = ref(false)
 
 // Available items
@@ -36,6 +36,10 @@ const assignedMcps = ref<McpServer[]>([])
 const assignedAgents = ref<Array<{ id: string; name: string; slug: string; mode: string }>>([])
 
 const toggling = ref<string | null>(null)
+
+// Permissions
+const allPermissions = ref<Array<{ id: string; resource: string; action: string; description?: string }>>([])
+const assignedPermissions = ref<Array<{ id: string; resource: string; action: string }>>([])
 
 // ── Tool selection sub-panel ──────────────────────────────────────────────────
 const toolPanelMcp = ref<McpServer | null>(null)
@@ -126,18 +130,23 @@ async function openAssocModal(role: Role) {
   assocLoading.value = true
   assignedMcps.value = []
   assignedAgents.value = []
+  assignedPermissions.value = []
   toolPanelMcp.value = null
   try {
-    const [mcpsRes, agentsRes, mcpAssignedRes, agentAssignedRes] = await Promise.all([
+    const [mcpsRes, agentsRes, mcpAssignedRes, agentAssignedRes, allPermsRes, rolePermsRes] = await Promise.all([
       api.getMcpServers(),
       api.getAgents(),
       api.getRoleMcps(role.id),
       api.getRoleAgents(role.id),
+      api.getPermissions(),
+      api.getRolePermissions(role.id),
     ])
     allMcps.value = mcpsRes.data ?? (mcpsRes as any)
     allAgents.value = agentsRes.data ?? (agentsRes as any)
     assignedMcps.value = mcpAssignedRes.data ?? (mcpAssignedRes as any)
     assignedAgents.value = agentAssignedRes.data ?? (agentAssignedRes as any)
+    allPermissions.value = allPermsRes ?? []
+    assignedPermissions.value = rolePermsRes ?? []
   } catch (e: any) {
     toast.error(e.message ?? 'Failed to load associations')
   } finally {
@@ -200,6 +209,43 @@ async function toggleAgent(agentId: string) {
     toggling.value = null
   }
 }
+
+// ── Permissions tab ────────────────────────────────────────────────────────
+
+function hasPermission(permId: string): boolean {
+  return assignedPermissions.value.some((p) => p.id === permId)
+}
+
+async function togglePermission(permId: string) {
+  if (!assocModalRole.value) return
+  toggling.value = permId
+  try {
+    if (hasPermission(permId)) {
+      await api.removePermission(assocModalRole.value.id, permId)
+      assignedPermissions.value = assignedPermissions.value.filter((p) => p.id !== permId)
+      toast.success('Permission removed from role')
+    } else {
+      await api.assignPermission(assocModalRole.value.id, permId)
+      const perm = allPermissions.value.find((p) => p.id === permId)
+      if (perm) assignedPermissions.value.push(perm)
+      toast.success('Permission assigned to role')
+    }
+  } catch (e: any) {
+    toast.error(e.message ?? 'Failed to update permission')
+  } finally {
+    toggling.value = null
+  }
+}
+
+// Group permissions by resource
+const permissionsByResource = computed(() => {
+  const groups: Record<string, typeof allPermissions.value> = {}
+  for (const perm of allPermissions.value) {
+    if (!groups[perm.resource]) groups[perm.resource] = []
+    groups[perm.resource].push(perm)
+  }
+  return groups
+})
 
 // ── Tool selection panel ───────────────────────────────────────────────────
 
@@ -443,6 +489,20 @@ async function saveToolSelection() {
                   <span class="bg-violet-100 text-violet-700 text-xs font-semibold px-1.5 py-0.5 rounded-full">{{ assignedAgents.length }}</span>
                 </span>
               </button>
+              <button
+                class="px-4 py-3 text-sm font-medium border-b-2 transition-colors"
+                :class="assocTab === 'permissions' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'"
+                @click="assocTab = 'permissions'"
+              >
+                <span class="flex items-center gap-2">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                  Permissions
+                  <span class="bg-emerald-100 text-emerald-700 text-xs font-semibold px-1.5 py-0.5 rounded-full">{{ assignedPermissions.length }}</span>
+                </span>
+              </button>
             </div>
 
             <!-- Content -->
@@ -513,7 +573,7 @@ async function saveToolSelection() {
               </div>
 
               <!-- Agents tab -->
-              <div v-else class="space-y-2">
+              <div v-else-if="assocTab === 'agents'" class="space-y-2">
                 <div v-if="!allAgents.length" class="text-center text-slate-400 py-10 text-sm">
                   No agents configured.
                   <RouterLink to="/agents" class="text-indigo-600 hover:underline ml-1" @click="closeAssocModal">Create some first.</RouterLink>
@@ -568,6 +628,46 @@ async function saveToolSelection() {
                       <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
                       <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                     </svg>
+                  </div>
+                </template>
+              </div>
+
+              <!-- Permissions tab -->
+              <div v-else class="space-y-4">
+                <div v-if="!allPermissions.length" class="text-center text-slate-400 py-10 text-sm">
+                  No permissions found in the system.
+                </div>
+                <template v-for="(perms, resource) in permissionsByResource" :key="resource">
+                  <div>
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">{{ resource }}</p>
+                    <div class="space-y-1">
+                      <div
+                        v-for="perm in perms"
+                        :key="perm.id"
+                        class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer border"
+                        :class="hasPermission(perm.id) ? 'border-emerald-200 bg-emerald-50/50' : 'border-transparent'"
+                        @click="togglePermission(perm.id)"
+                      >
+                        <input
+                          type="checkbox"
+                          :checked="hasPermission(perm.id)"
+                          :disabled="toggling === perm.id"
+                          class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer shrink-0"
+                          @click.stop
+                          @change="togglePermission(perm.id)"
+                        />
+                        <div class="flex-1 min-w-0">
+                          <div class="flex items-center gap-2">
+                            <span class="text-xs font-mono font-medium text-slate-700">{{ perm.action }}</span>
+                          </div>
+                          <p v-if="perm.description" class="text-xs text-slate-400 mt-0.5">{{ perm.description }}</p>
+                        </div>
+                        <svg v-if="toggling === perm.id" class="animate-spin h-4 w-4 text-indigo-400 shrink-0" fill="none" viewBox="0 0 24 24">
+                          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                        </svg>
+                      </div>
+                    </div>
                   </div>
                 </template>
               </div>

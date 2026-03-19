@@ -2,7 +2,7 @@ import { z } from "zod";
 import { LoginSchema, CreateUserSchema } from "@domain/entities/user.entity.js";
 import passport from "passport";
 import { registry } from "@application/services/registry.service.js";
-import { randomUUID } from "crypto";
+import { randomUUID, randomBytes, createHash } from "crypto";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import NodeCache from "node-cache";
@@ -11,6 +11,16 @@ import { JWT_SECRET } from "@infra/service/passport.service.js";
 
 // Cache para CSRF state del flujo OAuth (TTL 10 min)
 const oauthStateCache = new NodeCache({ stdTTL: 600 });
+
+/** Genera un code_verifier aleatorio para PKCE (RFC 7636) */
+function generateCodeVerifier(): string {
+	return randomBytes(32).toString("base64url");
+}
+
+/** Computa code_challenge = BASE64URL(SHA256(verifier)) */
+function generateCodeChallenge(verifier: string): string {
+	return createHash("sha256").update(verifier).digest().toString("base64url");
+}
 
 export function registerAuthRoutes() {
 	// Login
@@ -108,7 +118,10 @@ export function registerAuthRoutes() {
 			}
 
 			const state = randomUUID();
-			oauthStateCache.set(state, true);
+			const codeVerifier = generateCodeVerifier();
+			const codeChallenge = generateCodeChallenge(codeVerifier);
+			const returnTo = (req.query.return_to as string) || null;
+			oauthStateCache.set(state, { codeVerifier, returnTo });
 
 			const params = new URLSearchParams({
 				client_id: AZURE_CLIENT_ID,
@@ -117,6 +130,8 @@ export function registerAuthRoutes() {
 				response_mode: "query",
 				scope: "openid profile email User.Read",
 				state,
+				code_challenge: codeChallenge,
+				code_challenge_method: "S256",
 			});
 
 			const authUrl = `https://login.microsoftonline.com/${AZURE_TENANT_ID}/oauth2/v2.0/authorize?${params.toString()}`;
@@ -151,16 +166,18 @@ export function registerAuthRoutes() {
 				);
 			}
 
-			// Validar state CSRF
-			if (!state || !oauthStateCache.get<boolean>(state)) {
+			// Validar state CSRF y recuperar code_verifier
+			const cached = oauthStateCache.get<{ codeVerifier: string; returnTo: string | null }>(state);
+			if (!state || !cached) {
 				return res.redirect(
 					`${FRONTEND_URL}/login?error=invalid_state`,
 				);
 			}
 			oauthStateCache.del(state);
+			const { codeVerifier, returnTo } = cached;
 
 			try {
-				// Intercambiar code por tokens
+				// Intercambiar code por tokens (con PKCE code_verifier)
 				const tokenRes = await fetch(
 					`https://login.microsoftonline.com/${AZURE_TENANT_ID}/oauth2/v2.0/token`,
 					{
@@ -172,6 +189,7 @@ export function registerAuthRoutes() {
 							code,
 							redirect_uri: AZURE_REDIRECT_URI,
 							grant_type: "authorization_code",
+							code_verifier: codeVerifier,
 						}),
 					},
 				);
@@ -242,9 +260,11 @@ export function registerAuthRoutes() {
 					{ expiresIn: "7d" },
 				);
 
-				res.redirect(
-					`${FRONTEND_URL}/login?azureToken=${encodeURIComponent(token)}`,
-				);
+				const tokenParam = `azureToken=${encodeURIComponent(token)}`;
+				const destination = returnTo
+					? `${returnTo}${returnTo.includes("?") ? "&" : "?"}${tokenParam}`
+					: `${FRONTEND_URL}/login?${tokenParam}`;
+				res.redirect(destination);
 			} catch (err: any) {
 				console.error("Azure callback error:", err);
 				res.redirect(

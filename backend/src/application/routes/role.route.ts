@@ -116,6 +116,45 @@ export function registerRoleRoutes() {
 		requiredPermission: { resource: "roles", action: "delete" },
 	});
 
+	// Listar todos los permisos del sistema
+	registry.register({
+		useBy: ["server"],
+		path: "/api/permissions",
+		method: "GET",
+		handler: async ({ context: { req, res } }) => {
+			const { container } = await import("@application/container.js");
+			const permissionRepository = container.permissionRepository;
+			try {
+				const perms = await permissionRepository.findAll();
+				return perms;
+			} catch (error: any) {
+				res.status(500).json({ error: error.message });
+			}
+		},
+		requiresAuth: true,
+		requiredPermission: { resource: "permissions", action: "read" },
+	});
+
+	// Listar permisos de un rol
+	registry.register({
+		useBy: ["server"],
+		path: "/api/roles/:id/permissions",
+		method: "GET",
+		handler: async ({ context: { req, res } }) => {
+			const { container } = await import("@application/container.js");
+			const roleRepository = container.roleRepository;
+			try {
+				const perms = await roleRepository.getPermissions(req.params.id);
+				return perms;
+			} catch (error: any) {
+				res.status(500).json({ error: error.message });
+			}
+		},
+		inputSchema: z.object({ id: z.string() }),
+		requiresAuth: true,
+		requiredPermission: { resource: "roles", action: "read" },
+	});
+
 	// Asignar permiso a rol
 	registry.register({
 		useBy: ["server"],

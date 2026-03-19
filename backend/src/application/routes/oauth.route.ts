@@ -2,6 +2,8 @@ import { z } from "zod";
 import { registry } from "@application/services/registry.service.js";
 import { envs } from "../../envs.js";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import { JWT_SECRET } from "@infra/service/passport.service.js";
 
 /**
  * Registers OAuth 2.0 endpoints (RFC 6749) and well-known discovery documents.
@@ -67,7 +69,7 @@ export function registerOAuthRoutes(): void {
 			// Forward all query params to the frontend consent page
 			const params = new URLSearchParams(req.query as Record<string, string>);
 			params.set("client_name", client.client_name);
-			return res.redirect(`${envs.FRONTEND_URL}/oauth/authorize?${params.toString()}`);
+			return res.redirect(`${envs.FRONTEND_URL}/oauth/authorize/mcp?${params.toString()}`);
 		},
 	});
 
@@ -81,14 +83,15 @@ export function registerOAuthRoutes(): void {
 			redirect_uri: z.string(),
 			state: z.string().optional(),
 			scope: z.string().optional(),
-			username: z.string(),
-			password: z.string(),
+			username: z.string().optional(),
+			password: z.string().optional(),
+			token: z.string().optional(),
 			approved: z.boolean(),
 		}),
 		handler: async ({ input, context: { req, res }, oauthService }) => {
 			if (!oauthService) return res.status(503).json({ error: "OAuth not configured" });
 
-			const { client_id, redirect_uri, state, scope, username, password, approved } = input as any;
+			const { client_id, redirect_uri, state, scope, username, password, token, approved } = input as any;
 
 			const deniedUrl = `${redirect_uri}?error=access_denied${state ? `&state=${state}` : ""}`;
 			if (!approved) {
@@ -100,17 +103,33 @@ export function registerOAuthRoutes(): void {
 				return res.status(400).json({ error: "Invalid client or redirect_uri" });
 			}
 
-			// Authenticate user with credentials
+			// Authenticate user — either via JWT token (Azure) or username/password
 			const { container } = await import("@application/container.js");
-			const user = await container.userRepository.findByUsername(username)
-				?? await container.userRepository.findByEmail(username);
+			let user: any;
 
-			if (!user || !user.active) {
-				return { error: "invalid_credentials" };
+			if (token) {
+				try {
+					const payload = jwt.verify(token, JWT_SECRET) as { sub: string };
+					user = await container.userRepository.findById(payload.sub);
+				} catch {
+					return { error: "invalid_credentials" };
+				}
+			} else {
+				if (!username || !password) {
+					return { error: "invalid_credentials" };
+				}
+				user = await container.userRepository.findByUsername(username)
+					?? await container.userRepository.findByEmail(username);
+				if (!user) {
+					return { error: "invalid_credentials" };
+				}
+				const validPassword = await bcrypt.compare(password, user.password);
+				if (!validPassword) {
+					return { error: "invalid_credentials" };
+				}
 			}
 
-			const validPassword = await bcrypt.compare(password, user.password);
-			if (!validPassword) {
+			if (!user || !user.active) {
 				return { error: "invalid_credentials" };
 			}
 
