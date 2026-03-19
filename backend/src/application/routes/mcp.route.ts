@@ -7,7 +7,7 @@ import { randomUUID } from "node:crypto";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
+import { z, type ZodRawShape, type ZodTypeAny } from "zod";
 import { registry } from "@applicationService/registry.service.js";
 import type { McpOAuthService } from "@infra/service/mcp-oauth.service.js";
 import { mcpTokenAuthMiddleware } from "./middlewares/mcp-token-auth.middleware.js";
@@ -27,6 +27,64 @@ declare global {
 	var __mcpSessionContexts: Record<string, HttpContext>;
 }
 globalThis.__mcpSessionContexts = sessionContexts;
+
+// ── JSON Schema → ZodRawShape converter ──────────────────────────────────────
+
+function jsonSchemaPropertyToZod(
+	prop: Record<string, unknown>,
+	required: boolean,
+): ZodTypeAny {
+	let schema: ZodTypeAny;
+
+	const type = prop.type as string | undefined;
+
+	if (type === "string" || (!type && !prop.properties && !prop.items)) {
+		schema = z.string();
+	} else if (type === "number" || type === "integer") {
+		schema = z.number();
+	} else if (type === "boolean") {
+		schema = z.boolean();
+	} else if (type === "array") {
+		const items = prop.items as Record<string, unknown> | undefined;
+		const itemSchema = items
+			? jsonSchemaPropertyToZod(items, true)
+			: z.unknown();
+		schema = z.array(itemSchema);
+	} else if (type === "object" || prop.properties) {
+		const nestedShape = jsonSchemaToZodShape(
+			prop as Record<string, unknown>,
+		);
+		schema = z.object(nestedShape);
+	} else {
+		schema = z.unknown();
+	}
+
+	if (prop.description) {
+		schema = schema.describe(prop.description as string);
+	}
+
+	return required ? schema : schema.optional();
+}
+
+function jsonSchemaToZodShape(
+	jsonSchema: Record<string, unknown>,
+): ZodRawShape {
+	const properties = (jsonSchema.properties ?? {}) as Record<
+		string,
+		Record<string, unknown>
+	>;
+	const required = new Set<string>(
+		Array.isArray(jsonSchema.required)
+			? (jsonSchema.required as string[])
+			: [],
+	);
+
+	const shape: ZodRawShape = {};
+	for (const [key, prop] of Object.entries(properties)) {
+		shape[key] = jsonSchemaPropertyToZod(prop, required.has(key));
+	}
+	return shape;
+}
 
 // ── Role-based tool injection ─────────────────────────────────────────────────
 
@@ -90,10 +148,14 @@ async function applyRoleBasedTools(
 				// Empty allowedTools means "all tools allowed"
 				if (allowedTools.size > 0 && !allowedTools.has(tool.toolName)) continue;
 
+				const inputSchema = jsonSchemaToZodShape(
+					tool.inputSchema as Record<string, unknown>,
+				);
+
 				server.tool(
 					tool.toolId,
 					tool.description,
-					tool.inputSchema as Record<string, z.ZodTypeAny>,
+					inputSchema,
 					async (args: Record<string, unknown>) => {
 						const result = await mcpExternalManager.callTool(tool.toolId, args);
 						return { content: [{ type: "text" as const, text: result }] };

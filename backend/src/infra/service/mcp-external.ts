@@ -13,6 +13,7 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { agentLogger } from "../service/logger.service.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { ZodRawShape } from "zod";
 
 // ── MCP config types ──────────────────────────────────────────────────────────
 
@@ -535,7 +536,7 @@ export class McpExternalManager {
 		toolId: string;
 		toolName: string;
 		description: string;
-		inputSchema: unknown;
+		inputSchema: ZodRawShape;
 	}> {
 		const prefix = `${MCP_PREFIX}${serverName}__`;
 		return this.tools
@@ -544,7 +545,7 @@ export class McpExternalManager {
 				toolId: t.function.name,
 				toolName: t.function.name.slice(prefix.length),
 				description: t.function.description,
-				inputSchema: t.function.parameters,
+				inputSchema: t.function.parameters as ZodRawShape,
 			}));
 	}
 
