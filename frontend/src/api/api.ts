@@ -70,3 +70,34 @@ export const getAgentTools = () => request<{ success: boolean; data: any[] }>('/
 export const createAgent = (data: any) => request<any>('/agents', { method: 'POST', body: JSON.stringify(data) })
 export const updateAgent = (id: string, data: any) => request<any>(`/agents/${id}`, { method: 'PUT', body: JSON.stringify(data) })
 export const deleteAgent = (id: string) => request<any>(`/agents/${id}`, { method: 'DELETE' })
+
+// MCP Server tools discovery
+export const getMcpServerTools = (mcpServerId: string) =>
+  request<{ success: boolean; data: Array<{ toolName: string; description: string }> }>(`/mcp-servers/${mcpServerId}/tools`)
+
+// Role MCP tool selection
+export const getRoleMcpTools = (roleId: string, mcpServerId: string) =>
+  request<{ success: boolean; data: string[] }>(`/roles/${roleId}/mcps/${mcpServerId}/tools`)
+export const setRoleMcpTools = (roleId: string, mcpServerId: string, tools: string[]) =>
+  request<{ success: boolean }>(`/roles/${roleId}/mcps/${mcpServerId}/tools`, {
+    method: 'PUT',
+    body: JSON.stringify({ tools }),
+  })
+
+// OAuth clients
+export const getOAuthClients = () => request<{ success: boolean; data: any[] }>('/oauth/clients')
+
+// OAuth authorize (SPA-friendly: returns redirect URL)
+export const oauthAuthorize = (data: {
+  client_id: string
+  redirect_uri: string
+  state?: string
+  scope?: string
+  username: string
+  password: string
+  approved: boolean
+}) =>
+  request<{ redirect?: string; error?: string }>('/oauth/authorize', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })

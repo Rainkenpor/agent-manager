@@ -66,3 +66,17 @@ export interface McpServer {
   createdAt: string
   updatedAt: string
 }
+
+export interface McpTool {
+  toolName: string
+  description: string
+}
+
+export interface OAuthClient {
+  client_id: string
+  client_name: string
+  redirect_uris: string[]
+  grant_types: string[]
+  scope?: string
+  createdAt: string
+}

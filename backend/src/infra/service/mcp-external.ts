@@ -447,7 +447,7 @@ export class McpExternalManager {
 		);
 	}
 
-	private async initServer(name: string, cfg: McpServerConfig): Promise<void> {
+	async initServer(name: string, cfg: McpServerConfig): Promise<void> {
 		let tools: McpTool[];
 
 		if ("url" in cfg && cfg.url) {
@@ -494,6 +494,58 @@ export class McpExternalManager {
 				},
 			});
 		}
+	}
+
+	/**
+	 * Ensures a DB-registered MCP server is initialized (idempotent).
+	 * Config shape matches McpServerEntity fields.
+	 */
+	async ensureServerInitialized(
+		serverName: string,
+		config: {
+			type: "http" | "stdio";
+			url?: string | null;
+			command?: string | null;
+			args?: string[] | null;
+			headers?: Record<string, string> | null;
+		},
+	): Promise<void> {
+		if (this.httpClients.has(serverName) || this.stdioClients.has(serverName)) {
+			return; // already up
+		}
+		if (config.type === "http" && config.url) {
+			await this.initServer(serverName, {
+				url: config.url,
+				headers: config.headers ?? {},
+			});
+		} else if (config.type === "stdio" && config.command) {
+			await this.initServer(serverName, {
+				command: config.command,
+				args: config.args ?? [],
+			});
+		}
+	}
+
+	/**
+	 * Returns tools belonging to a specific server, with parsed metadata.
+	 */
+	getToolsForServer(
+		serverName: string,
+	): Array<{
+		toolId: string;
+		toolName: string;
+		description: string;
+		inputSchema: unknown;
+	}> {
+		const prefix = `${MCP_PREFIX}${serverName}__`;
+		return this.tools
+			.filter((t) => t.function.name.startsWith(prefix))
+			.map((t) => ({
+				toolId: t.function.name,
+				toolName: t.function.name.slice(prefix.length),
+				description: t.function.description,
+				inputSchema: t.function.parameters,
+			}));
 	}
 
 	isMcpTool(toolId: string): boolean {

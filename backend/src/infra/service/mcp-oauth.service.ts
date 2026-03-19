@@ -2,27 +2,21 @@ import { randomBytes } from "node:crypto";
 import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "./passport.service.js";
 import type { IUserRepository } from "@domain/repositories/user.repository.js";
+import { db } from "@infra/db/database.js";
+import {
+	oauthClients,
+	oauthCodes,
+	oauthRefreshTokens,
+} from "@infra/db/schema.js";
+import { eq, and, lt } from "drizzle-orm";
 
-interface OAuthClient {
+export interface OAuthClientRecord {
 	client_id: string;
 	client_secret?: string;
 	client_name: string;
 	redirect_uris: string[];
 	grant_types: string[];
-	response_types: string[];
-	token_endpoint_auth_method: string;
 	scope?: string;
-}
-
-interface AuthorizationCode {
-	code: string;
-	client_id: string;
-	redirect_uri: string;
-	userId: string;
-	scope?: string;
-	expiresAt: number;
-	codeChallenge?: string;
-	codeChallengeMethod?: string;
 }
 
 interface AccessToken {
@@ -34,188 +28,150 @@ interface AccessToken {
 }
 
 /**
- * Servicio OAuth para MCP siguiendo RFC 6749 y especificación MCP
- * Gestiona el flujo de autenticación OAuth 2.0 para el servidor MCP
+ * Servicio OAuth para MCP siguiendo RFC 6749 y especificación MCP.
+ * Persistencia en SQLite via Drizzle ORM.
  */
 export class McpOAuthService {
-	// Almacenamiento en memoria (en producción usar Redis o DB)
-	private clients: Map<string, OAuthClient> = new Map();
-	private authorizationCodes: Map<string, AuthorizationCode> = new Map();
-	private refreshTokens: Map<string, string> = new Map(); // refresh_token -> userId
-
 	constructor(private userRepository: IUserRepository) {
-		// Registrar cliente de prueba automáticamente
-		this.registerDefaultClient();
+		this.seedDefaultClient();
 	}
 
-	/**
-	 * Registra un cliente OAuth por defecto para desarrollo
-	 */
-	private registerDefaultClient() {
-		const defaultClient: OAuthClient = {
-			client_id: "clarify-mcp-client",
-			client_secret: "clarify-secret-change-in-production",
-			client_name: "Clarify MCP Client",
-			redirect_uris: [
+	// ── Client management ────────────────────────────────────────────────────
+
+	private async seedDefaultClient() {
+		const existing = await db
+			.select()
+			.from(oauthClients)
+			.where(eq(oauthClients.id, "agent-manager-mcp-client"));
+		if (existing.length) return;
+		await db.insert(oauthClients).values({
+			id: "agent-manager-mcp-client",
+			secret: "change-in-production",
+			name: "Agent Manager MCP Client",
+			redirectUris: [
 				"http://localhost:3000/callback",
 				"http://localhost:8090/callback",
 			],
-			grant_types: ["authorization_code", "refresh_token"],
-			response_types: ["code"],
-			token_endpoint_auth_method: "client_secret_post",
+			grantTypes: ["authorization_code", "refresh_token"],
 			scope: "mcp:all",
-		};
-
-		this.clients.set(defaultClient.client_id, defaultClient);
+		});
 	}
 
-	/**
-	 * Registro dinámico de clientes OAuth (RFC 7591)
-	 */
-	registerClient(
-		clientData: Omit<OAuthClient, "client_id" | "client_secret">,
-	): OAuthClient {
+	async registerClient(
+		data: Omit<OAuthClientRecord, "client_id" | "client_secret">,
+	): Promise<OAuthClientRecord> {
 		const client_id = `mcp-client-${randomBytes(16).toString("hex")}`;
 		const client_secret = randomBytes(32).toString("hex");
+		await db.insert(oauthClients).values({
+			id: client_id,
+			secret: client_secret,
+			name: data.client_name,
+			redirectUris: data.redirect_uris,
+			grantTypes: data.grant_types,
+			scope: data.scope,
+		});
+		return { client_id, client_secret, ...data };
+	}
 
-		const client: OAuthClient = {
-			...clientData,
-			client_id,
-			client_secret,
+	async getClient(client_id: string): Promise<OAuthClientRecord | undefined> {
+		const rows = await db
+			.select()
+			.from(oauthClients)
+			.where(eq(oauthClients.id, client_id));
+		if (!rows[0]) return undefined;
+		const r = rows[0];
+		return {
+			client_id: r.id,
+			client_secret: r.secret ?? undefined,
+			client_name: r.name,
+			redirect_uris: r.redirectUris,
+			grant_types: r.grantTypes,
+			scope: r.scope ?? undefined,
 		};
-
-		this.clients.set(client_id, client);
-		return client;
 	}
 
-	/**
-	 * Obtiene información del cliente
-	 */
-	getClient(client_id: string): OAuthClient | undefined {
-		return this.clients.get(client_id);
-	}
-
-	/**
-	 * Valida las credenciales del cliente
-	 */
-	validateClient(client_id: string, client_secret?: string): boolean {
-		const client = this.clients.get(client_id);
+	async validateClient(client_id: string, client_secret?: string): Promise<boolean> {
+		const client = await this.getClient(client_id);
 		if (!client) return false;
-
-		// Si el cliente tiene secret, debe coincidir
-		if (client.client_secret) {
-			return client.client_secret === client_secret;
-		}
-
-		// Cliente público (sin secret)
-		return true;
+		if (client.client_secret) return client.client_secret === client_secret;
+		return true; // public client
 	}
 
-	/**
-	 * Genera un código de autorización
-	 */
-	createAuthorizationCode(
+	// ── Authorization codes ───────────────────────────────────────────────────
+
+	async createAuthorizationCode(
 		client_id: string,
 		redirect_uri: string,
 		userId: string,
 		scope?: string,
 		codeChallenge?: string,
 		codeChallengeMethod?: string,
-	): string {
+	): Promise<string> {
 		const code = randomBytes(32).toString("hex");
-		const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutos
-
-		this.authorizationCodes.set(code, {
+		const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+		await db.insert(oauthCodes).values({
 			code,
-			client_id,
-			redirect_uri,
+			clientId: client_id,
 			userId,
-			scope,
+			redirectUri: redirect_uri,
+			scope: scope ?? null,
+			codeChallenge: codeChallenge ?? null,
+			codeChallengeMethod: codeChallengeMethod ?? null,
 			expiresAt,
-			codeChallenge,
-			codeChallengeMethod,
 		});
-
-		// Limpiar código después de expiración
-		setTimeout(
-			() => {
-				this.authorizationCodes.delete(code);
-			},
-			10 * 60 * 1000,
-		);
-
 		return code;
 	}
 
-	/**
-	 * Valida y consume un código de autorización
-	 */
-	validateAuthorizationCode(
+	async validateAuthorizationCode(
 		code: string,
 		redirect_uri: string,
-		codeVerifier?: string,
-	): string | null {
-		const authCode = this.authorizationCodes.get(code);
+	): Promise<string | null> {
+		const rows = await db
+			.select()
+			.from(oauthCodes)
+			.where(eq(oauthCodes.code, code));
+		if (!rows[0]) return null;
 
-		if (!authCode) {
-			return null; // Código no existe
+		const authCode = rows[0];
+		if (new Date(authCode.expiresAt) < new Date()) {
+			await db.delete(oauthCodes).where(eq(oauthCodes.code, code));
+			return null;
 		}
+		if (authCode.redirectUri !== redirect_uri) return null;
 
-		if (authCode.expiresAt < Date.now()) {
-			this.authorizationCodes.delete(code);
-			return null; // Código expirado
-		}
-
-		if (authCode.redirect_uri !== redirect_uri) {
-			return null; // Redirect URI no coincide
-		}
-
-		// Validar PKCE si se usó
-		if (authCode.codeChallenge && codeVerifier) {
-			// TODO: Implementar validación PKCE
-			// const challenge = base64urlEncode(sha256(codeVerifier));
-			// if (challenge !== authCode.codeChallenge) return null;
-		}
-
-		// Consumir código (solo puede usarse una vez)
-		this.authorizationCodes.delete(code);
-
+		await db.delete(oauthCodes).where(eq(oauthCodes.code, code));
 		return authCode.userId;
 	}
 
-	/**
-	 * Genera un access token JWT
-	 */
+	// ── Access tokens ─────────────────────────────────────────────────────────
+
 	async createAccessToken(
 		userId: string,
+		clientId: string,
 		scope?: string,
 	): Promise<AccessToken> {
 		const user = await this.userRepository.findById(userId);
-		if (!user) {
-			throw new Error("Usuario no encontrado");
-		}
+		if (!user) throw new Error("Usuario no encontrado");
 
-		// Obtener roles y permisos
-		const roles = await this.userRepository.getRoles(userId);
-		const permissions = await this.userRepository.getPermissions(userId);
-
-		// Generar access token
 		const access_token = jwt.sign(
 			{
-				sub: userId,
+				userId,
 				username: user.username,
-				email: user.email,
-				roles: roles.map((r) => r.name),
-				permissions: permissions.map((p) => `${p.resource}:${p.action}`),
 				scope: scope || "mcp:all",
 			},
 			JWT_SECRET,
 			{ expiresIn: "1h" },
 		);
 
-		// Generar refresh token
 		const refresh_token = randomBytes(32).toString("hex");
-		this.refreshTokens.set(refresh_token, userId);
+		const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+		await db.insert(oauthRefreshTokens).values({
+			token: refresh_token,
+			clientId,
+			userId,
+			scope: scope ?? null,
+			expiresAt,
+		});
 
 		return {
 			access_token,
@@ -226,43 +182,55 @@ export class McpOAuthService {
 		};
 	}
 
-	/**
-	 * Renueva un access token usando refresh token
-	 */
-	async refreshAccessToken(refresh_token: string): Promise<AccessToken | null> {
-		const userId = this.refreshTokens.get(refresh_token);
-		if (!userId) {
+	async refreshAccessToken(
+		refresh_token: string,
+		clientId: string,
+	): Promise<AccessToken | null> {
+		const rows = await db
+			.select()
+			.from(oauthRefreshTokens)
+			.where(
+				and(
+					eq(oauthRefreshTokens.token, refresh_token),
+					eq(oauthRefreshTokens.clientId, clientId),
+				),
+			);
+		if (!rows[0]) return null;
+
+		const rt = rows[0];
+		if (new Date(rt.expiresAt) < new Date()) {
+			await db
+				.delete(oauthRefreshTokens)
+				.where(eq(oauthRefreshTokens.token, refresh_token));
 			return null;
 		}
 
-		return this.createAccessToken(userId);
+		// Rotate refresh token
+		await db
+			.delete(oauthRefreshTokens)
+			.where(eq(oauthRefreshTokens.token, refresh_token));
+		return this.createAccessToken(rt.userId, clientId, rt.scope ?? undefined);
 	}
 
-	/**
-	 * Revoca un refresh token
-	 */
-	revokeRefreshToken(refresh_token: string): boolean {
-		return this.refreshTokens.delete(refresh_token);
+	async revokeRefreshToken(token: string): Promise<boolean> {
+		const result = await db
+			.delete(oauthRefreshTokens)
+			.where(eq(oauthRefreshTokens.token, token));
+		return true;
 	}
 
-	/**
-	 * Verifica un access token JWT
-	 */
 	verifyAccessToken(token: string): Record<string, unknown> | null {
 		try {
 			const payload = jwt.verify(token, JWT_SECRET);
-			if (typeof payload === "string") {
-				return null;
-			}
+			if (typeof payload === "string") return null;
 			return payload as Record<string, unknown>;
-		} catch (error) {
+		} catch {
 			return null;
 		}
 	}
 
-	/**
-	 * Metadata del servidor de autorización (RFC 8414)
-	 */
+	// ── Well-known metadata ───────────────────────────────────────────────────
+
 	getAuthorizationServerMetadata(baseUrl: string) {
 		return {
 			issuer: baseUrl,
@@ -278,29 +246,16 @@ export class McpOAuthService {
 			response_types_supported: ["code"],
 			response_modes_supported: ["query"],
 			code_challenge_methods_supported: ["S256", "plain"],
-			scopes_supported: [
-				"mcp:all",
-				"mcp:tools",
-				"mcp:resources",
-				"mcp:prompts",
-			],
+			scopes_supported: ["mcp:all", "mcp:tools", "mcp:resources", "mcp:prompts"],
 			revocation_endpoint: `${baseUrl}/oauth/revoke`,
 		};
 	}
 
-	/**
-	 * Metadata del recurso protegido MCP
-	 */
 	getProtectedResourceMetadata(baseUrl: string, authServerUrl: string) {
 		return {
 			resource: `${baseUrl}/mcp`,
 			authorization_servers: [authServerUrl],
-			scopes_supported: [
-				"mcp:all",
-				"mcp:tools",
-				"mcp:resources",
-				"mcp:prompts",
-			],
+			scopes_supported: ["mcp:all", "mcp:tools", "mcp:resources", "mcp:prompts"],
 			bearer_methods_supported: ["header"],
 		};
 	}

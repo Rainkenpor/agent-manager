@@ -38,6 +38,12 @@ const router = createRouter({
       component: () => import('@/views/McpServersView.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      path: '/oauth/authorize',
+      name: 'oauth-authorize',
+      component: () => import('@/views/OAuthAuthorizeView.vue'),
+      meta: { requiresAuth: false },
+    },
   ],
 })
 

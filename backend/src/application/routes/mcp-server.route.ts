@@ -196,4 +196,72 @@ export function registerMcpServerRoutes(): void {
       }
     },
   })
+
+  // ── Role MCP Tool selection ───────────────────────────────────────────────
+
+  // Get selected tools for a role+mcp pair
+  registry.register({
+    useBy: ["server"],
+    method: "GET",
+    path: "/api/roles/:roleId/mcps/:mcpServerId/tools",
+    inputSchema: z.object({ roleId: z.string(), mcpServerId: z.string() }).shape,
+    requiresAuth: true,
+    handler: async ({ context: { req } }) => {
+      const { container } = await import("@application/container.js")
+      const tools = await container.mcpServerRepository.getRoleMcpTools(
+        req.params.roleId as string,
+        req.params.mcpServerId as string,
+      )
+      return { success: true, data: tools }
+    },
+  })
+
+  // Set (replace) selected tools for a role+mcp pair
+  registry.register({
+    useBy: ["server"],
+    method: "PUT",
+    path: "/api/roles/:roleId/mcps/:mcpServerId/tools",
+    inputSchema: z.object({
+      roleId: z.string(),
+      mcpServerId: z.string(),
+      tools: z.array(z.string()),
+    }).shape,
+    requiresAuth: true,
+    handler: async ({ context: { req, res } }) => {
+      const { container } = await import("@application/container.js")
+      try {
+        const toolNames: string[] = req.body.tools ?? []
+        await container.mcpServerRepository.setRoleMcpTools(
+          req.params.roleId as string,
+          req.params.mcpServerId as string,
+          toolNames,
+        )
+        return { success: true, message: "Tool selection updated" }
+      } catch (error: any) {
+        res.status(500).json({ error: error.message })
+      }
+    },
+  })
+
+  // Discover available tools from an MCP server (connects and lists)
+  registry.register({
+    useBy: ["server"],
+    method: "GET",
+    path: "/api/mcp-servers/:id/tools",
+    inputSchema: z.object({ id: z.string() }).shape,
+    requiresAuth: true,
+    handler: async ({ context: { req, res } }) => {
+      const { container } = await import("@application/container.js")
+      const { mcpExternalManager } = await import("@infra/service/mcp-external.js")
+      try {
+        const server = await container.mcpServerRepository.findById(req.params.id as string)
+        if (!server) return res.status(404).json({ error: "MCP server not found" })
+        await mcpExternalManager.ensureServerInitialized(server.name, server)
+        const tools = mcpExternalManager.getToolsForServer(server.name)
+        return { success: true, data: tools.map(t => ({ toolName: t.toolName, description: t.description })) }
+      } catch (error: any) {
+        res.status(500).json({ error: error.message })
+      }
+    },
+  })
 }

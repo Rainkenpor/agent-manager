@@ -7,27 +7,133 @@ import { randomUUID } from "node:crypto";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
 import { registry } from "@applicationService/registry.service.js";
 import type { McpOAuthService } from "@infra/service/mcp-oauth.service.js";
 import { mcpTokenAuthMiddleware } from "./middlewares/mcp-token-auth.middleware.js";
-import { z } from "zod";
 import type { HttpContext } from "@application/interfaces/route.interface.js";
+import { mcpExternalManager } from "@infra/service/mcp-external.js";
+import { envs } from "../../envs.js";
 
 let oauthService: McpOAuthService | null = null;
 
 const router = express.Router();
-// Store active transports by session ID
 const transports: Record<string, StreamableHTTPServerTransport> = {};
-// Store current context by session ID
 const sessionContexts: Record<string, HttpContext> = {};
+// still routed to their existing session.
+const userSessionMap: Record<string, string> = {};
 
-// Expose sessionContexts globally for registry.service.ts
 declare global {
 	var __mcpSessionContexts: Record<string, HttpContext>;
 }
 globalThis.__mcpSessionContexts = sessionContexts;
 
-// Factory function to create MCP server instances
+// ── Role-based tool injection ─────────────────────────────────────────────────
+
+/**
+ * Applies external MCP proxy tools and agent tools for the given user's roles.
+ * Called once per MCP session after the McpServer instance is created.
+ */
+async function applyRoleBasedTools(
+	server: McpServer,
+	user: Record<string, unknown>,
+): Promise<void> {
+	const { container } = await import("@application/container.js");
+
+	const userId = user.userId as string | undefined;
+	if (!userId) return;
+
+	const userRoles = await container.userRepository.getRoles(userId);
+	const roleIds = userRoles.map((r) => r.id).filter(Boolean);
+
+	if (!roleIds.length) return;
+
+	// Accumulate MCP tools and agents across all roles (union)
+	const serverToolMap = new Map<
+		string,
+		{ mcpServer: { name: string; type: "http" | "stdio"; url?: string | null; command?: string | null; args?: string[] | null; headers?: Record<string, string> | null }; allowedTools: Set<string> }
+	>();
+	const seenAgents = new Set<string>();
+	const agentList: Array<{ id: string; name: string; slug: string }> = [];
+
+	for (const roleId of roleIds) {
+		const [mcpServers, roleAgents] = await Promise.all([
+			container.mcpServerRepository.getByRole(roleId),
+			container.mcpServerRepository.getAgentsByRole(roleId),
+		]);
+
+		for (const mcp of mcpServers) {
+			if (!mcp.active) continue;
+			const allowed = await container.mcpServerRepository.getRoleMcpTools(roleId, mcp.id);
+			if (serverToolMap.has(mcp.id)) {
+				for (const t of allowed) serverToolMap.get(mcp.id)!.allowedTools.add(t);
+			} else {
+				serverToolMap.set(mcp.id, { mcpServer: mcp, allowedTools: new Set(allowed) });
+			}
+		}
+
+		for (const agent of roleAgents) {
+			if (!seenAgents.has(agent.id)) {
+				seenAgents.add(agent.id);
+				agentList.push(agent);
+			}
+		}
+	}
+
+	// Register external MCP proxy tools
+	for (const [, { mcpServer, allowedTools }] of serverToolMap) {
+		try {
+			await mcpExternalManager.ensureServerInitialized(mcpServer.name, mcpServer);
+			const serverTools = mcpExternalManager.getToolsForServer(mcpServer.name);
+
+			for (const tool of serverTools) {
+				// Empty allowedTools means "all tools allowed"
+				if (allowedTools.size > 0 && !allowedTools.has(tool.toolName)) continue;
+
+				server.tool(
+					tool.toolId,
+					tool.description,
+					tool.inputSchema as Record<string, z.ZodTypeAny>,
+					async (args: Record<string, unknown>) => {
+						const result = await mcpExternalManager.callTool(tool.toolId, args);
+						return { content: [{ type: "text" as const, text: result }] };
+					},
+				);
+			}
+		} catch (err) {
+			console.warn(`[MCP] Failed to init server ${mcpServer.name}:`, err);
+		}
+	}
+
+	// Register platform agents as tools
+	for (const agent of agentList) {
+		server.tool(
+			`agent_${agent.slug}`,
+			`Platform agent: ${agent.name}. Send it instructions to get assistance.`,
+			{ instruction: z.string().describe("The instruction or task for the agent") },
+			async (args: { instruction: string }) => {
+				// Forward to internal agent service (basic invocation — extend for streaming)
+				try {
+					const { container } = await import("@application/container.js");
+					const agentEntity = await container.getAgentUseCase.execute(agent.id);
+					return {
+						content: [
+							{
+								type: "text" as const,
+								text: `Agent "${agent.name}" received instruction. Execute via /api/agents/${agent.id} with: ${args.instruction}`,
+							},
+						],
+					};
+				} catch {
+					return { content: [{ type: "text" as const, text: `Agent ${agent.slug} unavailable` }] };
+				}
+			},
+		);
+	}
+}
+
+// ── MCP Session factory ───────────────────────────────────────────────────────
+
 class CreateMcpServer {
 	sessionId: string;
 	constructor(sessionId?: string) {
@@ -49,6 +155,10 @@ class CreateMcpServer {
 			if (transport.sessionId) {
 				delete transports[transport.sessionId];
 				delete sessionContexts[transport.sessionId];
+				// Remove user → session mapping if it still points to this session
+				for (const [uid, sid] of Object.entries(userSessionMap)) {
+					if (sid === transport.sessionId) delete userSessionMap[uid];
+				}
 				console.log(`[MCP] Session closed: ${transport.sessionId}`);
 			}
 		};
@@ -58,34 +168,39 @@ class CreateMcpServer {
 
 	async connect({ context }: { context: HttpContext }) {
 		const server = new McpServer({
-			name: "clarify-server",
+			name: "agent-manager-mcp",
 			version: "1.0.0",
 		});
-		// Initialize context for this session
+
 		sessionContexts[this.sessionId] = context;
-		if (oauthService)
+
+		// Register platform tools from registry
+		if (oauthService) {
 			registry.applyToMcpServer({ server, sessionId: this.sessionId });
+		}
+
+		// Register role-based tools for authenticated user
+		const user = context.req.user as Record<string, unknown> | undefined;
+		if (user) {
+			await applyRoleBasedTools(server, user).catch((err) =>
+				console.warn("[MCP] applyRoleBasedTools error:", err),
+			);
+		}
+
 		const transport = await this.initializeTransport();
 		await server.connect(transport);
 		return transport;
 	}
 }
 
-/**
- * Middleware de autenticación combinado para MCP
- * Soporta tanto OAuth (Bearer token) como MCP Token (x-mcp-token header)
- */
+// ── Authentication middleware ─────────────────────────────────────────────────
+
 const mcpAuthMiddleware = async (
 	req: express.Request,
 	res: express.Response,
 	next: express.NextFunction,
 ) => {
-	// Permitir initialize sin auth (el cliente descubrirá OAuth después)
-	if (isInitializeRequest(req.body)) {
-		return next();
-	}
-
-	// Verificar si viene con MCP Token (header x-mcp-token o mcp-token)
+	// MCP-Token header takes priority (internal service-to-service)
 	const mcpToken =
 		req.headers["x-mcp-token"] ||
 		req.headers["mcp-token"] ||
@@ -93,71 +208,59 @@ const mcpAuthMiddleware = async (
 		req.query.mcp_token;
 
 	if (mcpToken) {
-		// Usar autenticación por token MCP
 		return mcpTokenAuthMiddleware(req, res, next);
 	}
 
-	// Si no hay MCP Token, intentar OAuth
+	// OAuth Bearer token — required for ALL requests including initialize.
+	// The MCP Inspector handles 401 on initialize to trigger OAuth discovery.
 	const authHeader = req.headers.authorization;
-	if (!authHeader || !authHeader.startsWith("Bearer ")) {
-		// Responder con WWW-Authenticate header según RFC 6750
+	if (!authHeader?.startsWith("Bearer ")) {
+		const mcpServerBase = `${req.protocol}://${req.get("host")}`;
 		res.setHeader(
 			"WWW-Authenticate",
-			`Bearer realm="MCP Server", scope="mcp:all", resource="${req.protocol}://${req.get("host")}/mcp", authorization_servers="${req.protocol}://${req.get("host")}"`,
+			`Bearer realm="MCP Server", resource_metadata="${mcpServerBase}/.well-known/oauth-protected-resource"`,
 		);
 		return res.status(401).json({
 			jsonrpc: "2.0",
-			error: {
-				code: -32000,
-				message: "Authentication required",
-			},
+			error: { code: -32000, message: "Authentication required" },
 			id: req.body?.id || null,
 		});
 	}
 
-	const token = authHeader.substring(7); // Remover "Bearer "
-
-	// Verificar token con OAuth service
+	const token = authHeader.substring(7);
 	if (oauthService) {
 		const payload = oauthService.verifyAccessToken(token);
 		if (!payload) {
 			res.setHeader(
 				"WWW-Authenticate",
-				'Bearer realm="MCP Server", error="invalid_token", error_description="The access token is invalid or expired"',
+				'Bearer realm="MCP Server", error="invalid_token"',
 			);
 			return res.status(401).json({
 				jsonrpc: "2.0",
-				error: {
-					code: -32000,
-					message: "Invalid or expired token",
-				},
+				error: { code: -32000, message: "Invalid or expired token" },
 				id: req.body?.id || null,
 			});
 		}
-
-		// Adjuntar info del usuario al request
-		req.user = payload;
+		req.user = payload as any;
 	}
 
 	next();
 };
 
-export function registerMCPRoutes(oauth?: McpOAuthService): express.Router {
-	if (oauth) {
-		oauthService = oauth;
-	}
+// ── Route registration ────────────────────────────────────────────────────────
 
-	// Aplicar middleware de autenticación combinado (OAuth + MCP Token)
+export function registerMCPRoutes(oauth?: McpOAuthService): express.Router {
+	if (oauth) oauthService = oauth;
+
 	router.use(mcpAuthMiddleware);
 
-	// POST /mcp - Handle MCP requests (initialize and messages)
+	// POST /mcp — Initialize or handle requests
 	router.post("/", async (req, res, next) => {
 		const sessionId = req.headers["mcp-session-id"] as string | undefined;
 		let transport: StreamableHTTPServerTransport;
 
 		if (sessionId && transports[sessionId]) {
 			transport = transports[sessionId];
-			// Update context for this session with current authenticated request
 			sessionContexts[sessionId] = { req, res, next };
 		} else if (!sessionId && isInitializeRequest(req.body)) {
 			const mcpServer = new CreateMcpServer(sessionId);
@@ -165,10 +268,7 @@ export function registerMCPRoutes(oauth?: McpOAuthService): express.Router {
 		} else {
 			res.status(400).json({
 				jsonrpc: "2.0",
-				error: {
-					code: -32000,
-					message: "Invalid session or missing session ID",
-				},
+				error: { code: -32000, message: "Invalid session or missing session ID" },
 				id: null,
 			});
 			return;
@@ -176,7 +276,7 @@ export function registerMCPRoutes(oauth?: McpOAuthService): express.Router {
 		transport.handleRequest(req, res, req.body);
 	});
 
-	// GET /mcp - Handle SSE streams for existing sessions
+	// GET /mcp — SSE stream for existing sessions
 	router.get("/", async (req, res) => {
 		const sessionId = req.headers["mcp-session-id"] as string;
 		const transport = transports[sessionId];
@@ -191,7 +291,7 @@ export function registerMCPRoutes(oauth?: McpOAuthService): express.Router {
 		}
 	});
 
-	// DELETE /mcp - Close session
+	// DELETE /mcp — Close session
 	router.delete("/", async (req, res) => {
 		const sessionId = req.headers["mcp-session-id"] as string;
 		const transport = transports[sessionId];
@@ -206,32 +306,14 @@ export function registerMCPRoutes(oauth?: McpOAuthService): express.Router {
 		}
 	});
 
-	// Endpoint to list available tools
+	// GET /mcp/tools — list tools (debug)
 	router.get("/tools", (_req, res) => {
-		res.json({
-			success: true,
-			tools: registry.getRegisteredTools(),
-		});
+		res.json({ success: true, tools: registry.getRegisteredTools() });
 	});
 
-	// Endpoint to list available prompts (for debugging)
+	// GET /mcp/prompts — list prompts (debug)
 	router.get("/prompts", (_req, res) => {
-		res.json({
-			success: true,
-			prompts: [
-				{
-					name: "guias_documentacion",
-					title: "Guías de Documentación",
-					description: "Guías para documentación del proyecto",
-				},
-				{
-					name: "documentar_tareas_pendientes",
-					title: "Documentar Tareas Pendientes",
-					description:
-						"Automatización para documentar y resolver tareas pendientes",
-				},
-			],
-		});
+		res.json({ success: true, prompts: [] });
 	});
 
 	return router;
@@ -252,26 +334,16 @@ export function registerMCPOauthRoutes(
 			| "delete"
 			| "patch";
 
-		// Preparar middlewares
 		const middlewares: any[] = [];
-
-		// Agregar handler principal
 		middlewares.push(
 			async (req: Request, res: Response, next: NextFunction) => {
 				try {
-					// Combine params, query, and body for input
-					const rawInput = {
-						...req.params,
-						...req.query,
-						...req.body,
-					};
-
-					// Validate input with Zod
+					const rawInput = { ...req.params, ...req.query, ...req.body };
+					const { z } = await import("zod");
 					const inputSchema =
 						route.inputSchema instanceof z.ZodObject
 							? route.inputSchema
 							: z.object(route.inputSchema);
-
 					const parseResult = inputSchema.safeParse(rawInput);
 					if (!parseResult.success) {
 						return res.status(400).json({
@@ -279,22 +351,12 @@ export function registerMCPOauthRoutes(
 							details: parseResult.error.flatten(),
 						});
 					}
-
-					// Execute handler with context
 					const result = await route.handler({
 						input: parseResult.data,
-						context: {
-							req,
-							res,
-							next,
-						},
+						context: { req, res, next },
 						oauthService,
 					});
-
-					// Only send response if handler didn't handle it (result is not null)
-					if (result !== null) {
-						res.json(result);
-					}
+					if (result !== null) res.json(result);
 				} catch (error) {
 					next(error);
 				}
@@ -303,10 +365,6 @@ export function registerMCPOauthRoutes(
 
 		router[expressMethod](route.path, ...middlewares);
 	}
-
-	console.log(
-		`🌐 API Router created with ${registry.getRoutes().length} routes`,
-	);
 
 	return router;
 }

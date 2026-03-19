@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { RouterLink } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { useToastStore } from '@/store/useToast'
 import * as api from '@/api/api'
-import type { Role, McpServer, Agent } from '@/types/types'
+import type { Role, McpServer, Agent, McpTool } from '@/types/types'
 
 const toast = useToastStore()
 
@@ -35,6 +36,13 @@ const assignedMcps = ref<McpServer[]>([])
 const assignedAgents = ref<Array<{ id: string; name: string; slug: string; mode: string }>>([])
 
 const toggling = ref<string | null>(null)
+
+// ── Tool selection sub-panel ──────────────────────────────────────────────────
+const toolPanelMcp = ref<McpServer | null>(null)
+const availableTools = ref<McpTool[]>([])
+const selectedTools = ref<Set<string>>(new Set())
+const toolsLoading = ref(false)
+const toolsSaving = ref(false)
 
 async function fetchData() {
   loading.value = true
@@ -118,6 +126,7 @@ async function openAssocModal(role: Role) {
   assocLoading.value = true
   assignedMcps.value = []
   assignedAgents.value = []
+  toolPanelMcp.value = null
   try {
     const [mcpsRes, agentsRes, mcpAssignedRes, agentAssignedRes] = await Promise.all([
       api.getMcpServers(),
@@ -138,6 +147,7 @@ async function openAssocModal(role: Role) {
 
 function closeAssocModal() {
   assocModalRole.value = null
+  toolPanelMcp.value = null
 }
 
 function hasMcp(mcpId: string): boolean {
@@ -155,6 +165,7 @@ async function toggleMcp(mcpId: string) {
     if (hasMcp(mcpId)) {
       await api.removeMcpFromRole(assocModalRole.value.id, mcpId)
       assignedMcps.value = assignedMcps.value.filter((m) => m.id !== mcpId)
+      if (toolPanelMcp.value?.id === mcpId) toolPanelMcp.value = null
       toast.success('MCP removed from role')
     } else {
       await api.assignMcpToRole(assocModalRole.value.id, mcpId)
@@ -187,6 +198,62 @@ async function toggleAgent(agentId: string) {
     toast.error(e.message ?? 'Failed to update agent')
   } finally {
     toggling.value = null
+  }
+}
+
+// ── Tool selection panel ───────────────────────────────────────────────────
+
+async function openToolPanel(mcp: McpServer) {
+  if (!assocModalRole.value) return
+  toolPanelMcp.value = mcp
+  toolsLoading.value = true
+  availableTools.value = []
+  selectedTools.value = new Set()
+  try {
+    const [toolsRes, selectedRes] = await Promise.all([
+      api.getMcpServerTools(mcp.id),
+      api.getRoleMcpTools(assocModalRole.value.id, mcp.id),
+    ])
+    availableTools.value = toolsRes.data ?? []
+    selectedTools.value = new Set(selectedRes.data ?? [])
+  } catch (e: any) {
+    toast.error(e.message ?? 'Failed to load tools')
+  } finally {
+    toolsLoading.value = false
+  }
+}
+
+function toggleToolSelection(toolName: string) {
+  if (selectedTools.value.has(toolName)) {
+    selectedTools.value.delete(toolName)
+  } else {
+    selectedTools.value.add(toolName)
+  }
+}
+
+function selectAllTools() {
+  selectedTools.value = new Set(availableTools.value.map((t) => t.toolName))
+}
+
+function clearAllTools() {
+  selectedTools.value = new Set()
+}
+
+async function saveToolSelection() {
+  if (!assocModalRole.value || !toolPanelMcp.value) return
+  toolsSaving.value = true
+  try {
+    await api.setRoleMcpTools(
+      assocModalRole.value.id,
+      toolPanelMcp.value.id,
+      [...selectedTools.value],
+    )
+    toast.success('Tool selection saved')
+    toolPanelMcp.value = null
+  } catch (e: any) {
+    toast.error(e.message ?? 'Failed to save tools')
+  } finally {
+    toolsSaving.value = false
   }
 }
 </script>
@@ -323,198 +390,274 @@ async function toggleAgent(agentId: string) {
     <!-- Associations Modal (MCPs + Agents) -->
     <div v-if="assocModalRole" class="fixed inset-0 z-40 flex items-center justify-center">
       <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="closeAssocModal" />
-      <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 flex flex-col max-h-[85vh] overflow-hidden">
 
-        <!-- Header -->
-        <div class="px-6 py-5 border-b border-slate-200 flex items-center justify-between shrink-0">
-          <div>
-            <h2 class="text-lg font-semibold text-slate-800">{{ assocModalRole.name }}</h2>
-            <p class="text-sm text-slate-500">Manage MCP servers and agents</p>
-          </div>
-          <button class="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition" @click="closeAssocModal">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
+      <!-- Main panel -->
+      <div
+        class="relative bg-white rounded-2xl shadow-2xl mx-4 flex flex-col max-h-[85vh] overflow-hidden transition-all"
+        :class="toolPanelMcp ? 'w-full max-w-2xl' : 'w-full max-w-lg'"
+      >
+        <div class="flex flex-1 min-h-0">
 
-        <!-- Tabs -->
-        <div class="flex border-b border-slate-200 shrink-0 px-6">
-          <button
-            class="px-4 py-3 text-sm font-medium border-b-2 transition-colors"
-            :class="assocTab === 'mcps'
-              ? 'border-indigo-600 text-indigo-600'
-              : 'border-transparent text-slate-500 hover:text-slate-700'"
-            @click="assocTab = 'mcps'"
-          >
-            <span class="flex items-center gap-2">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M5 12h14M12 5l7 7-7 7" />
-              </svg>
-              MCP Servers
-              <span class="bg-blue-100 text-blue-700 text-xs font-semibold px-1.5 py-0.5 rounded-full">
-                {{ assignedMcps.length }}
-              </span>
-            </span>
-          </button>
-          <button
-            class="px-4 py-3 text-sm font-medium border-b-2 transition-colors"
-            :class="assocTab === 'agents'
-              ? 'border-indigo-600 text-indigo-600'
-              : 'border-transparent text-slate-500 hover:text-slate-700'"
-            @click="assocTab = 'agents'"
-          >
-            <span class="flex items-center gap-2">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2h-2" />
-              </svg>
-              Agents
-              <span class="bg-violet-100 text-violet-700 text-xs font-semibold px-1.5 py-0.5 rounded-full">
-                {{ assignedAgents.length }}
-              </span>
-            </span>
-          </button>
-        </div>
+          <!-- Left: role associations -->
+          <div class="flex flex-col flex-1 min-w-0 min-h-0">
 
-        <!-- Content -->
-        <div class="flex-1 overflow-y-auto px-6 py-5">
-
-          <!-- Loading -->
-          <div v-if="assocLoading" class="flex justify-center py-10">
-            <svg class="animate-spin h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-            </svg>
-          </div>
-
-          <!-- MCPs tab -->
-          <div v-else-if="assocTab === 'mcps'" class="space-y-2">
-            <div v-if="!allMcps.length" class="text-center text-slate-400 py-10 text-sm">
-              No MCP servers configured.
-              <RouterLink to="/mcps" class="text-indigo-600 hover:underline ml-1" @click="closeAssocModal">
-                Add some first.
-              </RouterLink>
-            </div>
-            <div
-              v-for="mcp in allMcps"
-              :key="mcp.id"
-              class="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer border border-transparent"
-              :class="hasMcp(mcp.id) ? 'border-blue-200 bg-blue-50/50' : ''"
-              @click="toggleMcp(mcp.id)"
-            >
-              <input
-                type="checkbox"
-                :checked="hasMcp(mcp.id)"
-                :disabled="toggling === mcp.id"
-                class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
-                @click.stop
-                @change="toggleMcp(mcp.id)"
-              />
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2">
-                  <p class="text-sm font-medium text-slate-800">{{ mcp.displayName || mcp.name }}</p>
-                  <span
-                    class="px-1.5 py-0.5 rounded text-xs font-medium"
-                    :class="mcp.type === 'http' ? 'bg-blue-100 text-blue-600' : 'bg-amber-100 text-amber-600'"
-                  >{{ mcp.type }}</span>
-                  <span v-if="!mcp.active" class="px-1.5 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-400">inactive</span>
-                </div>
-                <p v-if="mcp.description" class="text-xs text-slate-400 mt-0.5 truncate">{{ mcp.description }}</p>
-                <p v-else-if="mcp.url" class="text-xs text-slate-400 mt-0.5 font-mono truncate">{{ mcp.url }}</p>
+            <!-- Header -->
+            <div class="px-6 py-5 border-b border-slate-200 flex items-center justify-between shrink-0">
+              <div>
+                <h2 class="text-lg font-semibold text-slate-800">{{ assocModalRole.name }}</h2>
+                <p class="text-sm text-slate-500">Manage MCP servers and agents</p>
               </div>
-              <svg v-if="toggling === mcp.id" class="animate-spin h-4 w-4 text-indigo-400 shrink-0" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-              </svg>
-            </div>
-          </div>
-
-          <!-- Agents tab -->
-          <div v-else class="space-y-2">
-            <div v-if="!allAgents.length" class="text-center text-slate-400 py-10 text-sm">
-              No agents configured.
-              <RouterLink to="/agents" class="text-indigo-600 hover:underline ml-1" @click="closeAssocModal">
-                Create some first.
-              </RouterLink>
+              <button class="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition" @click="closeAssocModal">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
 
-            <!-- Primary agents section -->
-            <template v-if="allAgents.some(a => a.mode === 'primary')">
-              <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Primary Agents</p>
-              <div
-                v-for="agent in allAgents.filter(a => a.mode === 'primary')"
-                :key="agent.id"
-                class="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer border border-transparent"
-                :class="hasAgent(agent.id) ? 'border-violet-200 bg-violet-50/50' : ''"
-                @click="toggleAgent(agent.id)"
+            <!-- Tabs -->
+            <div class="flex border-b border-slate-200 shrink-0 px-6">
+              <button
+                class="px-4 py-3 text-sm font-medium border-b-2 transition-colors"
+                :class="assocTab === 'mcps' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'"
+                @click="assocTab = 'mcps'"
               >
-                <input
-                  type="checkbox"
-                  :checked="hasAgent(agent.id)"
-                  :disabled="toggling === agent.id"
-                  class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
-                  @click.stop
-                  @change="toggleAgent(agent.id)"
-                />
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center gap-2">
-                    <p class="text-sm font-medium text-slate-800">{{ agent.name }}</p>
-                    <span class="px-1.5 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-600">primary</span>
-                    <span v-if="!agent.isActive" class="px-1.5 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-400">inactive</span>
-                  </div>
-                  <p class="text-xs text-slate-400 font-mono mt-0.5">{{ agent.slug }}</p>
-                </div>
-                <svg v-if="toggling === agent.id" class="animate-spin h-4 w-4 text-indigo-400 shrink-0" fill="none" viewBox="0 0 24 24">
+                <span class="flex items-center gap-2">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7" />
+                  </svg>
+                  MCP Servers
+                  <span class="bg-blue-100 text-blue-700 text-xs font-semibold px-1.5 py-0.5 rounded-full">{{ assignedMcps.length }}</span>
+                </span>
+              </button>
+              <button
+                class="px-4 py-3 text-sm font-medium border-b-2 transition-colors"
+                :class="assocTab === 'agents' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'"
+                @click="assocTab = 'agents'"
+              >
+                <span class="flex items-center gap-2">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2h-2" />
+                  </svg>
+                  Agents
+                  <span class="bg-violet-100 text-violet-700 text-xs font-semibold px-1.5 py-0.5 rounded-full">{{ assignedAgents.length }}</span>
+                </span>
+              </button>
+            </div>
+
+            <!-- Content -->
+            <div class="flex-1 overflow-y-auto px-6 py-5">
+              <div v-if="assocLoading" class="flex justify-center py-10">
+                <svg class="animate-spin h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
                   <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                 </svg>
               </div>
-            </template>
 
-            <!-- Subagents section -->
-            <template v-if="allAgents.some(a => a.mode === 'subagent')">
-              <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mt-4 mb-2">Subagents</p>
-              <div
-                v-for="agent in allAgents.filter(a => a.mode === 'subagent')"
-                :key="agent.id"
-                class="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer border border-transparent"
-                :class="hasAgent(agent.id) ? 'border-violet-200 bg-violet-50/50' : ''"
-                @click="toggleAgent(agent.id)"
-              >
-                <input
-                  type="checkbox"
-                  :checked="hasAgent(agent.id)"
-                  :disabled="toggling === agent.id"
-                  class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
-                  @click.stop
-                  @change="toggleAgent(agent.id)"
-                />
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center gap-2">
-                    <p class="text-sm font-medium text-slate-800">{{ agent.name }}</p>
-                    <span class="px-1.5 py-0.5 rounded text-xs font-medium bg-violet-100 text-violet-600">subagent</span>
-                  </div>
-                  <p class="text-xs text-slate-400 font-mono mt-0.5">{{ agent.slug }}</p>
+              <!-- MCPs tab -->
+              <div v-else-if="assocTab === 'mcps'" class="space-y-2">
+                <div v-if="!allMcps.length" class="text-center text-slate-400 py-10 text-sm">
+                  No MCP servers configured.
+                  <RouterLink to="/mcps" class="text-indigo-600 hover:underline ml-1" @click="closeAssocModal">Add some first.</RouterLink>
                 </div>
-                <svg v-if="toggling === agent.id" class="animate-spin h-4 w-4 text-indigo-400 shrink-0" fill="none" viewBox="0 0 24 24">
+                <div
+                  v-for="mcp in allMcps"
+                  :key="mcp.id"
+                  class="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-slate-50 transition-colors border"
+                  :class="hasMcp(mcp.id) ? 'border-blue-200 bg-blue-50/50' : 'border-transparent'"
+                >
+                  <!-- Checkbox -->
+                  <input
+                    type="checkbox"
+                    :checked="hasMcp(mcp.id)"
+                    :disabled="toggling === mcp.id"
+                    class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer shrink-0"
+                    @click.stop
+                    @change="toggleMcp(mcp.id)"
+                  />
+                  <!-- Info (clickable to toggle) -->
+                  <div class="flex-1 min-w-0 cursor-pointer" @click="toggleMcp(mcp.id)">
+                    <div class="flex items-center gap-2">
+                      <p class="text-sm font-medium text-slate-800">{{ mcp.displayName || mcp.name }}</p>
+                      <span class="px-1.5 py-0.5 rounded text-xs font-medium"
+                        :class="mcp.type === 'http' ? 'bg-blue-100 text-blue-600' : 'bg-amber-100 text-amber-600'">
+                        {{ mcp.type }}
+                      </span>
+                      <span v-if="!mcp.active" class="px-1.5 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-400">inactive</span>
+                    </div>
+                    <p v-if="mcp.description" class="text-xs text-slate-400 mt-0.5 truncate">{{ mcp.description }}</p>
+                    <p v-else-if="mcp.url" class="text-xs text-slate-400 mt-0.5 font-mono truncate">{{ mcp.url }}</p>
+                  </div>
+                  <!-- Configure tools button (only if assigned) -->
+                  <button
+                    v-if="hasMcp(mcp.id)"
+                    class="shrink-0 flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors"
+                    :class="toolPanelMcp?.id === mcp.id
+                      ? 'bg-indigo-600 text-white'
+                      : 'text-indigo-600 hover:bg-indigo-50 border border-indigo-200'"
+                    :title="'Configure tools for ' + (mcp.displayName || mcp.name)"
+                    @click.stop="toolPanelMcp?.id === mcp.id ? (toolPanelMcp = null) : openToolPanel(mcp)"
+                  >
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Tools
+                  </button>
+                  <svg v-if="toggling === mcp.id" class="animate-spin h-4 w-4 text-indigo-400 shrink-0" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                </div>
+              </div>
+
+              <!-- Agents tab -->
+              <div v-else class="space-y-2">
+                <div v-if="!allAgents.length" class="text-center text-slate-400 py-10 text-sm">
+                  No agents configured.
+                  <RouterLink to="/agents" class="text-indigo-600 hover:underline ml-1" @click="closeAssocModal">Create some first.</RouterLink>
+                </div>
+
+                <template v-if="allAgents.some(a => a.mode === 'primary')">
+                  <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Primary Agents</p>
+                  <div
+                    v-for="agent in allAgents.filter(a => a.mode === 'primary')"
+                    :key="agent.id"
+                    class="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer border border-transparent"
+                    :class="hasAgent(agent.id) ? 'border-violet-200 bg-violet-50/50' : ''"
+                    @click="toggleAgent(agent.id)"
+                  >
+                    <input type="checkbox" :checked="hasAgent(agent.id)" :disabled="toggling === agent.id"
+                      class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                      @click.stop @change="toggleAgent(agent.id)" />
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center gap-2">
+                        <p class="text-sm font-medium text-slate-800">{{ agent.name }}</p>
+                        <span class="px-1.5 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-600">primary</span>
+                      </div>
+                      <p class="text-xs text-slate-400 font-mono mt-0.5">agent_{{ agent.slug }}</p>
+                    </div>
+                    <svg v-if="toggling === agent.id" class="animate-spin h-4 w-4 text-indigo-400 shrink-0" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                    </svg>
+                  </div>
+                </template>
+
+                <template v-if="allAgents.some(a => a.mode === 'subagent')">
+                  <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mt-4 mb-2">Subagents</p>
+                  <div
+                    v-for="agent in allAgents.filter(a => a.mode === 'subagent')"
+                    :key="agent.id"
+                    class="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer border border-transparent"
+                    :class="hasAgent(agent.id) ? 'border-violet-200 bg-violet-50/50' : ''"
+                    @click="toggleAgent(agent.id)"
+                  >
+                    <input type="checkbox" :checked="hasAgent(agent.id)" :disabled="toggling === agent.id"
+                      class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                      @click.stop @change="toggleAgent(agent.id)" />
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center gap-2">
+                        <p class="text-sm font-medium text-slate-800">{{ agent.name }}</p>
+                        <span class="px-1.5 py-0.5 rounded text-xs font-medium bg-violet-100 text-violet-600">subagent</span>
+                      </div>
+                      <p class="text-xs text-slate-400 font-mono mt-0.5">agent_{{ agent.slug }}</p>
+                    </div>
+                    <svg v-if="toggling === agent.id" class="animate-spin h-4 w-4 text-indigo-400 shrink-0" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                    </svg>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="px-6 py-4 border-t border-slate-200 shrink-0">
+              <button
+                class="w-full px-4 py-2.5 rounded-lg bg-slate-800 text-white text-sm font-medium hover:bg-slate-700 transition-colors"
+                @click="closeAssocModal"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+
+          <!-- Right: tool selection panel -->
+          <div
+            v-if="toolPanelMcp"
+            class="w-72 border-l border-slate-200 flex flex-col min-h-0 shrink-0"
+          >
+            <!-- Panel header -->
+            <div class="px-4 py-4 border-b border-slate-200 shrink-0">
+              <div class="flex items-center justify-between mb-0.5">
+                <p class="text-sm font-semibold text-slate-800">Select Tools</p>
+                <button class="p-1 text-slate-400 hover:text-slate-600 rounded" @click="toolPanelMcp = null">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <p class="text-xs text-slate-500 truncate">{{ toolPanelMcp.displayName || toolPanelMcp.name }}</p>
+              <p class="text-xs text-slate-400 mt-1">
+                Empty selection = all tools exposed
+              </p>
+            </div>
+
+            <!-- Tools list -->
+            <div class="flex-1 overflow-y-auto py-2">
+              <div v-if="toolsLoading" class="flex justify-center py-8">
+                <svg class="animate-spin h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
                   <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                 </svg>
               </div>
-            </template>
-          </div>
-        </div>
+              <div v-else-if="!availableTools.length" class="px-4 py-6 text-center text-slate-400 text-xs">
+                No tools discovered.<br/>Check server connectivity.
+              </div>
+              <div v-else class="space-y-0.5 px-2">
+                <label
+                  v-for="tool in availableTools"
+                  :key="tool.toolName"
+                  class="flex items-start gap-2.5 px-2 py-2 rounded-md hover:bg-slate-50 cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    :checked="selectedTools.has(tool.toolName)"
+                    class="w-3.5 h-3.5 mt-0.5 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer shrink-0"
+                    @change="toggleToolSelection(tool.toolName)"
+                  />
+                  <div class="min-w-0">
+                    <p class="text-xs font-mono font-medium text-slate-700 truncate">{{ tool.toolName }}</p>
+                    <p v-if="tool.description" class="text-xs text-slate-400 mt-0.5 line-clamp-2">{{ tool.description }}</p>
+                  </div>
+                </label>
+              </div>
+            </div>
 
-        <!-- Footer -->
-        <div class="px-6 py-4 border-t border-slate-200 shrink-0">
-          <button
-            class="w-full px-4 py-2.5 rounded-lg bg-slate-800 text-white text-sm font-medium hover:bg-slate-700 transition-colors"
-            @click="closeAssocModal"
-          >
-            Done
-          </button>
+            <!-- Panel footer -->
+            <div class="px-4 py-3 border-t border-slate-200 shrink-0 space-y-2">
+              <div class="flex gap-2">
+                <button
+                  class="flex-1 text-xs px-2 py-1.5 rounded border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors"
+                  @click="selectAllTools"
+                >All</button>
+                <button
+                  class="flex-1 text-xs px-2 py-1.5 rounded border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors"
+                  @click="clearAllTools"
+                >None</button>
+              </div>
+              <button
+                :disabled="toolsSaving"
+                class="w-full px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-semibold transition-colors"
+                @click="saveToolSelection"
+              >
+                {{ toolsSaving ? 'Saving...' : `Save (${selectedTools.size} selected)` }}
+              </button>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>

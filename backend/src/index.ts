@@ -75,7 +75,11 @@ async function startServers() {
 	// Initialize Passport
 	apiApp.use(passport.initialize());
 
-	mcpApp.use(cors());
+  mcpApp.use(cors({
+    origin: '*', // Or your specific domain
+    allowedHeaders: ['Content-Type', 'mcp-session-id'],
+    exposedHeaders: ['mcp-session-id'] // Crucial for the client to see the ID
+  }));
 	mcpApp.use(express.json());
 	// Logging middleware
 
@@ -89,7 +93,17 @@ async function startServers() {
 
 	// MCP Routes (MCP Server con OAuth)
 	mcpApp.use("/mcp", registerMCPRoutes(mcpOAuthService));
-	// mcpApp.use(registerMCPOauthRoutes(mcpOAuthService));
+
+	// Well-known discovery on MCP server so clients can find the auth server
+	mcpApp.get("/.well-known/oauth-protected-resource", (req, res) => {
+		const apiBase = `${req.protocol}://${req.hostname}:${API_PORT}`;
+		const mcpBase = `${req.protocol}://${req.hostname}:${MCP_PORT}`;
+		res.json(mcpOAuthService.getProtectedResourceMetadata(mcpBase, apiBase));
+	});
+	mcpApp.get("/.well-known/oauth-authorization-server", (req, res) => {
+		const apiBase = `${req.protocol}://${req.hostname}:${API_PORT}`;
+		res.json(mcpOAuthService.getAuthorizationServerMetadata(apiBase));
+	});
 
 	// ==========================================
 	// 6. Serve Static UI (Only on API Server)

@@ -22,7 +22,7 @@ export default defineConfig((env) => {
     server: {
       proxy: {
         '/api': {
-          target:  envars.VITE_SERVER_URL,
+          target: envars.VITE_SERVER_URL,
           changeOrigin: true,
         },
       },

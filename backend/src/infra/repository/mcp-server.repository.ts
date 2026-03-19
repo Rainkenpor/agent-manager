@@ -1,6 +1,6 @@
 import { db } from "@infra/db/database.js"
-import { mcpServers, roleMcps, roleAgents, agents } from "@infra/db/schema.js"
-import { eq } from "drizzle-orm"
+import { mcpServers, roleMcps, roleAgents, roleMcpTools, agents } from "@infra/db/schema.js"
+import { and, eq } from "drizzle-orm"
 import { v4 as uuidv4 } from "uuid"
 import type { IMcpServerRepository } from "@domain/repositories/mcp-server.repository.js"
 import type { McpServerEntity, CreateMcpServer, UpdateMcpServer } from "@domain/entities/mcp-server.entity.js"
@@ -130,5 +130,31 @@ export class McpServerRepository implements IMcpServerRepository {
       }
     }
     return results
+  }
+
+  async getRoleMcpTools(roleId: string, mcpServerId: string): Promise<string[]> {
+    const rows = await db.select().from(roleMcpTools).where(
+      and(eq(roleMcpTools.roleId, roleId), eq(roleMcpTools.mcpServerId, mcpServerId))
+    )
+    return rows.map(r => r.toolName)
+  }
+
+  async setRoleMcpTools(roleId: string, mcpServerId: string, toolNames: string[]): Promise<void> {
+    // Delete existing selections for this role+server
+    await db.delete(roleMcpTools).where(
+      and(eq(roleMcpTools.roleId, roleId), eq(roleMcpTools.mcpServerId, mcpServerId))
+    )
+    // Insert new selections
+    if (toolNames.length > 0) {
+      await db.insert(roleMcpTools).values(
+        toolNames.map(toolName => ({
+          id: uuidv4(),
+          roleId,
+          mcpServerId,
+          toolName,
+          assignedAt: new Date().toISOString(),
+        }))
+      )
+    }
   }
 }

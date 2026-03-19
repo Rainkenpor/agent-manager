@@ -147,6 +147,49 @@ export const roleAgents = sqliteTable("role_agents", {
 	assignedAt: text("assigned_at").notNull().$defaultFn(() => new Date().toISOString()),
 });
 
+// Role ↔ MCP Tools (granular tool selection per role+server)
+export const roleMcpTools = sqliteTable("role_mcp_tools", {
+	id: text("id").primaryKey(),
+	roleId: text("role_id").notNull().references(() => roles.id, { onDelete: "cascade" }),
+	mcpServerId: text("mcp_server_id").notNull().references(() => mcpServers.id, { onDelete: "cascade" }),
+	toolName: text("tool_name").notNull(), // e.g. "create_issue", "search_issues"
+	assignedAt: text("assigned_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
+// OAuth Clients (persistent client registry)
+export const oauthClients = sqliteTable("oauth_clients", {
+	id: text("id").primaryKey(),                        // client_id
+	secret: text("secret"),                             // client_secret (null = public client)
+	name: text("name").notNull(),                       // client_name
+	redirectUris: text("redirect_uris", { mode: "json" }).$type<string[]>().notNull(),
+	grantTypes: text("grant_types", { mode: "json" }).$type<string[]>().notNull(),
+	scope: text("scope"),
+	createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
+// OAuth Authorization Codes (short-lived)
+export const oauthCodes = sqliteTable("oauth_codes", {
+	code: text("code").primaryKey(),
+	clientId: text("client_id").notNull().references(() => oauthClients.id, { onDelete: "cascade" }),
+	userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+	redirectUri: text("redirect_uri").notNull(),
+	scope: text("scope"),
+	codeChallenge: text("code_challenge"),
+	codeChallengeMethod: text("code_challenge_method"),
+	expiresAt: text("expires_at").notNull(),
+	createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
+// OAuth Refresh Tokens
+export const oauthRefreshTokens = sqliteTable("oauth_refresh_tokens", {
+	token: text("token").primaryKey(),
+	clientId: text("client_id").notNull().references(() => oauthClients.id, { onDelete: "cascade" }),
+	userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+	scope: text("scope"),
+	expiresAt: text("expires_at").notNull(),
+	createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
 // Tipos inferidos
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -166,3 +209,9 @@ export type McpServer = typeof mcpServers.$inferSelect;
 export type NewMcpServer = typeof mcpServers.$inferInsert;
 export type RoleMcp = typeof roleMcps.$inferSelect;
 export type RoleAgent = typeof roleAgents.$inferSelect;
+export type RoleMcpTool = typeof roleMcpTools.$inferSelect;
+export type NewRoleMcpTool = typeof roleMcpTools.$inferInsert;
+export type OAuthClient = typeof oauthClients.$inferSelect;
+export type NewOAuthClient = typeof oauthClients.$inferInsert;
+export type OAuthCode = typeof oauthCodes.$inferSelect;
+export type OAuthRefreshToken = typeof oauthRefreshTokens.$inferSelect;
