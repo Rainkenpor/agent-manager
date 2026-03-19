@@ -15,6 +15,13 @@
       "when": 1773875972001,
       "tag": "0001_rainy_bushwacker",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1773877759245,
+      "tag": "0002_reflective_lester",
+      "breakpoints": true
     }
   ]
 }

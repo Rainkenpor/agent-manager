@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import AppLayout from '@/components/AppLayout.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { useToastStore } from '@/store/useToast'
 import * as api from '@/api/api'
-import type { Role, Permission } from '@/types/types'
+import type { Role, McpServer, Agent } from '@/types/types'
 
 const toast = useToastStore()
 
@@ -21,17 +21,25 @@ const saving = ref(false)
 const deleteTarget = ref<Role | null>(null)
 const deleting = ref(false)
 
-// Permissions modal
-const permsModalRole = ref<Role | null>(null)
-const permsModalRoleDetail = ref<Role | null>(null)
-const allPermissions = ref<Permission[]>([])
-const togglingPerm = ref<string | null>(null)
+// Role associations modal
+const assocModalRole = ref<Role | null>(null)
+const assocTab = ref<'mcps' | 'agents'>('mcps')
+const assocLoading = ref(false)
+
+// Available items
+const allMcps = ref<McpServer[]>([])
+const allAgents = ref<Agent[]>([])
+
+// Assigned items for selected role
+const assignedMcps = ref<McpServer[]>([])
+const assignedAgents = ref<Array<{ id: string; name: string; slug: string; mode: string }>>([])
+
+const toggling = ref<string | null>(null)
 
 async function fetchData() {
   loading.value = true
   try {
-    const data = await api.getRoles()
-    roles.value = data
+    roles.value = await api.getRoles()
   } catch (e: any) {
     toast.error(e.message ?? 'Failed to load roles')
   } finally {
@@ -40,6 +48,8 @@ async function fetchData() {
 }
 
 onMounted(fetchData)
+
+// ── Role CRUD ──────────────────────────────────────────────────────────────
 
 function openCreate() {
   editingRole.value = null
@@ -100,72 +110,85 @@ async function doDelete() {
   }
 }
 
-async function openPermsModal(role: Role) {
-  permsModalRole.value = role
-  permsModalRoleDetail.value = null
-  allPermissions.value = []
+// ── Associations modal ─────────────────────────────────────────────────────
+
+async function openAssocModal(role: Role) {
+  assocModalRole.value = role
+  assocTab.value = 'mcps'
+  assocLoading.value = true
+  assignedMcps.value = []
+  assignedAgents.value = []
   try {
-    const detail = await api.getRoleById(role.id)
-    permsModalRoleDetail.value = detail
-
-    // Collect all known permissions across all roles
-    const allRoles = await api.getRoles()
-    const permsMap = new Map<string, Permission>()
-    for (const r of allRoles) {
-      const rd = await api.getRoleById(r.id)
-      for (const p of (rd.permissions ?? [])) {
-        permsMap.set(p.id, p)
-      }
-    }
-    // Also add assigned perms from current role
-    for (const p of (detail.permissions ?? [])) {
-      permsMap.set(p.id, p)
-    }
-    allPermissions.value = Array.from(permsMap.values())
+    const [mcpsRes, agentsRes, mcpAssignedRes, agentAssignedRes] = await Promise.all([
+      api.getMcpServers(),
+      api.getAgents(),
+      api.getRoleMcps(role.id),
+      api.getRoleAgents(role.id),
+    ])
+    allMcps.value = mcpsRes.data ?? (mcpsRes as any)
+    allAgents.value = agentsRes.data ?? (agentsRes as any)
+    assignedMcps.value = mcpAssignedRes.data ?? (mcpAssignedRes as any)
+    assignedAgents.value = agentAssignedRes.data ?? (agentAssignedRes as any)
   } catch (e: any) {
-    toast.error(e.message ?? 'Failed to load permissions')
-  }
-}
-
-function closePermsModal() {
-  permsModalRole.value = null
-  permsModalRoleDetail.value = null
-}
-
-function roleHasPerm(permId: string): boolean {
-  return (permsModalRoleDetail.value?.permissions ?? []).some((p: Permission) => p.id === permId)
-}
-
-async function togglePerm(permId: string) {
-  if (!permsModalRole.value) return
-  togglingPerm.value = permId
-  try {
-    if (roleHasPerm(permId)) {
-      await api.removePermission(permsModalRole.value.id, permId)
-      toast.success('Permission removed')
-    } else {
-      await api.assignPermission(permsModalRole.value.id, permId)
-      toast.success('Permission assigned')
-    }
-    const detail = await api.getRoleById(permsModalRole.value.id)
-    permsModalRoleDetail.value = detail
-    await fetchData()
-  } catch (e: any) {
-    toast.error(e.message ?? 'Failed to update permission')
+    toast.error(e.message ?? 'Failed to load associations')
   } finally {
-    togglingPerm.value = null
+    assocLoading.value = false
   }
 }
 
-// Group permissions by resource
-const groupedPermissions = computed(() => {
-  const groups: Record<string, Permission[]> = {}
-  for (const p of allPermissions.value) {
-    if (!groups[p.resource]) groups[p.resource] = []
-    groups[p.resource].push(p)
+function closeAssocModal() {
+  assocModalRole.value = null
+}
+
+function hasMcp(mcpId: string): boolean {
+  return assignedMcps.value.some((m) => m.id === mcpId)
+}
+
+function hasAgent(agentId: string): boolean {
+  return assignedAgents.value.some((a) => a.id === agentId)
+}
+
+async function toggleMcp(mcpId: string) {
+  if (!assocModalRole.value) return
+  toggling.value = mcpId
+  try {
+    if (hasMcp(mcpId)) {
+      await api.removeMcpFromRole(assocModalRole.value.id, mcpId)
+      assignedMcps.value = assignedMcps.value.filter((m) => m.id !== mcpId)
+      toast.success('MCP removed from role')
+    } else {
+      await api.assignMcpToRole(assocModalRole.value.id, mcpId)
+      const mcp = allMcps.value.find((m) => m.id === mcpId)
+      if (mcp) assignedMcps.value.push(mcp)
+      toast.success('MCP assigned to role')
+    }
+  } catch (e: any) {
+    toast.error(e.message ?? 'Failed to update MCP')
+  } finally {
+    toggling.value = null
   }
-  return groups
-})
+}
+
+async function toggleAgent(agentId: string) {
+  if (!assocModalRole.value) return
+  toggling.value = agentId
+  try {
+    if (hasAgent(agentId)) {
+      await api.removeAgentFromRole(assocModalRole.value.id, agentId)
+      assignedAgents.value = assignedAgents.value.filter((a) => a.id !== agentId)
+      toast.success('Agent removed from role')
+    } else {
+      await api.assignAgentToRole(assocModalRole.value.id, agentId)
+      const agent = allAgents.value.find((a) => a.id === agentId)
+      if (agent) assignedAgents.value.push({ id: agent.id, name: agent.name, slug: agent.slug, mode: agent.mode })
+      toast.success('Agent assigned to role')
+    }
+  } catch (e: any) {
+    toast.error(e.message ?? 'Failed to update agent')
+  } finally {
+    toggling.value = null
+  }
+}
 </script>
 
 <template>
@@ -175,7 +198,7 @@ const groupedPermissions = computed(() => {
       <div class="flex items-center justify-between mb-8">
         <div>
           <h1 class="text-2xl font-bold text-slate-800">Roles</h1>
-          <p class="text-slate-500 text-sm mt-0.5">Manage roles and permission assignments</p>
+          <p class="text-slate-500 text-sm mt-0.5">Manage roles, MCP servers and agent assignments</p>
         </div>
         <button
           class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm"
@@ -203,7 +226,6 @@ const groupedPermissions = computed(() => {
             <tr class="border-b border-slate-200 bg-slate-50">
               <th class="text-left px-6 py-3.5 font-semibold text-slate-600">Name</th>
               <th class="text-left px-6 py-3.5 font-semibold text-slate-600">Description</th>
-              <th class="text-left px-6 py-3.5 font-semibold text-slate-600">Permissions</th>
               <th class="text-left px-6 py-3.5 font-semibold text-slate-600">Status</th>
               <th class="text-right px-6 py-3.5 font-semibold text-slate-600">Actions</th>
             </tr>
@@ -213,15 +235,12 @@ const groupedPermissions = computed(() => {
               v-for="role in roles"
               :key="role.id"
               class="hover:bg-slate-50 transition-colors cursor-pointer"
-              @click="openPermsModal(role)"
+              @click="openAssocModal(role)"
             >
-              <td class="px-6 py-4 font-medium text-slate-800">{{ role.name }}</td>
-              <td class="px-6 py-4 text-slate-500">{{ role.description || '—' }}</td>
               <td class="px-6 py-4">
-                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-violet-100 text-violet-700">
-                  {{ (role.permissions ?? []).length }} permission{{ (role.permissions ?? []).length !== 1 ? 's' : '' }}
-                </span>
+                <span class="font-medium text-slate-800">{{ role.name }}</span>
               </td>
+              <td class="px-6 py-4 text-slate-500">{{ role.description || '—' }}</td>
               <td class="px-6 py-4">
                 <span
                   class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
@@ -256,14 +275,14 @@ const groupedPermissions = computed(() => {
               </td>
             </tr>
             <tr v-if="!roles.length">
-              <td colspan="5" class="px-6 py-12 text-center text-slate-400">No roles found</td>
+              <td colspan="4" class="px-6 py-12 text-center text-slate-400">No roles found</td>
             </tr>
           </tbody>
         </table>
       </div>
     </div>
 
-    <!-- Role Create/Edit Modal -->
+    <!-- Role Create / Edit Modal -->
     <div v-if="showRoleModal" class="fixed inset-0 z-40 flex items-center justify-center">
       <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="closeRoleModal" />
       <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
@@ -279,15 +298,17 @@ const groupedPermissions = computed(() => {
           <div>
             <label class="block text-sm font-medium text-slate-700 mb-1.5">Name <span class="text-red-500">*</span></label>
             <input v-model="roleForm.name" type="text" placeholder="Role name" required
-              class="w-full px-3 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
+              class="w-full px-3 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
           </div>
           <div>
             <label class="block text-sm font-medium text-slate-700 mb-1.5">Description</label>
             <textarea v-model="roleForm.description" placeholder="Optional description" rows="3"
-              class="w-full px-3 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none" />
+              class="w-full px-3 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none" />
           </div>
           <div class="flex gap-3 pt-2">
-            <button type="button" class="flex-1 px-4 py-2.5 rounded-lg border border-slate-300 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors" @click="closeRoleModal">
+            <button type="button"
+              class="flex-1 px-4 py-2.5 rounded-lg border border-slate-300 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+              @click="closeRoleModal">
               Cancel
             </button>
             <button type="submit" :disabled="saving"
@@ -299,67 +320,199 @@ const groupedPermissions = computed(() => {
       </div>
     </div>
 
-    <!-- Permissions Modal -->
-    <div v-if="permsModalRole" class="fixed inset-0 z-40 flex items-center justify-center">
-      <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="closePermsModal" />
-      <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden flex flex-col max-h-[80vh]">
+    <!-- Associations Modal (MCPs + Agents) -->
+    <div v-if="assocModalRole" class="fixed inset-0 z-40 flex items-center justify-center">
+      <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="closeAssocModal" />
+      <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 flex flex-col max-h-[85vh] overflow-hidden">
+
+        <!-- Header -->
         <div class="px-6 py-5 border-b border-slate-200 flex items-center justify-between shrink-0">
           <div>
-            <h2 class="text-lg font-semibold text-slate-800">Manage Permissions</h2>
-            <p class="text-sm text-slate-500">{{ permsModalRole.name }}</p>
+            <h2 class="text-lg font-semibold text-slate-800">{{ assocModalRole.name }}</h2>
+            <p class="text-sm text-slate-500">Manage MCP servers and agents</p>
           </div>
-          <button class="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition" @click="closePermsModal">
+          <button class="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition" @click="closeAssocModal">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
+        <!-- Tabs -->
+        <div class="flex border-b border-slate-200 shrink-0 px-6">
+          <button
+            class="px-4 py-3 text-sm font-medium border-b-2 transition-colors"
+            :class="assocTab === 'mcps'
+              ? 'border-indigo-600 text-indigo-600'
+              : 'border-transparent text-slate-500 hover:text-slate-700'"
+            @click="assocTab = 'mcps'"
+          >
+            <span class="flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+              MCP Servers
+              <span class="bg-blue-100 text-blue-700 text-xs font-semibold px-1.5 py-0.5 rounded-full">
+                {{ assignedMcps.length }}
+              </span>
+            </span>
+          </button>
+          <button
+            class="px-4 py-3 text-sm font-medium border-b-2 transition-colors"
+            :class="assocTab === 'agents'
+              ? 'border-indigo-600 text-indigo-600'
+              : 'border-transparent text-slate-500 hover:text-slate-700'"
+            @click="assocTab = 'agents'"
+          >
+            <span class="flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2h-2" />
+              </svg>
+              Agents
+              <span class="bg-violet-100 text-violet-700 text-xs font-semibold px-1.5 py-0.5 rounded-full">
+                {{ assignedAgents.length }}
+              </span>
+            </span>
+          </button>
+        </div>
+
+        <!-- Content -->
         <div class="flex-1 overflow-y-auto px-6 py-5">
-          <div v-if="!permsModalRoleDetail" class="flex justify-center py-8">
+
+          <!-- Loading -->
+          <div v-if="assocLoading" class="flex justify-center py-10">
             <svg class="animate-spin h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
             </svg>
           </div>
-          <div v-else-if="!allPermissions.length" class="text-center text-slate-400 py-8 text-sm">
-            No permissions available in the system
-          </div>
-          <div v-else class="space-y-4">
-            <div v-for="(perms, resource) in groupedPermissions" :key="resource">
-              <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">{{ resource }}</h3>
-              <div class="space-y-1">
-                <div
-                  v-for="perm in perms"
-                  :key="perm.id"
-                  class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"
-                  @click="togglePerm(perm.id)"
-                >
-                  <input
-                    type="checkbox"
-                    :checked="roleHasPerm(perm.id)"
-                    :disabled="togglingPerm === perm.id"
-                    class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
-                    @click.stop
-                    @change="togglePerm(perm.id)"
-                  />
-                  <div class="flex-1">
-                    <span class="text-sm font-medium text-slate-700">{{ perm.action }}</span>
-                    <span v-if="perm.description" class="text-xs text-slate-400 block">{{ perm.description }}</span>
-                  </div>
-                  <span class="text-xs text-slate-400 font-mono">{{ resource }}:{{ perm.action }}</span>
-                  <svg v-if="togglingPerm === perm.id" class="animate-spin h-4 w-4 text-indigo-400 shrink-0" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                  </svg>
-                </div>
-              </div>
+
+          <!-- MCPs tab -->
+          <div v-else-if="assocTab === 'mcps'" class="space-y-2">
+            <div v-if="!allMcps.length" class="text-center text-slate-400 py-10 text-sm">
+              No MCP servers configured.
+              <RouterLink to="/mcps" class="text-indigo-600 hover:underline ml-1" @click="closeAssocModal">
+                Add some first.
+              </RouterLink>
             </div>
+            <div
+              v-for="mcp in allMcps"
+              :key="mcp.id"
+              class="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer border border-transparent"
+              :class="hasMcp(mcp.id) ? 'border-blue-200 bg-blue-50/50' : ''"
+              @click="toggleMcp(mcp.id)"
+            >
+              <input
+                type="checkbox"
+                :checked="hasMcp(mcp.id)"
+                :disabled="toggling === mcp.id"
+                class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                @click.stop
+                @change="toggleMcp(mcp.id)"
+              />
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2">
+                  <p class="text-sm font-medium text-slate-800">{{ mcp.displayName || mcp.name }}</p>
+                  <span
+                    class="px-1.5 py-0.5 rounded text-xs font-medium"
+                    :class="mcp.type === 'http' ? 'bg-blue-100 text-blue-600' : 'bg-amber-100 text-amber-600'"
+                  >{{ mcp.type }}</span>
+                  <span v-if="!mcp.active" class="px-1.5 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-400">inactive</span>
+                </div>
+                <p v-if="mcp.description" class="text-xs text-slate-400 mt-0.5 truncate">{{ mcp.description }}</p>
+                <p v-else-if="mcp.url" class="text-xs text-slate-400 mt-0.5 font-mono truncate">{{ mcp.url }}</p>
+              </div>
+              <svg v-if="toggling === mcp.id" class="animate-spin h-4 w-4 text-indigo-400 shrink-0" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+              </svg>
+            </div>
+          </div>
+
+          <!-- Agents tab -->
+          <div v-else class="space-y-2">
+            <div v-if="!allAgents.length" class="text-center text-slate-400 py-10 text-sm">
+              No agents configured.
+              <RouterLink to="/agents" class="text-indigo-600 hover:underline ml-1" @click="closeAssocModal">
+                Create some first.
+              </RouterLink>
+            </div>
+
+            <!-- Primary agents section -->
+            <template v-if="allAgents.some(a => a.mode === 'primary')">
+              <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Primary Agents</p>
+              <div
+                v-for="agent in allAgents.filter(a => a.mode === 'primary')"
+                :key="agent.id"
+                class="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer border border-transparent"
+                :class="hasAgent(agent.id) ? 'border-violet-200 bg-violet-50/50' : ''"
+                @click="toggleAgent(agent.id)"
+              >
+                <input
+                  type="checkbox"
+                  :checked="hasAgent(agent.id)"
+                  :disabled="toggling === agent.id"
+                  class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                  @click.stop
+                  @change="toggleAgent(agent.id)"
+                />
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2">
+                    <p class="text-sm font-medium text-slate-800">{{ agent.name }}</p>
+                    <span class="px-1.5 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-600">primary</span>
+                    <span v-if="!agent.isActive" class="px-1.5 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-400">inactive</span>
+                  </div>
+                  <p class="text-xs text-slate-400 font-mono mt-0.5">{{ agent.slug }}</p>
+                </div>
+                <svg v-if="toggling === agent.id" class="animate-spin h-4 w-4 text-indigo-400 shrink-0" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                </svg>
+              </div>
+            </template>
+
+            <!-- Subagents section -->
+            <template v-if="allAgents.some(a => a.mode === 'subagent')">
+              <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mt-4 mb-2">Subagents</p>
+              <div
+                v-for="agent in allAgents.filter(a => a.mode === 'subagent')"
+                :key="agent.id"
+                class="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer border border-transparent"
+                :class="hasAgent(agent.id) ? 'border-violet-200 bg-violet-50/50' : ''"
+                @click="toggleAgent(agent.id)"
+              >
+                <input
+                  type="checkbox"
+                  :checked="hasAgent(agent.id)"
+                  :disabled="toggling === agent.id"
+                  class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                  @click.stop
+                  @change="toggleAgent(agent.id)"
+                />
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2">
+                    <p class="text-sm font-medium text-slate-800">{{ agent.name }}</p>
+                    <span class="px-1.5 py-0.5 rounded text-xs font-medium bg-violet-100 text-violet-600">subagent</span>
+                  </div>
+                  <p class="text-xs text-slate-400 font-mono mt-0.5">{{ agent.slug }}</p>
+                </div>
+                <svg v-if="toggling === agent.id" class="animate-spin h-4 w-4 text-indigo-400 shrink-0" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                </svg>
+              </div>
+            </template>
           </div>
         </div>
 
+        <!-- Footer -->
         <div class="px-6 py-4 border-t border-slate-200 shrink-0">
-          <button class="w-full px-4 py-2.5 rounded-lg bg-slate-800 text-white text-sm font-medium hover:bg-slate-700 transition-colors" @click="closePermsModal">
+          <button
+            class="w-full px-4 py-2.5 rounded-lg bg-slate-800 text-white text-sm font-medium hover:bg-slate-700 transition-colors"
+            @click="closeAssocModal"
+          >
             Done
           </button>
         </div>

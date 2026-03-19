@@ -115,6 +115,38 @@ export const agentSubagents = sqliteTable("agent_subagents", {
 		.$defaultFn(() => new Date().toISOString()),
 });
 
+// MCP Servers table — defines available external MCP servers
+export const mcpServers = sqliteTable("mcp_servers", {
+	id: text("id").primaryKey(),
+	name: text("name").notNull().unique(),         // identifier, e.g. "atlassian"
+	displayName: text("display_name"),             // human-readable name
+	description: text("description"),
+	type: text("type", { enum: ["http", "stdio"] }).notNull().default("http"),
+	url: text("url"),                              // for type="http"
+	command: text("command"),                      // for type="stdio"
+	args: text("args", { mode: "json" }).$type<string[]>(),  // for type="stdio"
+	headers: text("headers", { mode: "json" }).$type<Record<string, string>>(),
+	active: integer("active", { mode: "boolean" }).notNull().default(true),
+	createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+	updatedAt: text("updated_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
+// Role ↔ MCP Servers (many-to-many)
+export const roleMcps = sqliteTable("role_mcps", {
+	id: text("id").primaryKey(),
+	roleId: text("role_id").notNull().references(() => roles.id, { onDelete: "cascade" }),
+	mcpServerId: text("mcp_server_id").notNull().references(() => mcpServers.id, { onDelete: "cascade" }),
+	assignedAt: text("assigned_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
+// Role ↔ Agents (many-to-many)
+export const roleAgents = sqliteTable("role_agents", {
+	id: text("id").primaryKey(),
+	roleId: text("role_id").notNull().references(() => roles.id, { onDelete: "cascade" }),
+	agentId: text("agent_id").notNull().references(() => agents.id, { onDelete: "cascade" }),
+	assignedAt: text("assigned_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
 // Tipos inferidos
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -130,3 +162,7 @@ export type Agent = typeof agents.$inferSelect;
 export type NewAgent = typeof agents.$inferInsert;
 export type AgentSubagent = typeof agentSubagents.$inferSelect;
 export type NewAgentSubagent = typeof agentSubagents.$inferInsert;
+export type McpServer = typeof mcpServers.$inferSelect;
+export type NewMcpServer = typeof mcpServers.$inferInsert;
+export type RoleMcp = typeof roleMcps.$inferSelect;
+export type RoleAgent = typeof roleAgents.$inferSelect;

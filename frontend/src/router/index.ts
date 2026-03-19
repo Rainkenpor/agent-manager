@@ -32,6 +32,12 @@ const router = createRouter({
       component: () => import('@/views/AgentsView.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      path: '/mcps',
+      name: 'mcps',
+      component: () => import('@/views/McpServersView.vue'),
+      meta: { requiresAuth: true },
+    },
   ],
 })
 

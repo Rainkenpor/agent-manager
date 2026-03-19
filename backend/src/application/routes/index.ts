@@ -2,6 +2,7 @@ import { registerAgentRoutes } from "./agent.route.js";
 import { registerAuthRoutes } from "./auth.route.js";
 import { registerUserRoutes } from "./user.route.js";
 import { registerRoleRoutes } from "./role.route.js";
+import { registerMcpServerRoutes } from "./mcp-server.route.js";
 import { registry } from "@applicationService/registry.service.js";
 
 /**
@@ -13,6 +14,7 @@ export function initializeRegistry(): void {
 	registerUserRoutes();
 	registerRoleRoutes();
 	registerAgentRoutes();
+	registerMcpServerRoutes();
 	// console.log(
 	// 	`📝 Registry initialized with ${registry.getRoutes().length} routes`,
 	// );

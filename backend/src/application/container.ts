@@ -3,6 +3,7 @@ import type {
 	IRoleRepository,
 	IPermissionRepository,
 	IAgentRepository,
+	IMcpServerRepository,
 } from "@domain/repositories/index.js";
 
 import {
@@ -10,6 +11,7 @@ import {
 	UserRepository,
 	RoleRepository,
 	PermissionRepository,
+	McpServerRepository,
 } from "@infra/repository/index.js";
 
 import {
@@ -52,12 +54,16 @@ export class Container {
 	private _updateAgentUseCase?: UpdateAgentUseCase;
 	private _deleteAgentUseCase?: DeleteAgentUseCase;
 
+	// MCP Server Repository
+	private _mcpServerRepository: IMcpServerRepository;
+
 	constructor() {
 		// Initialize repositories with concrete implementations
 		this._userRepository = new UserRepository();
 		this._roleRepository = new RoleRepository();
 		this._permissionRepository = new PermissionRepository();
 		this._agentRepository = new AgentRepository();
+		this._mcpServerRepository = new McpServerRepository();
 	}
 
 	// ==========================================
@@ -74,6 +80,10 @@ export class Container {
 
 	get permissionRepository(): IPermissionRepository {
 		return this._permissionRepository;
+	}
+
+	get mcpServerRepository(): IMcpServerRepository {
+		return this._mcpServerRepository;
 	}
 
 	// ==========================================

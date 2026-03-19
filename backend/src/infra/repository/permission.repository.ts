@@ -344,6 +344,26 @@ export class PermissionRepository implements IPermissionRepository {
 				description: "Actualizar agentes",
 				createdAt: new Date().toISOString(),
 			},
+      {
+        id: randomUUID(),
+        resource: "mcp_servers",
+        action: "create",
+        description: "Crear servidores MCP",
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: randomUUID(),
+        resource: "mcp_servers",
+        action: "update",
+        description: "Actualizar servidores MCP",
+        createdAt: new Date().toISOString(),
+      },{
+        id: randomUUID(),        
+        resource: "mcp_servers",
+        action: "delete",
+        description: "Eliminar servidores MCP",
+        createdAt: new Date().toISOString(),
+      }
 		];
 
 		// Usar upsert para cada permiso

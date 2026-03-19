@@ -10,6 +10,7 @@ const navLinks = [
   { to: '/users', label: 'Users', icon: 'U' },
   { to: '/roles', label: 'Roles', icon: 'R' },
   { to: '/agents', label: 'Agents', icon: 'A' },
+  { to: '/mcps', label: 'MCP Servers', icon: 'M' },
 ]
 
 function logout() {

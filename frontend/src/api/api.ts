@@ -46,6 +46,23 @@ export const deleteRole = (id: string) => request<any>(`/roles/${id}`, { method:
 export const assignPermission = (roleId: string, permissionId: string) => request<any>(`/roles/${roleId}/permissions/${permissionId}`, { method: 'POST' })
 export const removePermission = (roleId: string, permissionId: string) => request<any>(`/roles/${roleId}/permissions/${permissionId}`, { method: 'DELETE' })
 
+// MCP Servers
+export const getMcpServers = () => request<{ success: boolean; data: any[] }>('/mcp-servers')
+export const getMcpServerById = (id: string) => request<any>(`/mcp-servers/${id}`)
+export const createMcpServer = (data: any) => request<any>('/mcp-servers', { method: 'POST', body: JSON.stringify(data) })
+export const updateMcpServer = (id: string, data: any) => request<any>(`/mcp-servers/${id}`, { method: 'PUT', body: JSON.stringify(data) })
+export const deleteMcpServer = (id: string) => request<any>(`/mcp-servers/${id}`, { method: 'DELETE' })
+
+// Role ↔ MCPs
+export const getRoleMcps = (roleId: string) => request<{ success: boolean; data: any[] }>(`/roles/${roleId}/mcps`)
+export const assignMcpToRole = (roleId: string, mcpServerId: string) => request<any>(`/roles/${roleId}/mcps/${mcpServerId}`, { method: 'POST' })
+export const removeMcpFromRole = (roleId: string, mcpServerId: string) => request<any>(`/roles/${roleId}/mcps/${mcpServerId}`, { method: 'DELETE' })
+
+// Role ↔ Agents
+export const getRoleAgents = (roleId: string) => request<{ success: boolean; data: any[] }>(`/roles/${roleId}/agents`)
+export const assignAgentToRole = (roleId: string, agentId: string) => request<any>(`/roles/${roleId}/agents/${agentId}`, { method: 'POST' })
+export const removeAgentFromRole = (roleId: string, agentId: string) => request<any>(`/roles/${roleId}/agents/${agentId}`, { method: 'DELETE' })
+
 // Agents
 export const getAgents = () => request<{ success: boolean; data: any[] }>('/agents')
 export const getAgentById = (id: string) => request<any>(`/agents/${id}`)
