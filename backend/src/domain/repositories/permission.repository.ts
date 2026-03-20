@@ -12,7 +12,4 @@ export interface IPermissionRepository {
 	): Promise<Permission | null>;
 	findAll(): Promise<Permission[]>;
 	delete(id: string): Promise<void>;
-
-	// Semillas para permisos comunes
-	seedDefaultPermissions(): Promise<void>;
 }

@@ -1,4 +1,194 @@
+import { randomUUID } from "node:crypto";
 import { container } from "../../application/container.js";
+import { permissions, type NewPermission } from "./schema.js";
+import { db } from "./database.js";
+import { and, eq } from "drizzle-orm";
+
+// Semillas para permisos comunes
+async function seedDefaultPermissions() {
+	const defaultPermissions: NewPermission[] = [
+		// Usuarios
+		{
+			id: randomUUID(),
+			resource: "users",
+			action: "create",
+			description: "Crear usuarios",
+			createdAt: new Date().toISOString(),
+		},
+		{
+			id: randomUUID(),
+			resource: "users",
+			action: "read",
+			description: "Ver usuarios",
+			createdAt: new Date().toISOString(),
+		},
+		{
+			id: randomUUID(),
+			resource: "users",
+			action: "update",
+			description: "Actualizar usuarios",
+			createdAt: new Date().toISOString(),
+		},
+		{
+			id: randomUUID(),
+			resource: "users",
+			action: "delete",
+			description: "Eliminar usuarios",
+			createdAt: new Date().toISOString(),
+		},
+		{
+			id: randomUUID(),
+			resource: "users",
+			action: "assign_role",
+			description: "Asignar roles a usuarios",
+			createdAt: new Date().toISOString(),
+		},
+
+		// Roles
+		{
+			id: randomUUID(),
+			resource: "roles",
+			action: "create",
+			description: "Crear roles",
+			createdAt: new Date().toISOString(),
+		},
+		{
+			id: randomUUID(),
+			resource: "roles",
+			action: "read",
+			description: "Ver roles",
+			createdAt: new Date().toISOString(),
+		},
+		{
+			id: randomUUID(),
+			resource: "roles",
+			action: "update",
+			description: "Actualizar roles",
+			createdAt: new Date().toISOString(),
+		},
+		{
+			id: randomUUID(),
+			resource: "roles",
+			action: "delete",
+			description: "Eliminar roles",
+			createdAt: new Date().toISOString(),
+		},
+		{
+			id: randomUUID(),
+			resource: "roles",
+			action: "assign_permission",
+			description: "Asignar permisos a roles",
+			createdAt: new Date().toISOString(),
+		},
+
+		// Permisos
+		{
+			id: randomUUID(),
+			resource: "permissions",
+			action: "create",
+			description: "Crear permisos",
+			createdAt: new Date().toISOString(),
+		},
+		{
+			id: randomUUID(),
+			resource: "permissions",
+			action: "read",
+			description: "Ver permisos",
+			createdAt: new Date().toISOString(),
+		},
+		{
+			id: randomUUID(),
+			resource: "permissions",
+			action: "delete",
+			description: "Eliminar permisos",
+			createdAt: new Date().toISOString(),
+		},
+		{
+			id: randomUUID(),
+			resource: "agents",
+			action: "create",
+			description: "Crear agentes",
+			createdAt: new Date().toISOString(),
+		},
+		{
+			id: randomUUID(),
+			resource: "agents",
+			action: "delete",
+			description: "Eliminar agentes",
+			createdAt: new Date().toISOString(),
+		},
+		{
+			id: randomUUID(),
+			resource: "agents",
+			action: "update",
+			description: "Actualizar agentes",
+			createdAt: new Date().toISOString(),
+		},
+		{
+			id: randomUUID(),
+			resource: "agents",
+			action: "read",
+			description: "Ver agentes",
+			createdAt: new Date().toISOString(),
+		},
+		{
+			id: randomUUID(),
+			resource: "mcp_servers",
+			action: "create",
+			description: "Crear servidores MCP",
+			createdAt: new Date().toISOString(),
+		},
+		{
+			id: randomUUID(),
+			resource: "mcp_servers",
+			action: "update",
+			description: "Actualizar servidores MCP",
+			createdAt: new Date().toISOString(),
+		},
+		{
+			id: randomUUID(),
+			resource: "mcp_servers",
+			action: "delete",
+			description: "Eliminar servidores MCP",
+			createdAt: new Date().toISOString(),
+		},
+		{
+			id: randomUUID(),
+			resource: "mcp_servers",
+			action: "read",
+			description: "Ver servidores MCP",
+			createdAt: new Date().toISOString(),
+		},
+	];
+
+	// Usar upsert para cada permiso
+	for (const permission of defaultPermissions) {
+		// Verificar si existe
+		const existing = await db
+			.select()
+			.from(permissions)
+			.where(
+				and(
+					eq(permissions.resource, permission.resource),
+					eq(permissions.action, permission.action),
+				),
+			);
+
+		if (existing.length === 0) {
+			// Insertar nuevo permiso
+			await db.insert(permissions).values(permission);
+		} else {
+			// Actualizar descripción si cambió
+			await db
+				.update(permissions)
+				.set({ description: permission.description })
+				.where(eq(permissions.id, existing[0].id));
+		}
+	}
+	console.log(
+		`✅ Seeded ${defaultPermissions.length} default permissions (upserted)`,
+	);
+}
 
 async function seed() {
 	console.log("🌱 Sembrando datos iniciales...\n");
@@ -6,8 +196,8 @@ async function seed() {
 	try {
 		// 1. Crear permisos por defecto
 		console.log("📜 Creando permisos...");
-    console.log('all',await container.userRepository.findAll())
-		await container.permissionRepository.seedDefaultPermissions();
+		console.log("all", await container.userRepository.findAll());
+		await seedDefaultPermissions();
 		console.log("✅ Permisos creados\n");
 
 		// 2. Crear roles

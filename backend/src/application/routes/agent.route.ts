@@ -52,6 +52,8 @@ export function registerAgentRoutes(): void {
 		method: "GET",
 		path: "/api/agents/tools",
 		inputSchema: {},
+		requiresAuth: true,
+		requiredPermission: { resource: "agents", action: "read" },
 		handler: async () => {
 			const tools = await listAvailableAgentTools();
 			return { success: true, data: tools };
@@ -63,10 +65,9 @@ export function registerAgentRoutes(): void {
 		useBy: ["server"],
 		method: "GET",
 		path: "/api/agents",
-		toolName: "list_agents",
-		toolDescription:
-			"Lista todos los agentes y subagentes definidos en el sistema, con sus herramientas y subagentes referenciados.",
 		inputSchema: getAgent.shape,
+		requiresAuth: true,
+		requiredPermission: { resource: "agents", action: "read" },
 		handler: async ({ input }) => {
 			return await container.listAgentsUseCase.execute(input);
 		},
@@ -77,10 +78,10 @@ export function registerAgentRoutes(): void {
 		useBy: ["server"],
 		method: "GET",
 		path: "/api/agents/:id",
-		toolName: "get_agent",
-		toolDescription:
-			"Obtiene el detalle completo de un agente por su ID, incluyendo sus subagentes y herramientas asignadas.",
 		inputSchema: getAgentSchema.shape,
+		requiresAuth: true,
+		requiredPermission: { resource: "agents", action: "read" },
+
 		handler: async ({ input }) => {
 			return await container.getAgentUseCase.execute(input.id);
 		},
@@ -91,11 +92,6 @@ export function registerAgentRoutes(): void {
 		useBy: ["server"],
 		method: "POST",
 		path: "/api/agents",
-		toolName: "create_agent",
-		toolDescription:
-			"Crea un nuevo agente markdown. Requiere name, slug (solo minúsculas-guiones), mode (primary|subagent). " +
-			"El campo tools es un objeto con claves siendo el nombre de la herramienta y valor booleano. " +
-			"Guarda automáticamente el archivo .md en Server/agent o Server/agent/subagents según el mode.",
 		inputSchema: createAgentSchema.shape,
 		requiresAuth: true,
 		requiredPermission: { resource: "agents", action: "create" },
@@ -112,11 +108,6 @@ export function registerAgentRoutes(): void {
 		useBy: ["server"],
 		method: "PUT",
 		path: "/api/agents/:id",
-		toolName: "update_agent",
-		toolDescription:
-			"Actualiza un agente existente. Todos los campos son opcionales excepto id. " +
-			"Si se cambia el slug, el archivo anterior se elimina y se crea uno nuevo. " +
-			"Si se cambia el mode, el archivo se mueve al directorio correspondiente.",
 		inputSchema: updateAgentSchema.shape,
 		requiresAuth: true,
 		requiredPermission: { resource: "agents", action: "update" },
@@ -133,14 +124,78 @@ export function registerAgentRoutes(): void {
 		useBy: ["server"],
 		method: "DELETE",
 		path: "/api/agents/:id",
-		toolName: "delete_agent",
-		toolDescription:
-			"Elimina un agente y su archivo .md del sistema. No elimina los subagentes referenciados, solo la relación.",
 		inputSchema: deleteAgentSchema.shape,
 		requiresAuth: true,
 		requiredPermission: { resource: "agents", action: "delete" },
 		handler: async ({ input }) => {
 			return await container.deleteAgentUseCase.execute(input.id);
+		},
+	});
+
+	// ==============================================
+	// AGENT-ROLE ASSIGNMENT ROUTES
+	// ==============================================
+	// Assign agent to role
+	registry.register({
+		useBy: ["server"],
+		method: "POST",
+		path: "/api/roles/:roleId/agents/:agentId",
+		inputSchema: z.object({ roleId: z.string(), agentId: z.string() }).shape,
+		requiresAuth: true,
+		requiredPermission: { resource: "agents", action: "update" },
+		handler: async ({ context: { req, res } }) => {
+			const { container } = await import("@application/container.js");
+			try {
+				await container.mcpServerRepository.assignAgentToRole(
+					req.params.roleId,
+					req.params.agentId,
+				);
+				return { message: "Agent assigned to role" };
+			} catch (error: any) {
+				res.status(400).json({ error: error.message });
+			}
+		},
+	});
+
+	// Remove agent from role
+	registry.register({
+		useBy: ["server"],
+		method: "DELETE",
+		path: "/api/roles/:roleId/agents/:agentId",
+		inputSchema: z.object({ roleId: z.string(), agentId: z.string() }).shape,
+		requiresAuth: true,
+		requiredPermission: { resource: "agents", action: "update" },
+		handler: async ({ context: { req, res } }) => {
+			const { container } = await import("@application/container.js");
+			try {
+				await container.mcpServerRepository.removeAgentFromRole(
+					req.params.roleId,
+					req.params.agentId,
+				);
+				return { success: true, message: "Agent removed from role" };
+			} catch (error: any) {
+				res.status(500).json({ error: error.message });
+			}
+		},
+	});
+
+	// Get agents assigned to a role
+	registry.register({
+		useBy: ["server"],
+		method: "GET",
+		path: "/api/roles/:roleId/agents",
+		inputSchema: z.object({ roleId: z.string() }).shape,
+		requiresAuth: true,
+		handler: async ({ context: { req, res } }) => {
+			const { container } = await import("@application/container.js");
+			try {
+				const agentList = await container.mcpServerRepository.getAgentsByRole(
+					req.params.roleId,
+				);
+				return { success: true, data: agentList };
+			} catch (error: any) {
+				res.status(500).json({ error: error.message });
+			}
 		},
 	});
 }
