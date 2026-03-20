@@ -1,245 +1,211 @@
-import { z } from "zod";
-import { LoginSchema, CreateUserSchema } from "@domain/entities/user.entity.js";
-import passport from "passport";
-import { registry } from "@application/services/registry.service.js";
-import { randomUUID, randomBytes, createHash } from "crypto";
-import jwt from "jsonwebtoken";
-import bcrypt from "bcryptjs";
-import NodeCache from "node-cache";
-import { envs } from "../../envs.js";
-import { JWT_SECRET } from "@infra/service/passport.service.js";
+import { z } from 'zod'
+import { LoginSchema } from '@domain/entities/user.entity.js'
+import passport from 'passport'
+import { registry } from '@application/services/registry.service.js'
+import { randomUUID, randomBytes, createHash } from 'crypto'
+import jwt from 'jsonwebtoken'
+import NodeCache from 'node-cache'
+import { envs } from '../../envs.js'
+import { JWT_SECRET } from '@infra/service/passport.service.js'
 
 // Cache para CSRF state del flujo OAuth (TTL 10 min)
-const oauthStateCache = new NodeCache({ stdTTL: 600 });
+const oauthStateCache = new NodeCache({ stdTTL: 600 })
 
 /** Genera un code_verifier aleatorio para PKCE (RFC 7636) */
 function generateCodeVerifier(): string {
-	return randomBytes(32).toString("base64url");
+	return randomBytes(32).toString('base64url')
 }
 
 /** Computa code_challenge = BASE64URL(SHA256(verifier)) */
 function generateCodeChallenge(verifier: string): string {
-	return createHash("sha256").update(verifier).digest().toString("base64url");
+	return createHash('sha256').update(verifier).digest().toString('base64url')
 }
 
 export function registerAuthRoutes() {
 	// Login
 	registry.register({
-		useBy: ["server"],
-		path: "/api/auth/login",
-		method: "POST",
+		useBy: ['server'],
+		path: '/api/auth/login',
+		method: 'POST',
 		handler: async ({ context: { req, res, next } }) => {
 			return new Promise((resolve) => {
-				passport.authenticate(
-					"local",
-					{ session: false },
-					async (err: any, user: any, info: any) => {
-						if (err) {
-							res.status(500).json({ error: "Error de autenticación" });
-							return resolve(null);
-						}
+				passport.authenticate('local', { session: false }, async (err: any, user: any, info: any) => {
+					if (err) {
+						res.status(500).json({ error: 'Error de autenticación' })
+						return resolve(null)
+					}
 
-						console.log(req.body);
+					console.log(req.body)
 
-						if (!user) {
-							res.status(401).json({
-								error: info?.message || "Credenciales inválidas",
-							});
-							return resolve(null);
-						}
+					if (!user) {
+						res.status(401).json({
+							error: info?.message || 'Credenciales inválidas'
+						})
+						return resolve(null)
+					}
 
-						try {
-							const { container } = await import("@application/container.js");
-							const loginUseCase = container.loginUseCase;
-							const result = await loginUseCase.execute(user);
+					try {
+						const { container } = await import('@application/container.js')
+						const loginUseCase = container.loginUseCase
+						const result = await loginUseCase.execute(user)
 
-							res.json(result);
-							resolve(null);
-						} catch (error: any) {
-							res.status(500).json({ error: error.message });
-							resolve(null);
-						}
-					},
-				)(req, res, next);
-			});
+						res.json(result)
+						resolve(null)
+					} catch (error: any) {
+						res.status(500).json({ error: error.message })
+						resolve(null)
+					}
+				})(req, res, next)
+			})
 		},
-		inputSchema: LoginSchema,
-	});
+		inputSchema: LoginSchema
+	})
 
 	// Obtener perfil del usuario actual
 	registry.register({
-		useBy: ["server"],
-		path: "/api/auth/me",
-		method: "GET",
+		useBy: ['server'],
+		path: '/api/auth/me',
+		method: 'GET',
 		handler: async ({ context: { req, res, next } }) => {
 			if (!req.user) {
-				return res.status(401).json({ error: "No autorizado" });
+				return res.status(401).json({ error: 'No autorizado' })
 			}
 
-			const { container } = await import("@application/container.js");
-			const userRepository = container.userRepository;
+			const { container } = await import('@application/container.js')
+			const userRepository = container.userRepository
 
 			try {
-				const roles = await userRepository.getRoles(req.user.id);
-				const permissions = await userRepository.getPermissions(req.user.id);
+				const roles = await userRepository.getRoles(req.user.id)
+				const permissions = await userRepository.getPermissions(req.user.id)
 
-				const { password, ...userWithoutPassword } = req.user;
+				const { password, ...userWithoutPassword } = req.user
 
 				return {
 					...userWithoutPassword,
 					roles,
-					permissions,
-				};
+					permissions
+				}
 			} catch (error: any) {
-				res.status(500).json({ error: error.message });
+				res.status(500).json({ error: error.message })
 			}
 		},
-		requiresAuth: true,
-	});
+		requiresAuth: true
+	})
 
 	// ==========================================
 	// Azure AD OAuth2 - Iniciar flujo
 	// ==========================================
 	registry.register({
-		useBy: ["server"],
-		path: "/api/auth/azure",
-		method: "GET",
+		useBy: ['server'],
+		path: '/api/auth/azure',
+		method: 'GET',
 		handler: async ({ context: { req, res } }) => {
-			const {
-				AZURE_CLIENT_ID,
-				AZURE_TENANT_ID,
-				AZURE_REDIRECT_URI,
-			} = envs;
+			const { AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_REDIRECT_URI } = envs
 
 			if (!AZURE_CLIENT_ID || !AZURE_TENANT_ID) {
-				return res
-					.status(500)
-					.json({ error: "Azure AD no está configurado" });
+				return res.status(500).json({ error: 'Azure AD no está configurado' })
 			}
 
-			const state = randomUUID();
-			const codeVerifier = generateCodeVerifier();
-			const codeChallenge = generateCodeChallenge(codeVerifier);
-			const returnTo = (req.query.return_to as string) || null;
-			oauthStateCache.set(state, { codeVerifier, returnTo });
+			const state = randomUUID()
+			const codeVerifier = generateCodeVerifier()
+			const codeChallenge = generateCodeChallenge(codeVerifier)
+			const returnTo = (req.query.return_to as string) || null
+			oauthStateCache.set(state, { codeVerifier, returnTo })
 
 			const params = new URLSearchParams({
 				client_id: AZURE_CLIENT_ID,
-				response_type: "code",
+				response_type: 'code',
 				redirect_uri: AZURE_REDIRECT_URI,
-				response_mode: "query",
-				scope: "openid profile email User.Read",
+				response_mode: 'query',
+				scope: 'openid profile email User.Read',
 				state,
 				code_challenge: codeChallenge,
-				code_challenge_method: "S256",
-			});
+				code_challenge_method: 'S256'
+			})
 
-			const authUrl = `https://login.microsoftonline.com/${AZURE_TENANT_ID}/oauth2/v2.0/authorize?${params.toString()}`;
-			res.redirect(authUrl);
-		},
-	});
+			const authUrl = `https://login.microsoftonline.com/${AZURE_TENANT_ID}/oauth2/v2.0/authorize?${params.toString()}`
+			res.redirect(authUrl)
+		}
+	})
 
 	// ==========================================
 	// Azure AD OAuth2 - Callback
 	// ==========================================
 	registry.register({
-		useBy: ["server"],
-		path: "/api/auth/azure/callback",
-		method: "GET",
+		useBy: ['server'],
+		path: '/api/auth/azure/callback',
+		method: 'GET',
 		handler: async ({ context: { req, res } }) => {
-			const {
-				AZURE_CLIENT_ID,
-				AZURE_CLIENT_SECRET,
-				AZURE_TENANT_ID,
-				AZURE_REDIRECT_URI,
-				FRONTEND_URL,
-			} = envs;
+			const { AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID, AZURE_REDIRECT_URI, FRONTEND_URL } = envs
 
-			const { code, state, error: azureError } = req.query as Record<
-				string,
-				string
-			>;
+			const { code, state, error: azureError } = req.query as Record<string, string>
 
 			if (azureError) {
-				return res.redirect(
-					`${FRONTEND_URL}/login?error=${encodeURIComponent(azureError)}`,
-				);
+				return res.redirect(`${FRONTEND_URL}/login?error=${encodeURIComponent(azureError)}`)
 			}
 
 			// Validar state CSRF y recuperar code_verifier
-			const cached = oauthStateCache.get<{ codeVerifier: string; returnTo: string | null }>(state);
+			const cached = oauthStateCache.get<{ codeVerifier: string; returnTo: string | null }>(state)
 			if (!state || !cached) {
-				return res.redirect(
-					`${FRONTEND_URL}/login?error=invalid_state`,
-				);
+				return res.redirect(`${FRONTEND_URL}/login?error=invalid_state`)
 			}
-			oauthStateCache.del(state);
-			const { codeVerifier, returnTo } = cached;
+			oauthStateCache.del(state)
+			const { codeVerifier, returnTo } = cached
 
 			try {
 				// Intercambiar code por tokens (con PKCE code_verifier)
-				const tokenRes = await fetch(
-					`https://login.microsoftonline.com/${AZURE_TENANT_ID}/oauth2/v2.0/token`,
-					{
-						method: "POST",
-						headers: { "Content-Type": "application/x-www-form-urlencoded" },
-						body: new URLSearchParams({
-							client_id: AZURE_CLIENT_ID,
-							client_secret: AZURE_CLIENT_SECRET,
-							code,
-							redirect_uri: AZURE_REDIRECT_URI,
-							grant_type: "authorization_code",
-							code_verifier: codeVerifier,
-						}),
-					},
-				);
+				const tokenRes = await fetch(`https://login.microsoftonline.com/${AZURE_TENANT_ID}/oauth2/v2.0/token`, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+					body: new URLSearchParams({
+						client_id: AZURE_CLIENT_ID,
+						client_secret: AZURE_CLIENT_SECRET,
+						code,
+						redirect_uri: AZURE_REDIRECT_URI,
+						grant_type: 'authorization_code',
+						code_verifier: codeVerifier
+					})
+				})
 
-				const tokens = (await tokenRes.json()) as Record<string, string>;
+				const tokens = (await tokenRes.json()) as Record<string, string>
 
 				if (!tokenRes.ok) {
-					console.error("Azure token exchange error:", tokens);
-					return res.redirect(
-						`${FRONTEND_URL}/login?error=token_exchange_failed`,
-					);
+					console.error('Azure token exchange error:', tokens)
+					return res.redirect(`${FRONTEND_URL}/login?error=token_exchange_failed`)
 				}
 
 				// Obtener perfil del usuario desde Microsoft Graph
-				const graphRes = await fetch("https://graph.microsoft.com/v1.0/me", {
-					headers: { Authorization: `Bearer ${tokens.access_token}` },
-				});
+				const graphRes = await fetch('https://graph.microsoft.com/v1.0/me', {
+					headers: { Authorization: `Bearer ${tokens.access_token}` }
+				})
 
-				const azureUser = (await graphRes.json()) as Record<string, string>;
+				const azureUser = (await graphRes.json()) as Record<string, string>
 
 				if (!graphRes.ok) {
-					console.error("Microsoft Graph error:", azureUser);
-					return res.redirect(
-						`${FRONTEND_URL}/login?error=graph_api_failed`,
-					);
+					console.error('Microsoft Graph error:', azureUser)
+					return res.redirect(`${FRONTEND_URL}/login?error=graph_api_failed`)
 				}
 
-				const email =
-					azureUser.mail || azureUser.userPrincipalName || "";
+				const email = azureUser.mail || azureUser.userPrincipalName || ''
 
 				if (!email) {
-					return res.redirect(
-						`${FRONTEND_URL}/login?error=no_email`,
-					);
+					return res.redirect(`${FRONTEND_URL}/login?error=no_email`)
 				}
 
-				const { container } = await import("@application/container.js");
-				const userRepository = container.userRepository;
+				const { container } = await import('@application/container.js')
+				const userRepository = container.userRepository
 
 				// Buscar o crear usuario
-				let user = await userRepository.findByEmail(email);
+				let user = await userRepository.findByEmail(email)
 
 				if (!user) {
-					const baseUsername = email.split("@")[0].replace(/[^a-zA-Z0-9_]/g, "_");
-					let username = baseUsername;
-					let existing = await userRepository.findByUsername(username);
-					let suffix = 1;
+					const baseUsername = email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '_')
+					let username = baseUsername
+					let existing = await userRepository.findByUsername(username)
+					let suffix = 1
 					while (existing) {
-						username = `${baseUsername}_${suffix++}`;
-						existing = await userRepository.findByUsername(username);
+						username = `${baseUsername}_${suffix++}`
+						existing = await userRepository.findByUsername(username)
 					}
 
 					user = await userRepository.create({
@@ -247,62 +213,56 @@ export function registerAuthRoutes() {
 						username,
 						password: randomUUID(), // contraseña aleatoria — nunca se usará
 						firstName: azureUser.givenName || undefined,
-						lastName: azureUser.surname || undefined,
-					});
+						lastName: azureUser.surname || undefined
+					})
 				}
 
-				await userRepository.updateLastLogin(user.id);
+				await userRepository.updateLastLogin(user.id)
 
 				// Emitir JWT
-				const token = jwt.sign(
-					{ sub: user.id, username: user.username, email: user.email },
-					JWT_SECRET,
-					{ expiresIn: "7d" },
-				);
+				const token = jwt.sign({ sub: user.id, username: user.username, email: user.email }, JWT_SECRET, { expiresIn: '7d' })
 
-				const tokenParam = `azureToken=${encodeURIComponent(token)}`;
+				const tokenParam = `azureToken=${encodeURIComponent(token)}`
 				const destination = returnTo
-					? `${returnTo}${returnTo.includes("?") ? "&" : "?"}${tokenParam}`
-					: `${FRONTEND_URL}/login?${tokenParam}`;
-				res.redirect(destination);
+					? `${returnTo}${returnTo.includes('?') ? '&' : '?'}${tokenParam}`
+					: `${FRONTEND_URL}/login?${tokenParam}`
+				res.redirect(destination)
 			} catch (err: any) {
-				console.error("Azure callback error:", err);
-				res.redirect(
-					`${FRONTEND_URL}/login?error=server_error`,
-				);
+				console.error('Azure callback error:', err)
+				res.redirect(`${FRONTEND_URL}/login?error=server_error`)
 			}
-		},
-	});
+		}
+	})
 
 	// Verificar permiso específico
 	registry.register({
-		useBy: ["server"],
-		path: "/api/auth/check-permission",
-		method: "POST",
+		useBy: ['server'],
+		path: '/api/auth/check-permission',
+		method: 'POST',
 		handler: async ({ context: { req, res, next } }) => {
 			if (!req.user) {
-				return res.status(401).json({ error: "No autorizado" });
+				return res.status(401).json({ error: 'No autorizado' })
 			}
 
-			const { container } = await import("@application/container.js");
-			const checkPermissionUseCase = container.checkPermissionUseCase;
+			const { container } = await import('@application/container.js')
+			const checkPermissionUseCase = container.checkPermissionUseCase
 
 			try {
 				const hasPermission = await checkPermissionUseCase.execute({
 					userId: req.user.id,
 					resource: req.body.resource,
-					action: req.body.action,
-				});
+					action: req.body.action
+				})
 
-				res.json({ hasPermission });
+				res.json({ hasPermission })
 			} catch (error: any) {
-				res.status(500).json({ error: error.message });
+				res.status(500).json({ error: error.message })
 			}
 		},
 		inputSchema: z.object({
 			resource: z.string(),
-			action: z.string(),
+			action: z.string()
 		}),
-		requiresAuth: true,
-	});
+		requiresAuth: true
+	})
 }
