@@ -42,6 +42,12 @@ export const useAuthStore = defineStore('auth', () => {
     return perms.some((p) => p.resource === resource && p.action === action)
   }
 
+  function hasResourceAccess(resource: string): boolean {
+    if (!user.value) return false
+    const perms: Permission[] = user.value.permissions ?? []
+    return perms.some((p) => p.resource === resource)
+  }
+
   return {
     user,
     token,
@@ -51,5 +57,6 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
     fetchCurrentUser,
     hasPermission,
+    hasResourceAccess,
   }
 })

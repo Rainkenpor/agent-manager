@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/useAuth'
 
@@ -6,12 +7,17 @@ const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 
-const navLinks = [
-  { to: '/users', label: 'Users', icon: 'U' },
-  { to: '/roles', label: 'Roles', icon: 'R' },
-  { to: '/agents', label: 'Agents', icon: 'A' },
-  { to: '/mcps', label: 'MCP Servers', icon: 'M' },
+const allNavLinks = [
+  { to: '/', label: 'Home', icon: 'H', resource: null },
+  { to: '/users', label: 'Users', icon: 'U', resource: 'users' },
+  { to: '/roles', label: 'Roles', icon: 'R', resource: 'roles' },
+  { to: '/agents', label: 'Agents', icon: 'A', resource: 'agents' },
+  { to: '/mcps', label: 'MCP Servers', icon: 'M', resource: 'mcp_servers' },
 ]
+
+const navLinks = computed(() =>
+  allNavLinks.filter((l) => l.resource === null || auth.hasResourceAccess(l.resource))
+)
 
 function logout() {
   auth.logout()
@@ -37,14 +43,14 @@ function logout() {
         :to="link.to"
         class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
         :class="
-          route.path === link.to
+          (link.to === '/' ? route.path === '/' : route.path.startsWith(link.to))
             ? 'bg-indigo-600 text-white'
             : 'text-slate-400 hover:text-white hover:bg-slate-800'
         "
       >
         <span
           class="w-6 h-6 rounded flex items-center justify-center text-xs font-bold shrink-0"
-          :class="route.path === link.to ? 'bg-indigo-500' : 'bg-slate-700'"
+          :class="(link.to === '/' ? route.path === '/' : route.path.startsWith(link.to)) ? 'bg-indigo-500' : 'bg-slate-700'"
         >
           {{ link.icon }}
         </span>

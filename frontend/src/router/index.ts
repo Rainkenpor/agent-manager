@@ -12,31 +12,33 @@ const router = createRouter({
     },
     {
       path: '/',
-      redirect: '/users',
+      name: 'home',
+      component: () => import('@/views/HomeView.vue'),
+      meta: { requiresAuth: true },
     },
     {
       path: '/users',
       name: 'users',
       component: () => import('@/views/UsersView.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, resource: 'users' },
     },
     {
       path: '/roles',
       name: 'roles',
       component: () => import('@/views/RolesView.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, resource: 'roles' },
     },
     {
       path: '/agents',
       name: 'agents',
       component: () => import('@/views/AgentsView.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, resource: 'agents' },
     },
     {
       path: '/mcps',
       name: 'mcps',
       component: () => import('@/views/McpServersView.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, resource: 'mcp_servers' },
     },
     {
       path: '/oauth/authorize/mcp',
@@ -62,7 +64,12 @@ router.beforeEach(async (to) => {
   }
 
   if (to.name === 'login' && auth.isAuthenticated) {
-    return { path: '/users' }
+    return { path: '/' }
+  }
+
+  const resource = to.meta.resource as string | undefined
+  if (resource && auth.isAuthenticated && !auth.hasResourceAccess(resource)) {
+    return { name: 'home' }
   }
 })
 

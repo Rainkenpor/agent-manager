@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db } from "@infra/db/database.js";
 import {
 	roles,
@@ -84,8 +84,10 @@ export class RoleRepository implements IRoleRepository {
 		await db
 			.delete(rolePermissions)
 			.where(
-				eq(rolePermissions.roleId, roleId) &&
+				and(
+					eq(rolePermissions.roleId, roleId),
 					eq(rolePermissions.permissionId, permissionId),
+				),
 			);
 	}
 

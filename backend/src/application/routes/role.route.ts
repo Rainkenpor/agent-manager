@@ -3,7 +3,6 @@ import {
 	CreateRoleSchema,
 	UpdateRoleSchema,
 } from "@domain/entities/role.entity.js";
-import type { HttpContext } from "@application/interfaces/route.interface.js";
 import { registry } from "@application/services/registry.service.js";
 
 export function registerRoleRoutes() {
@@ -53,12 +52,12 @@ export function registerRoleRoutes() {
 		useBy: ["server"],
 		path: "/api/roles/:id",
 		method: "GET",
-		handler: async ({ context: { req, res, next } }) => {
+		handler: async ({ input, context: { req, res, next } }) => {
 			const { container } = await import("@application/container.js");
 			const roleRepository = container.roleRepository;
 
 			try {
-				const role = await roleRepository.findById(req.params.id);
+				const role = await roleRepository.findById(input.id);
 				if (!role) {
 					return res.status(404).json({ error: "Rol no encontrado" });
 				}
@@ -100,12 +99,12 @@ export function registerRoleRoutes() {
 		useBy: ["server"],
 		path: "/api/roles/:id",
 		method: "DELETE",
-		handler: async ({ context: { req, res, next } }) => {
+		handler: async ({ input, context: { res } }) => {
 			const { container } = await import("@application/container.js");
 			const roleRepository = container.roleRepository;
 
 			try {
-				await roleRepository.delete(req.params.id);
+				await roleRepository.delete(input.id);
 				return { success: true, message: "Rol eliminado correctamente" };
 			} catch (error: any) {
 				res.status(500).json({ error: error.message });
@@ -121,7 +120,7 @@ export function registerRoleRoutes() {
 		useBy: ["server"],
 		path: "/api/permissions",
 		method: "GET",
-		handler: async ({ context: { req, res } }) => {
+		handler: async ({ context: { res } }) => {
 			const { container } = await import("@application/container.js");
 			const permissionRepository = container.permissionRepository;
 			try {
@@ -140,11 +139,11 @@ export function registerRoleRoutes() {
 		useBy: ["server"],
 		path: "/api/roles/:id/permissions",
 		method: "GET",
-		handler: async ({ context: { req, res } }) => {
+		handler: async ({ input, context: { res } }) => {
 			const { container } = await import("@application/container.js");
 			const roleRepository = container.roleRepository;
 			try {
-				const perms = await roleRepository.getPermissions(req.params.id);
+				const perms = await roleRepository.getPermissions(input.id);
 				return perms;
 			} catch (error: any) {
 				res.status(500).json({ error: error.message });
@@ -160,14 +159,14 @@ export function registerRoleRoutes() {
 		useBy: ["server"],
 		path: "/api/roles/:roleId/permissions/:permissionId",
 		method: "POST",
-		handler: async ({ context: { req, res, next } }) => {
+		handler: async ({ input, context: { res } }) => {
 			const { container } = await import("@application/container.js");
 			const assignPermissionUseCase = container.assignPermissionUseCase;
 
 			try {
 				await assignPermissionUseCase.execute({
-					roleId: req.params.roleId,
-					permissionId: req.params.permissionId,
+					roleId: input.roleId,
+					permissionId: input.permissionId,
 				});
 				return { message: "Permiso asignado exitosamente" };
 			} catch (error: any) {
@@ -187,15 +186,12 @@ export function registerRoleRoutes() {
 		useBy: ["server"],
 		path: "/api/roles/:roleId/permissions/:permissionId",
 		method: "DELETE",
-		handler: async ({ context: { req, res, next } }) => {
+		handler: async ({ input, context: { res } }) => {
 			const { container } = await import("@application/container.js");
 			const roleRepository = container.roleRepository;
 
 			try {
-				await roleRepository.removePermission(
-					req.params.roleId,
-					req.params.permissionId,
-				);
+				await roleRepository.removePermission(input.roleId, input.permissionId);
 				return { success: true, message: "Permiso eliminado correctamente" };
 			} catch (error: any) {
 				res.status(500).json({ error: error.message });

@@ -1,1 +1,6 @@
 @import "tailwindcss";
+
+#app {
+	height: 100vh;
+	overflow: auto;
+}

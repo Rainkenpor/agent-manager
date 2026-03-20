@@ -18,6 +18,13 @@ export function registerUserRoutes() {
 			try {
 				const users = await userRepository.findAll();
 				const usersWithoutPassword = users.map(({ password, ...user }) => user);
+
+				// Obtener roles y permisos para cada usuario
+				for (const user of usersWithoutPassword) {
+					const roles = await userRepository.getRoles(user.id);
+					user.roles = roles;
+				}
+
 				return usersWithoutPassword;
 			} catch (error: any) {
 				res.status(500).json({ error: error.message });
