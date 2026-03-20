@@ -159,50 +159,61 @@ async function applyRoleBasedTools(server: McpServer, user: Record<string, unkno
 				instruction: z.string().describe('The instruction or task for the agent')
 			},
 			async (args: { instruction: string }) => {
-				// Forward to internal agent service (basic invocation — extend for streaming)
-				try {
-					const { container } = await import('@application/container.js')
-					const agentEntity = await container.getAgentUseCase.execute(agent.id)
-					const agentService = new AgentService()
-
-					if (!agentEntity.success) {
-						throw new Error(`Agent not found: ${agent.id}`)
-					}
-
-					const response = await agentService.initAgent({
-						systemPrompt: agentEntity.data.content,
-						agentSlug: agentEntity.data.slug,
-						query: args.instruction,
-						allowedTools: new Set(
-							Object.entries(agentEntity.data.tools)
-								.filter(([_, enabled]) => enabled)
-								.map(([toolName]) => toolName)
-						),
-						history: []
-					})
-
-					console.log(`[MCP] Agent tool invoked: ${agent.slug} with instruction: ${args.instruction}`, response)
-
-					return {
-						content: [
-							{
-								type: 'text' as const,
-								text: response
-							}
-						]
-					}
-				} catch {
-					return {
-						content: [
-							{
-								type: 'text' as const,
-								text: `Agent ${agent.slug} unavailable`
-							}
-						]
-					}
-				}
+				return await callMCPAgent(agent, args)
 			}
 		)
+	}
+}
+
+export async function callMCPAgent(
+	agent: { id: string; name: string; slug: string },
+	args: { instruction: string; history?: Array<{ role: 'user' | 'assistant'; content: string }>; stream?: boolean }
+) {
+	// Forward to internal agent service (basic invocation — extend for streaming)
+	try {
+		const { container } = await import('@application/container.js')
+		const agentEntity = await container.getAgentUseCase.execute(agent.id)
+		const agentService = new AgentService()
+
+		if (!agentEntity.success) {
+			throw new Error(`Agent not found: ${agent.id}`)
+		}
+		const params = {
+			systemPrompt: agentEntity.data.content,
+			agentSlug: agentEntity.data.slug,
+			query: args.instruction,
+			allowedTools: new Set(
+				Object.entries(agentEntity.data.tools)
+					.filter(([_, enabled]) => enabled)
+					.map(([toolName]) => toolName)
+			),
+			history: args.history || []
+		}
+
+		// Stream
+		if (args.stream) return await agentService.initAgentStream(params)
+
+		const response = await agentService.initAgent(params)
+
+		console.log(`[MCP] Agent tool invoked: ${agent.slug} with instruction: ${args.instruction}`, response)
+
+		return {
+			content: [
+				{
+					type: 'text' as const,
+					text: response
+				}
+			]
+		}
+	} catch {
+		return {
+			content: [
+				{
+					type: 'text' as const,
+					text: `Agent ${agent.slug} unavailable`
+				}
+			]
+		}
 	}
 }
 

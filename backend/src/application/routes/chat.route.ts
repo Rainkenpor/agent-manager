@@ -4,12 +4,12 @@ import { z } from 'zod'
 
 const createConversationSchema = z.object({
 	title: z.string().min(1),
-	agentId: z.string().min(1),
+	agentId: z.string().min(1)
 })
 
 const sendMessageSchema = z.object({
 	id: z.string(),
-	content: z.string().min(1),
+	content: z.string().min(1)
 })
 
 export function registerChatRoutes(): void {
@@ -24,7 +24,7 @@ export function registerChatRoutes(): void {
 		handler: async ({ context: { req } }) => {
 			const userId = (req as any).user?.id
 			return await container.listConversationsUseCase.execute(userId)
-		},
+		}
 	})
 
 	// Get a single conversation with its messages
@@ -37,7 +37,7 @@ export function registerChatRoutes(): void {
 		requiredPermission: { resource: 'chat', action: 'read' },
 		handler: async ({ input }) => {
 			return await container.getConversationUseCase.execute(input.id)
-		},
+		}
 	})
 
 	// Create a new conversation
@@ -53,9 +53,9 @@ export function registerChatRoutes(): void {
 			return await container.createConversationUseCase.execute({
 				title: input.title,
 				agentId: input.agentId,
-				userId,
+				userId
 			})
-		},
+		}
 	})
 
 	// Delete a conversation
@@ -68,7 +68,7 @@ export function registerChatRoutes(): void {
 		requiredPermission: { resource: 'chat', action: 'delete' },
 		handler: async ({ input }) => {
 			return await container.deleteConversationUseCase.execute(input.id)
-		},
+		}
 	})
 
 	// Send a message — streams the response via SSE
@@ -96,6 +96,6 @@ export function registerChatRoutes(): void {
 
 			res.end()
 			return null
-		},
+		}
 	})
 }

@@ -143,6 +143,14 @@ async function sendMessage() {
             messages.value[idx] = { ...messages.value[idx], content: messages.value[idx].content + event.content }
             await scrollToBottom()
           }
+        } else if (event.type === 'tool') {
+          const idx = messages.value.findIndex((m) => m.id === streamingId)
+          if (idx !== -1) {
+            const existing = messages.value[idx].toolCalls ?? []
+            if (!existing.includes(event.name)) {
+              messages.value[idx] = { ...messages.value[idx], toolCalls: [...existing, event.name] }
+            }
+          }
         } else if (event.type === 'done') {
           const idx = messages.value.findIndex((m) => m.id === streamingId)
           if (idx !== -1) {
@@ -214,39 +222,29 @@ onMounted(fetchInitialData)
         <h2 class="text-sm font-semibold text-white">Conversaciones</h2>
         <button
           class="text-xs px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium transition-colors"
-          @click="showNewChatForm = !showNewChatForm"
-        >
+          @click="showNewChatForm = !showNewChatForm">
           + Nueva
         </button>
       </div>
 
       <!-- New conversation form -->
       <div v-if="showNewChatForm" class="px-4 py-3 border-b border-slate-800 space-y-2">
-        <input
-          v-model="newChatTitle"
-          type="text"
-          placeholder="Nombre del chat..."
-          class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
-        />
-        <select
-          v-model="selectedAgentId"
-          class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm text-white focus:outline-none focus:border-indigo-500"
-        >
+        <input v-model="newChatTitle" type="text" placeholder="Nombre del chat..."
+          class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500" />
+        <select v-model="selectedAgentId"
+          class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm text-white focus:outline-none focus:border-indigo-500">
           <option value="">Seleccionar agente...</option>
           <option v-for="agent in agents" :key="agent.id" :value="agent.id">{{ agent.name }}</option>
         </select>
         <div class="flex gap-2">
           <button
             class="flex-1 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium transition-colors disabled:opacity-50"
-            :disabled="!selectedAgentId || !newChatTitle.trim()"
-            @click="createConversation"
-          >
+            :disabled="!selectedAgentId || !newChatTitle.trim()" @click="createConversation">
             Crear
           </button>
           <button
             class="flex-1 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium transition-colors"
-            @click="showNewChatForm = false"
-          >
+            @click="showNewChatForm = false">
             Cancelar
           </button>
         </div>
@@ -257,23 +255,16 @@ onMounted(fetchInitialData)
         <div v-if="conversations.length === 0" class="px-4 py-8 text-center text-slate-500 text-sm">
           Sin conversaciones
         </div>
-        <button
-          v-for="conv in conversations"
-          :key="conv.id"
+        <button v-for="conv in conversations" :key="conv.id"
           class="w-full text-left px-4 py-3 border-b border-slate-800/60 hover:bg-slate-800/50 transition-colors group"
-          :class="activeConversation?.id === conv.id ? 'bg-slate-800' : ''"
-          @click="openConversation(conv)"
-        >
+          :class="activeConversation?.id === conv.id ? 'bg-slate-800' : ''" @click="openConversation(conv)">
           <div class="flex items-start justify-between gap-2">
             <div class="min-w-0">
               <p class="text-sm font-medium text-white truncate">{{ conv.title }}</p>
               <p class="text-xs text-slate-500 mt-0.5">{{ new Date(conv.updatedAt).toLocaleDateString() }}</p>
             </div>
-            <button
-              class="shrink-0 opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-400 transition-all"
-              title="Eliminar"
-              @click.stop="deleteConversation(conv)"
-            >
+            <button class="shrink-0 opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-400 transition-all"
+              title="Eliminar" @click.stop="deleteConversation(conv)">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -338,38 +329,45 @@ onMounted(fetchInitialData)
             Sin mensajes aún. ¡Escribe algo para comenzar!
           </div>
 
-          <div v-for="msg in messages" :key="msg.id" class="flex gap-3" :class="msg.role === 'user' ? 'flex-row-reverse' : ''">
+          <div v-for="msg in messages" :key="msg.id" class="flex gap-3"
+            :class="msg.role === 'user' ? 'flex-row-reverse' : ''">
             <!-- Avatar -->
-            <div
-              class="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold mt-0.5"
-              :class="msg.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-300'"
-            >
+            <div class="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold mt-0.5"
+              :class="msg.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-300'">
               {{ msg.role === 'user' ? 'U' : 'A' }}
             </div>
 
             <!-- Bubble + metadata -->
-            <div class="max-w-[70%] flex flex-col gap-1" :class="msg.role === 'user' ? 'items-end' : 'items-start'">
-              <div
-                class="px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap"
-                :class="msg.role === 'user'
-                  ? 'bg-indigo-600 text-white rounded-tr-sm'
-                  : 'bg-slate-800 text-slate-100 rounded-tl-sm border border-slate-700/50'"
-              >
+            <div class="flex flex-col gap-1" :class="msg.form ? 'max-w-[85%]' : 'max-w-[70%]'"
+              :style="msg.role === 'user' ? 'align-items:flex-end' : ''">
+
+              <!-- ── Regular text bubble ─────────────────── -->
+              <div class="px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap" :class="msg.role === 'user'
+                ? 'bg-indigo-600 text-white rounded-tr-sm'
+                : 'bg-slate-800 text-slate-100 rounded-tl-sm border border-slate-700/50'">
+                <!-- Tool calls — shown before the text content -->
+                <div v-if="msg.toolCalls?.length" class="flex flex-wrap gap-1.5 mb-2">
+                  <span v-for="tool in msg.toolCalls" :key="tool"
+                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-700/60 text-slate-500 text-xs font-mono">
+                    <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    {{ tool }}
+                  </span>
+                </div>
                 {{ msg.content }}
-                <!-- Blinking cursor while streaming -->
-                <span
-                  v-if="msg.streaming"
-                  class="inline-block w-0.5 h-4 bg-slate-300 ml-0.5 align-middle animate-pulse"
-                />
+                <span v-if="msg.streaming"
+                  class="inline-block w-0.5 h-4 bg-slate-300 ml-0.5 align-middle animate-pulse" />
               </div>
 
               <!-- Timestamp + response time -->
               <div class="flex items-center gap-2 px-1">
                 <span class="text-xs text-slate-600">{{ formatTime(msg.createdAt) }}</span>
-                <span
-                  v-if="msg.role === 'assistant' && msg.responseTime != null && !msg.streaming"
-                  class="flex items-center gap-1 text-xs text-slate-600"
-                >
+                <span v-if="msg.role === 'assistant' && msg.responseTime != null && !msg.streaming"
+                  class="flex items-center gap-1 text-xs text-slate-600">
                   <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -383,34 +381,24 @@ onMounted(fetchInitialData)
       </div>
 
       <!-- Error banner -->
-      <div
-        v-if="error"
-        class="mx-6 mb-2 px-4 py-2 rounded-lg bg-red-900/40 border border-red-700/50 text-red-400 text-sm flex items-center justify-between"
-      >
+      <div v-if="error"
+        class="mx-6 mb-2 px-4 py-2 rounded-lg bg-red-900/40 border border-red-700/50 text-red-400 text-sm flex items-center justify-between">
         {{ error }}
         <button class="text-red-500 hover:text-red-300 ml-3" @click="error = ''">✕</button>
       </div>
 
       <!-- Input area -->
       <div class="px-6 pb-5 pt-2">
-        <div
-          class="flex items-end gap-3 rounded-2xl border bg-slate-900 px-4 py-3 transition-colors"
-          :class="activeConversation ? 'border-slate-700 focus-within:border-indigo-500/60' : 'border-slate-800 opacity-50'"
-        >
-          <textarea
-            v-model="messageInput"
-            :disabled="!activeConversation || sending"
-            rows="1"
+        <div class="flex items-end gap-3 rounded-2xl border bg-slate-900 px-4 py-3 transition-colors"
+          :class="activeConversation ? 'border-slate-700 focus-within:border-indigo-500/60' : 'border-slate-800 opacity-50'">
+          <textarea v-model="messageInput" :disabled="!activeConversation || sending" rows="1"
             placeholder="Escribe un mensaje... (Enter para enviar, Shift+Enter para salto de línea)"
             class="flex-1 resize-none bg-transparent text-sm text-white placeholder-slate-500 focus:outline-none max-h-36"
-            @keydown="handleKeydown"
-          />
+            @keydown="handleKeydown" />
           <button
             class="shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-colors disabled:opacity-40"
             :class="messageInput.trim() && activeConversation && !sending ? 'bg-indigo-600 hover:bg-indigo-500' : 'bg-slate-700'"
-            :disabled="!messageInput.trim() || !activeConversation || sending"
-            @click="sendMessage"
-          >
+            :disabled="!messageInput.trim() || !activeConversation || sending" @click="sendMessage">
             <!-- Spinner while sending -->
             <svg v-if="sending" class="w-4 h-4 text-slate-300 animate-spin" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
@@ -418,7 +406,8 @@ onMounted(fetchInitialData)
             </svg>
             <!-- Send icon -->
             <svg v-else class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
             </svg>
           </button>
         </div>

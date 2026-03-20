@@ -784,27 +784,6 @@ export class InternalAgentService implements IAgentService {
 	}
 
 	/**
-	 * Load the set of allowed tool names from the YAML frontmatter of an agent .md file.
-	 * Returns null when the file has no `tools:` section (i.e. all tools allowed).
-	 */
-	private loadAllowedTools(basePath: string, agentType: string): Set<string> | null {
-		const candidates = [
-			nodePath.join(basePath, '.opencode', 'agent', `${agentType}.md`),
-			nodePath.join(process.cwd(), 'agent', `${agentType}.md`),
-			nodePath.join(process.cwd(), 'agent', 'subagents', `${agentType}.md`)
-		]
-
-		for (const candidate of candidates) {
-			if (fs.existsSync(candidate)) {
-				const raw = fs.readFileSync(candidate, 'utf-8')
-				return parseFrontmatterTools(raw)
-			}
-		}
-
-		return null
-	}
-
-	/**
 	 * Cap a raw tool result to TOOL_RESULT_IN_HISTORY chars before storing in
 	 * message history. Long results (file reads, grep output) are the primary
 	 * source of context bloat — mirrors OpenCode's per-part size limit.

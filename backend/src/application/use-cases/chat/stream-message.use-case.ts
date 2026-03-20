@@ -4,20 +4,21 @@ import { AgentService } from '@infra/service/agent.service.js'
 
 export type SseEvent =
 	| { type: 'chunk'; content: string }
-	| { type: 'done'; message: { id: string; conversationId: string; role: string; content: string; createdAt: string }; responseTime: number }
+	| { type: 'tool'; name: string }
+	| {
+			type: 'done'
+			message: { id: string; conversationId: string; role: string; content: string; createdAt: string }
+			responseTime: number
+	  }
 	| { type: 'error'; error: string }
 
 export class StreamMessageUseCase {
 	constructor(
 		private readonly chatRepository: IChatRepository,
-		private readonly agentRepository: IAgentRepository,
+		private readonly agentRepository: IAgentRepository
 	) {}
 
-	async execute(
-		conversationId: string,
-		userContent: string,
-		sendEvent: (event: SseEvent) => void,
-	): Promise<void> {
+	async execute(conversationId: string, userContent: string, sendEvent: (event: SseEvent) => void): Promise<void> {
 		const startTime = Date.now()
 
 		const conv = await this.chatRepository.findConversationById(conversationId)
@@ -46,11 +47,15 @@ export class StreamMessageUseCase {
 			agentSlug: agent.slug,
 			query: userContent,
 			systemPrompt: agent.content || undefined,
-			history,
+			history
 		})) {
 			allChunks.push(chunk)
-			// Skip tool-progress markers — only forward text deltas
-			if (!chunk.startsWith('<<')) {
+			if (chunk.startsWith('<<')) {
+				// Tool invocation marker: <<id::toolName>>{args}<<\id>>
+				const match = chunk.match(/^<<[^:]+::([^>]+)>>/)
+				if (match) sendEvent({ type: 'tool', name: match[1] })
+				// Tool result markers are silently dropped
+			} else {
 				sendEvent({ type: 'chunk', content: chunk })
 			}
 		}
