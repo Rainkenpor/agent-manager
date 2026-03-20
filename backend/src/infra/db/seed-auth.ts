@@ -158,6 +158,29 @@ async function seedDefaultPermissions() {
 			action: 'read',
 			description: 'Ver servidores MCP',
 			createdAt: new Date().toISOString()
+		},
+
+		// Chat
+		{
+			id: randomUUID(),
+			resource: 'chat',
+			action: 'create',
+			description: 'Crear conversaciones y enviar mensajes',
+			createdAt: new Date().toISOString()
+		},
+		{
+			id: randomUUID(),
+			resource: 'chat',
+			action: 'read',
+			description: 'Ver conversaciones y mensajes',
+			createdAt: new Date().toISOString()
+		},
+		{
+			id: randomUUID(),
+			resource: 'chat',
+			action: 'delete',
+			description: 'Eliminar conversaciones',
+			createdAt: new Date().toISOString()
 		}
 	]
 

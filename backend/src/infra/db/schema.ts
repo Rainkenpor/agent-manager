@@ -92,6 +92,7 @@ export const agents = sqliteTable("agents", {
 		.$default(() => ({})), // Record<string, boolean>
 	content: text("content").notNull().default(""), // Cuerpo markdown sin frontmatter
 	isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+	useByChat: integer("use_by_chat", { mode: "boolean" }).notNull().default(false),
 	createdAt: text("created_at")
 		.notNull()
 		.$defaultFn(() => new Date().toISOString()),
@@ -190,6 +191,25 @@ export const oauthRefreshTokens = sqliteTable("oauth_refresh_tokens", {
 	createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
 });
 
+// Conversations (chat sessions)
+export const conversations = sqliteTable('conversations', {
+	id: text('id').primaryKey(),
+	title: text('title').notNull(),
+	agentId: text('agent_id').notNull().references(() => agents.id, { onDelete: 'cascade' }),
+	userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
+	updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString()),
+})
+
+// Messages within a conversation
+export const messages = sqliteTable('messages', {
+	id: text('id').primaryKey(),
+	conversationId: text('conversation_id').notNull().references(() => conversations.id, { onDelete: 'cascade' }),
+	role: text('role', { enum: ['user', 'assistant'] }).notNull(),
+	content: text('content').notNull(),
+	createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
+})
+
 // Tipos inferidos
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -215,3 +235,7 @@ export type OAuthClient = typeof oauthClients.$inferSelect;
 export type NewOAuthClient = typeof oauthClients.$inferInsert;
 export type OAuthCode = typeof oauthCodes.$inferSelect;
 export type OAuthRefreshToken = typeof oauthRefreshTokens.$inferSelect;
+export type Conversation = typeof conversations.$inferSelect;
+export type NewConversation = typeof conversations.$inferInsert;
+export type Message = typeof messages.$inferSelect;
+export type NewMessage = typeof messages.$inferInsert;

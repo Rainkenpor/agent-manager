@@ -55,19 +55,23 @@ const allSections = [
     glow: 'shadow-amber-500/20',
     badge: 'bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/20',
     icon: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />`,
+  },
+  {
+    to: '/chat',
+    resource: 'chat',
+    label: 'Chat',
+    description:
+      'Chatea directamente con los agentes de IA configurados. Selecciona el agente que deseas utilizar, inicia una conversación y el historial queda guardado por sesión.',
+    gradient: 'from-cyan-500 to-sky-600',
+    glow: 'shadow-cyan-500/20',
+    badge: 'bg-cyan-500/10 text-cyan-400 ring-1 ring-cyan-500/20',
+    icon: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />`,
   }
 ]
 
 const sections = computed(() =>
   allSections.filter((s) => auth.hasResourceAccess(s.resource))
 )
-
-const architecture = [
-  { label: 'Routes', desc: 'Validación de entrada con Zod' },
-  { label: 'Use Cases', desc: 'Lógica de negocio (CQRS)' },
-  { label: 'Domain', desc: 'Entidades e interfaces' },
-  { label: 'Infra', desc: 'Drizzle ORM · Passport · MCP' },
-]
 </script>
 
 <template>

@@ -106,3 +106,30 @@ export const oauthAuthorize = (data: {
     method: 'POST',
     body: JSON.stringify(data),
   })
+
+// Chat
+export const getConversations = () =>
+  request<{ success: boolean; data: any[] }>('/chat/conversations')
+export const getConversation = (id: string) =>
+  request<{ success: boolean; data: any }>(`/chat/conversations/${id}`)
+export const createConversation = (data: { title: string; agentId: string }) =>
+  request<{ success: boolean; data: any }>('/chat/conversations', { method: 'POST', body: JSON.stringify(data) })
+export const deleteConversation = (id: string) =>
+  request<{ success: boolean }>(`/chat/conversations/${id}`, { method: 'DELETE' })
+export const sendMessage = (conversationId: string, content: string) =>
+  request<{ success: boolean; data: any }>(`/chat/conversations/${conversationId}/messages`, {
+    method: 'POST',
+    body: JSON.stringify({ content }),
+  })
+
+export function streamMessage(conversationId: string, content: string): Promise<Response> {
+  const token = localStorage.getItem('token')
+  return fetch(`${BASE}/chat/conversations/${conversationId}/messages`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ content }),
+  })
+}

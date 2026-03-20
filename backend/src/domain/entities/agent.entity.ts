@@ -26,6 +26,7 @@ export interface AgentRecord {
 	tools: Record<string, boolean>;
 	content: string;
 	isActive: boolean;
+	useByChat: boolean;
 	createdAt: string;
 	updatedAt: string;
 }

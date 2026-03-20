@@ -684,7 +684,7 @@ export class InternalAgentService implements IAgentService {
 		const res = await fetch(`${config.baseURL}/chat/completions`, {
 			method: 'POST',
 			headers: config.headers,
-			body: JSON.stringify({ ...body, tool_choice: 'auto', stream: true })
+			body: JSON.stringify({ ...body, tool_choice: 'auto', stream: true, cache_prompt: true })
 		})
 		if (!res.ok) throw new Error(`API error ${res.status} ${res.statusText}: ${await res.text()}`)
 		if (!res.body) throw new Error('Response body is null')

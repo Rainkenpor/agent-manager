@@ -13,6 +13,7 @@ const allNavLinks = [
   { to: '/roles', label: 'Roles', icon: 'R', resource: 'roles' },
   { to: '/agents', label: 'Agents', icon: 'A', resource: 'agents' },
   { to: '/mcps', label: 'MCP Servers', icon: 'M', resource: 'mcp_servers' },
+  { to: '/chat', label: 'Chat', icon: 'C', resource: 'chat' },
 ]
 
 const navLinks = computed(() =>
