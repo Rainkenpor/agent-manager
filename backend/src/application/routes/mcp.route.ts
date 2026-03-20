@@ -66,6 +66,64 @@ function jsonSchemaToZodShape(jsonSchema: Record<string, unknown>): ZodRawShape 
 	return shape
 }
 
+// ── Elicitation helper ────────────────────────────────────────────────────────
+
+interface ElicitOption {
+	value: string
+	title?: string
+}
+
+interface ElicitPayload {
+	message: string
+	options: ElicitOption[]
+}
+
+/**
+ * Tries to parse a structured elicitation block from the agent response.
+ * The agent can embed a JSON block anywhere in its response using the format:
+ *
+ *   ```json
+ *   { "elicit": true, "message": "...", "options": [...] }
+ *   ```
+ *
+ * Options can be strings or { value, title } objects.
+ * Returns null if no valid elicitation block is found.
+ */
+function tryParseElicitation(text: string): ElicitPayload | null {
+	// Match ```json ... ``` blocks or a bare top-level JSON object
+	const patterns = [/```json\s*([\s\S]*?)\s*```/g, /(\{[\s\S]*?"elicit"\s*:\s*true[\s\S]*?\})/g]
+
+	for (const pattern of patterns) {
+		let match: RegExpExecArray | null
+		while ((match = pattern.exec(text)) !== null) {
+			try {
+				const parsed = JSON.parse(match[1]) as Record<string, unknown>
+				if (parsed.elicit !== true) continue
+				if (!Array.isArray(parsed.options) || parsed.options.length === 0) continue
+
+				const message = typeof parsed.message === 'string' ? parsed.message : 'Please select an option:'
+				const options: ElicitOption[] = (parsed.options as unknown[]).map((o) => {
+					if (typeof o === 'string') return { value: o, title: o }
+					if (typeof o === 'object' && o !== null) {
+						const obj = o as Record<string, unknown>
+						return {
+							value: String(obj.value ?? obj.const ?? ''),
+							title: typeof obj.title === 'string' ? obj.title : undefined
+						}
+					}
+					return { value: String(o) }
+				})
+
+				return { message, options }
+			} catch {
+				// not valid JSON, continue
+			}
+		}
+	}
+
+	return null
+}
+
 // ── Role-based tool injection ─────────────────────────────────────────────────
 
 /**
@@ -159,7 +217,6 @@ async function applyRoleBasedTools(server: McpServer, user: Record<string, unkno
 				instruction: z.string().describe('The instruction or task for the agent')
 			},
 			async (args: { instruction: string }) => {
-				// Forward to internal agent service (basic invocation — extend for streaming)
 				try {
 					const { container } = await import('@application/container.js')
 					const agentEntity = await container.getAgentUseCase.execute(agent.id)
@@ -181,24 +238,53 @@ async function applyRoleBasedTools(server: McpServer, user: Record<string, unkno
 						history: []
 					})
 
-					console.log(`[MCP] Agent tool invoked: ${agent.slug} with instruction: ${args.instruction}`, response)
+					console.log(`[MCP] Agent tool invoked: ${agent.slug}`, response)
+
+					// Check if the agent response contains a structured elicitation block
+					const elicitPayload = tryParseElicitation(response)
+
+					if (elicitPayload) {
+						// Build oneOf entries for each option
+						const oneOf = elicitPayload.options.map((o) => ({
+							const: o.value,
+							title: o.title ?? o.value
+						}))
+
+						const elicitResult = await server.server.elicitInput({
+							mode: 'form',
+							message: elicitPayload.message,
+							requestedSchema: {
+								type: 'object' as const,
+								properties: {
+									choice: {
+										type: 'string' as const,
+										title: 'Select an option',
+										oneOf
+									}
+								},
+								required: ['choice']
+							}
+						})
+
+						if (elicitResult.action === 'accept' && elicitResult.content) {
+							const chosen = String(elicitResult.content.choice ?? '')
+							return {
+								content: [{ type: 'text' as const, text: chosen }]
+							}
+						}
+
+						return {
+							content: [{ type: 'text' as const, text: 'Selection cancelled by user.' }]
+						}
+					}
 
 					return {
-						content: [
-							{
-								type: 'text' as const,
-								text: response
-							}
-						]
+						content: [{ type: 'text' as const, text: response }]
 					}
-				} catch {
+				} catch (err) {
+					console.error(`[MCP] Agent tool error: ${agent.slug}`, err)
 					return {
-						content: [
-							{
-								type: 'text' as const,
-								text: `Agent ${agent.slug} unavailable`
-							}
-						]
+						content: [{ type: 'text' as const, text: `Agent ${agent.slug} unavailable` }]
 					}
 				}
 			}
