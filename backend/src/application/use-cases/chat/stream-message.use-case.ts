@@ -1,6 +1,6 @@
 import type { IChatRepository } from '@domain/repositories/chat.repository.js'
 import type { IAgentRepository } from '@domain/repositories/agent.repository.js'
-import { AgentService } from '@infra/service/agent.service.js'
+import { MCPAgentService } from '@infra/service/mcp-agent.service'
 
 export type SseEvent =
 	| { type: 'chunk'; content: string }
@@ -39,16 +39,9 @@ export class StreamMessageUseCase {
 		// Build history from messages already in DB before this turn
 		const history = conv.messages.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }))
 
-		// Stream agent response
-		const agentService = new AgentService()
 		const allChunks: string[] = []
 
-		for await (const chunk of agentService.initAgentStream({
-			agentSlug: agent.slug,
-			query: userContent,
-			systemPrompt: agent.content || undefined,
-			history
-		})) {
+		for await (const chunk of MCPAgentService.asyncCall(agent, { instruction: userContent, history })) {
 			allChunks.push(chunk)
 			if (chunk.startsWith('<<')) {
 				// Tool invocation marker: <<id::toolName>>{args}<<\id>>

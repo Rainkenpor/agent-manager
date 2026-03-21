@@ -10,6 +10,8 @@ import { mcpTokenAuthMiddleware } from './middlewares/mcp-token-auth.middleware.
 import type { HttpContext } from '@application/interfaces/route.interface.js'
 import { mcpExternalManager } from '@infra/service/mcp-external.js'
 import { AgentService } from '@infra/service/agent.service.js'
+import { systemPrompt } from '../../const.js'
+import { MCPAgentService } from '@infra/service/mcp-agent.service.js'
 
 let oauthService: McpOAuthService | null = null
 
@@ -159,7 +161,7 @@ async function applyRoleBasedTools(server: McpServer, user: Record<string, unkno
 				instruction: z.string().describe('The instruction or task for the agent')
 			},
 			async (args: { instruction: string }) => {
-				return await callMCPAgent(agent, args)
+				return await MCPAgentService.call(agent, args)
 			}
 		)
 	}
@@ -168,7 +170,7 @@ async function applyRoleBasedTools(server: McpServer, user: Record<string, unkno
 export async function callMCPAgent(
 	agent: { id: string; name: string; slug: string },
 	args: { instruction: string; history?: Array<{ role: 'user' | 'assistant'; content: string }>; stream?: boolean }
-) {
+): Promise<{ content: Array<{ type: 'text'; text: string }> } | AsyncGenerator<any>> {
 	// Forward to internal agent service (basic invocation — extend for streaming)
 	try {
 		const { container } = await import('@application/container.js')
@@ -179,7 +181,7 @@ export async function callMCPAgent(
 			throw new Error(`Agent not found: ${agent.id}`)
 		}
 		const params = {
-			systemPrompt: agentEntity.data.content,
+			systemPrompt: `${systemPrompt}\n${agentEntity.data.content}`,
 			agentSlug: agentEntity.data.slug,
 			query: args.instruction,
 			allowedTools: new Set(

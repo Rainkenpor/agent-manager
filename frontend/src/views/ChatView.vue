@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import * as api from '@/api/api'
 
 interface Agent {
@@ -17,6 +17,7 @@ interface DisplayMessage {
   createdAt: string
   responseTime?: number   // ms — only set on assistant messages once streaming completes
   streaming?: boolean     // true while the stream is still open
+  toolCalls?: string[]    // tool names invoked during this response
 }
 
 interface Conversation {
@@ -26,6 +27,14 @@ interface Conversation {
   createdAt: string
   updatedAt: string
   messages?: DisplayMessage[]
+}
+
+interface RequestQuestion {
+  id: string
+  type: 'text' | 'multi' | 'select'
+  label: string
+  description: string
+  options: Array<{ label: string; description: string }>
 }
 
 const agents = ref<Agent[]>([])
@@ -42,6 +51,10 @@ const showNewChatForm = ref(false)
 const error = ref('')
 
 const messagesContainer = ref<HTMLElement | null>(null)
+
+// Form state keyed by message id
+const formAnswers = ref<Record<string, Record<string, { textValue: string; selectedOptions: string[] }>>>({})
+const submittedForms = ref<string[]>([])
 
 const activeAgent = computed(() => agents.value.find((a) => a.id === activeConversation.value?.agentId))
 
@@ -61,6 +74,7 @@ async function openConversation(conv: Conversation) {
     const res = await api.getConversation(conv.id)
     activeConversation.value = res.data
     messages.value = (res.data.messages ?? []) as DisplayMessage[]
+    initFormAnswersFromMessages()
     await scrollToBottom()
   } catch (e: any) {
     error.value = e.message
@@ -158,6 +172,7 @@ async function sendMessage() {
               ...event.message,
               streaming: false,
               responseTime: event.responseTime,
+              toolCalls: messages.value[idx].toolCalls,
             }
           }
         } else if (event.type === 'error') {
@@ -209,6 +224,119 @@ function formatTime(iso: string) {
 function formatResponseTime(ms: number): string {
   return ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`
 }
+
+// ── Request form helpers ──────────────────────────────────────────────────────
+
+function parseRequestBlock(content: string): RequestQuestion[] | null {
+  const match = content.match(/```request\n([\s\S]*?)```/)
+  if (!match) return null
+
+  const questions: RequestQuestion[] = []
+  const parts = match[1].split(/(?=\[Q\d+\|)/)
+
+  for (const part of parts) {
+    const header = part.match(/^\[Q(\d+)\|(text|multi|select)\]\s*(.+?)(?:\n|$)/)
+    if (!header) continue
+
+    const rest = part.slice(header[0].length).trim()
+    const lines = rest.split('\n')
+    const options: Array<{ label: string; description: string }> = []
+    const descLines: string[] = []
+
+    for (const line of lines) {
+      const opt = line.match(/^-\s*(.+?)\s*\|\s*(.+)$/)
+      if (opt) options.push({ label: opt[1].trim(), description: opt[2].trim() })
+      else if (line.trim()) descLines.push(line.trim())
+    }
+
+    questions.push({
+      id: `Q${header[1]}`,
+      type: header[2] as 'text' | 'multi' | 'select',
+      label: header[3].trim(),
+      description: descLines.join('\n'),
+      options,
+    })
+  }
+
+  return questions.length > 0 ? questions : null
+}
+
+function getContentBeforeRequest(content: string): string {
+  const idx = content.indexOf('```request')
+  return idx > 0 ? content.slice(0, idx).trim() : ''
+}
+
+function getRequestQuestions(msg: DisplayMessage): RequestQuestion[] | null {
+  if (msg.role !== 'assistant' || msg.streaming) return null
+  return parseRequestBlock(msg.content)
+}
+
+function renderInlineMarkdown(text: string): string {
+  return text
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/`(.+?)`/g, '<code class="bg-slate-700/80 px-1 rounded text-xs font-mono">$1</code>')
+}
+
+function stripMarkdown(text: string): string {
+  return text.replace(/\*\*(.+?)\*\*/g, '$1').replace(/`(.+?)`/g, '$1')
+}
+
+function toggleOption(msgId: string, questionId: string, option: string) {
+  const q = formAnswers.value[msgId]?.[questionId]
+  if (!q) return
+  const idx = q.selectedOptions.indexOf(option)
+  if (idx === -1) q.selectedOptions.push(option)
+  else q.selectedOptions.splice(idx, 1)
+}
+
+function selectOption(msgId: string, questionId: string, option: string) {
+  const q = formAnswers.value[msgId]?.[questionId]
+  if (!q) return
+  q.selectedOptions = [option]
+}
+
+function initFormAnswersFromMessages() {
+  for (const msg of messages.value) {
+    if (msg.role !== 'assistant' || msg.streaming || formAnswers.value[msg.id]) continue
+    const questions = parseRequestBlock(msg.content)
+    if (!questions) continue
+    const answers: Record<string, { textValue: string; selectedOptions: string[] }> = {}
+    for (const q of questions) answers[q.id] = { textValue: '', selectedOptions: [] }
+    formAnswers.value[msg.id] = answers
+  }
+}
+
+async function submitRequestForm(msgId: string, questions: RequestQuestion[]) {
+  const answers = formAnswers.value[msgId]
+  if (!answers) return
+
+  const lines: string[] = []
+  for (const q of questions) {
+    const a = answers[q.id]
+    let answerText: string
+
+    if (q.type === 'text') {
+      answerText = a.textValue.trim() || '(sin respuesta)'
+    } else if (q.type === 'multi') {
+      const parts = [...a.selectedOptions]
+      if (a.textValue.trim()) parts.push(a.textValue.trim())
+      answerText = parts.length > 0 ? parts.join(', ') : '(sin selección)'
+    } else {
+      // select
+      answerText = a.selectedOptions[0] ?? (a.textValue.trim() || '(sin selección)')
+      if (a.textValue.trim() && a.textValue.trim() !== answerText) answerText += ` (${a.textValue.trim()})`
+    }
+
+    lines.push(`${stripMarkdown(q.label)}: ${answerText}`)
+  }
+
+  submittedForms.value.push(msgId)
+  messageInput.value = lines.join('\n')
+  await sendMessage()
+}
+
+watch(messages, initFormAnswersFromMessages, { deep: true })
 
 onMounted(fetchInitialData)
 </script>
@@ -338,13 +466,15 @@ onMounted(fetchInitialData)
             </div>
 
             <!-- Bubble + metadata -->
-            <div class="flex flex-col gap-1" :class="msg.form ? 'max-w-[85%]' : 'max-w-[70%]'"
+            <div class="flex flex-col gap-1"
+              :class="getRequestQuestions(msg) && !submittedForms.includes(msg.id) ? 'max-w-[88%]' : 'max-w-[70%]'"
               :style="msg.role === 'user' ? 'align-items:flex-end' : ''">
 
-              <!-- ── Regular text bubble ─────────────────── -->
-              <div class="px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap" :class="msg.role === 'user'
+              <!-- ── Bubble ─────────────────────────────────── -->
+              <div class="px-4 py-2.5 rounded-2xl text-sm leading-relaxed" :class="msg.role === 'user'
                 ? 'bg-indigo-600 text-white rounded-tr-sm'
                 : 'bg-slate-800 text-slate-100 rounded-tl-sm border border-slate-700/50'">
+
                 <!-- Tool calls — shown before the text content -->
                 <div v-if="msg.toolCalls?.length" class="flex flex-wrap gap-1.5 mb-2">
                   <span v-for="tool in msg.toolCalls" :key="tool"
@@ -358,9 +488,89 @@ onMounted(fetchInitialData)
                     {{ tool }}
                   </span>
                 </div>
-                {{ msg.content }}
-                <span v-if="msg.streaming"
-                  class="inline-block w-0.5 h-4 bg-slate-300 ml-0.5 align-middle animate-pulse" />
+
+                <!-- ── Active request form ── -->
+                <template v-if="getRequestQuestions(msg) && !submittedForms.includes(msg.id) && formAnswers[msg.id]">
+                  <p v-if="getContentBeforeRequest(msg.content)" class="whitespace-pre-wrap mb-3 text-slate-300">{{
+                    getContentBeforeRequest(msg.content) }}</p>
+
+                  <div class="space-y-4 border border-slate-600/40 rounded-xl p-4 bg-slate-900/60">
+                    <p class="text-xs font-semibold text-indigo-400 uppercase tracking-wider">Completa el formulario</p>
+
+                    <div v-for="q in getRequestQuestions(msg)" :key="q.id" class="space-y-2">
+                      <!-- Question label + description -->
+                      <div>
+                        <p class="text-sm font-medium text-slate-100" v-html="renderInlineMarkdown(q.label)" />
+                        <p v-if="q.description" class="text-xs text-slate-500 mt-0.5 whitespace-pre-wrap"
+                          v-html="renderInlineMarkdown(q.description)" />
+                      </div>
+
+                      <!-- Multi: predefined options (checkboxes) -->
+                      <div v-if="q.type === 'multi' && q.options.length" class="space-y-1.5 pl-0.5">
+                        <label v-for="opt in q.options" :key="opt.label"
+                          class="flex items-start gap-2.5 cursor-pointer select-none">
+                          <input type="checkbox"
+                            :checked="formAnswers[msg.id][q.id].selectedOptions.includes(opt.label)"
+                            @change="toggleOption(msg.id, q.id, opt.label)"
+                            class="mt-0.5 shrink-0 rounded border-slate-600 bg-slate-800 accent-indigo-500 cursor-pointer" />
+                          <span class="text-sm text-slate-200 leading-snug">
+                            {{ opt.label }}
+                            <span v-if="opt.description" class="text-slate-500"> — {{ opt.description }}</span>
+                          </span>
+                        </label>
+                      </div>
+
+                      <!-- Select: predefined options (radio buttons, single choice) -->
+                      <div v-if="q.type === 'select' && q.options.length" class="space-y-1.5 pl-0.5">
+                        <label v-for="opt in q.options" :key="opt.label"
+                          class="flex items-start gap-2.5 cursor-pointer select-none">
+                          <input type="radio" :name="`${msg.id}-${q.id}`" :value="opt.label"
+                            :checked="formAnswers[msg.id][q.id].selectedOptions[0] === opt.label"
+                            @change="selectOption(msg.id, q.id, opt.label)"
+                            class="mt-0.5 shrink-0 border-slate-600 bg-slate-800 accent-indigo-500 cursor-pointer" />
+                          <span class="text-sm text-slate-200 leading-snug">
+                            {{ opt.label }}
+                            <span v-if="opt.description" class="text-slate-500"> — {{ opt.description }}</span>
+                          </span>
+                        </label>
+                      </div>
+
+                      <!-- Text input (always shown) -->
+                      <input :value="formAnswers[msg.id][q.id].textValue"
+                        @input="(e) => (formAnswers[msg.id][q.id].textValue = (e.target as HTMLInputElement).value)"
+                        type="text" :placeholder="q.type === 'multi' || q.type === 'select'
+                          ? 'Otra respuesta (opcional)...'
+                          : (q.description ? q.description.split('\n')[0] : 'Tu respuesta...')"
+                        class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors" />
+                    </div>
+
+                    <button @click="submitRequestForm(msg.id, getRequestQuestions(msg)!)"
+                      :disabled="sending || !activeConversation"
+                      class="w-full py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-sm font-semibold transition-colors">
+                      Enviar respuestas
+                    </button>
+                  </div>
+                </template>
+
+                <!-- ── Submitted form notice ── -->
+                <template v-else-if="getRequestQuestions(msg)">
+                  <p v-if="getContentBeforeRequest(msg.content)" class="whitespace-pre-wrap mb-2 text-slate-300">{{
+                    getContentBeforeRequest(msg.content) }}</p>
+                  <span class="inline-flex items-center gap-1.5 text-xs text-slate-500">
+                    <svg class="w-3.5 h-3.5 text-green-400 shrink-0" fill="none" stroke="currentColor"
+                      viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Formulario enviado
+                  </span>
+                </template>
+
+                <!-- ── Plain text content ── -->
+                <template v-else>
+                  <span class="whitespace-pre-wrap">{{ msg.content }}</span>
+                  <span v-if="msg.streaming"
+                    class="inline-block w-0.5 h-4 bg-slate-300 ml-0.5 align-middle animate-pulse" />
+                </template>
               </div>
 
               <!-- Timestamp + response time -->
