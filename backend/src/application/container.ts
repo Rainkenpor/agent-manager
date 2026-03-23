@@ -40,7 +40,7 @@ import {
 	// MCP Credential Use Cases
 	GetMcpCredentialsUseCase,
 	UpsertMcpCredentialUseCase,
-	DeleteMcpCredentialUseCase,
+	DeleteMcpCredentialUseCase
 } from './use-cases/index.js'
 
 /**
@@ -237,7 +237,8 @@ export class Container {
 			this._streamMessageUseCase = new StreamMessageUseCase(
 				this._chatRepository,
 				this._agentRepository,
-				this._mcpUserCredentialRepository
+				this._mcpUserCredentialRepository,
+				this.mcpServerRepository
 			)
 		}
 		return this._streamMessageUseCase

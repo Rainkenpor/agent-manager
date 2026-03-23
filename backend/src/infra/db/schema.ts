@@ -127,6 +127,7 @@ export const mcpServers = sqliteTable("mcp_servers", {
 	command: text("command"),                      // for type="stdio"
 	args: text("args", { mode: "json" }).$type<string[]>(),  // for type="stdio"
 	headers: text("headers", { mode: "json" }).$type<Record<string, string>>(),
+	credentialFields: text("credential_fields", { mode: "json" }).$type<Array<{ key: string; description: string }>>(),
 	active: integer("active", { mode: "boolean" }).notNull().default(true),
 	createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
 	updatedAt: text("updated_at").notNull().$defaultFn(() => new Date().toISOString()),

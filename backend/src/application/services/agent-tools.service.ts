@@ -24,6 +24,12 @@ const BASE_TOOLS: AvailableTool[] = [
 		description:
 			'Permite guardar o actualizar las credenciales de un usuario para un servicio específico (ej: GitHub, Jira, etc). Recibe el nombre del servicio y un objeto con las credenciales a guardar.',
 		source: 'registry'
+	},
+	{
+		name: 'list_mcp_credential_fields',
+		description:
+			'Lista los campos de credenciales requeridos para cada servidor MCP activo. Devuelve un array con el id, nombre, displayName y campos de credenciales (key y descripción) de cada servidor MCP activo.',
+		source: 'registry'
 	}
 ]
 

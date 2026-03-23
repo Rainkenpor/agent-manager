@@ -1,7 +1,7 @@
 import type { IChatRepository } from '@domain/repositories/chat.repository.js'
 import type { IAgentRepository } from '@domain/repositories/agent.repository.js'
-import type { IMcpUserCredentialRepository } from '@domain/repositories/mcp-user-credential.repository.js'
 import { MCPAgentService } from '@infra/service/mcp-agent.service'
+import type { IMcpServerRepository, IMcpUserCredentialRepository } from '@domain/repositories'
 
 export type SseEvent =
 	| { type: 'chunk'; content: string }
@@ -18,7 +18,8 @@ export class StreamMessageUseCase {
 	constructor(
 		private readonly chatRepository: IChatRepository,
 		private readonly agentRepository: IAgentRepository,
-		private readonly credentialRepository: IMcpUserCredentialRepository
+		private readonly credentialRepository: IMcpUserCredentialRepository,
+		private readonly mcpServerRepository: IMcpServerRepository
 	) {}
 
 	async execute(conversationId: string, userContent: string, sendEvent: (event: SseEvent) => void): Promise<void> {
@@ -63,10 +64,27 @@ export class StreamMessageUseCase {
 					return Object.fromEntries(creds.map((c) => [c.key, c.value]))
 				},
 				setCredential: async (mcpServerId: string, key: string, value: string): Promise<void> => {
+					// Si se envia el nombre por mcpServerId
+					const server = await this.mcpServerRepository.findByName(mcpServerId)
+					if (server) mcpServerId = server.id
+
 					await this.credentialRepository.upsert({ userId, mcpServerId, key, value })
 				},
 				deleteCredential: async (mcpServerId: string, key: string): Promise<void> => {
 					await this.credentialRepository.delete(userId, mcpServerId, key)
+				},
+				getListCredentials: async (): Promise<
+					{ id: string; name: string; displayName: string; credentialFields: { key: string; description: string }[] }[]
+				> => {
+					const servers = await this.mcpServerRepository.findAll()
+					if (!servers || servers.length === 0) return []
+					const active = servers.filter((s) => s.active)
+					return active.map((s) => ({
+						id: s.id,
+						name: s.name,
+						displayName: s.displayName ?? s.name,
+						credentialFields: s.credentialFields ?? []
+					}))
 				}
 			}
 		}

@@ -8,6 +8,14 @@ export interface ToolCallbacks {
 		getCredentials: (mcpServerId: string) => Promise<Record<string, string>>
 		setCredential: (mcpServerId: string, key: string, value: string) => Promise<void>
 		deleteCredential: (mcpServerId: string, key: string) => Promise<void>
+		getListCredentials: () => Promise<
+			{
+				id: string
+				name: string
+				displayName: string
+				credentialFields: { key: string; description: string }[]
+			}[]
+		>
 	}
 }
 

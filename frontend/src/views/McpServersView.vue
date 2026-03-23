@@ -4,7 +4,7 @@ import AppLayout from '@/components/AppLayout.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { useToastStore } from '@/store/useToast'
 import * as api from '@/api/api'
-import type { McpServer } from '@/types/types'
+import type { McpServer, CredentialField } from '@/types/types'
 
 const toast = useToastStore()
 
@@ -25,6 +25,7 @@ interface ServerForm {
   command: string
   args: string
   active: boolean
+  credentialFields: CredentialField[]
 }
 
 const defaultForm = (): ServerForm => ({
@@ -36,9 +37,18 @@ const defaultForm = (): ServerForm => ({
   command: '',
   args: '',
   active: true,
+  credentialFields: [],
 })
 
 const form = ref<ServerForm>(defaultForm())
+
+function addCredentialField() {
+  form.value.credentialFields.push({ key: '', description: '' })
+}
+
+function removeCredentialField(index: number) {
+  form.value.credentialFields.splice(index, 1)
+}
 
 // Delete
 const deleteTarget = ref<McpServer | null>(null)
@@ -75,6 +85,7 @@ function openEdit(server: McpServer) {
     command: server.command ?? '',
     args: (server.args ?? []).join(', '),
     active: server.active,
+    credentialFields: (server.credentialFields ?? []).map((f) => ({ ...f })),
   }
   showModal.value = true
 }
@@ -93,6 +104,7 @@ async function saveServer() {
       description: form.value.description || undefined,
       type: form.value.type,
       active: form.value.active,
+      credentialFields: form.value.credentialFields.filter((f) => f.key.trim()),
     }
     if (form.value.type === 'http') {
       payload.url = form.value.url || undefined
@@ -230,6 +242,22 @@ async function doDelete() {
               </template>
             </div>
 
+            <!-- Credential fields badges -->
+            <div v-if="(server.credentialFields ?? []).length > 0" class="flex flex-wrap gap-1 mb-3">
+              <span
+                v-for="field in server.credentialFields"
+                :key="field.key"
+                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-violet-900/40 text-violet-300 text-xs font-mono"
+                :title="field.description"
+              >
+                <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                </svg>
+                {{ field.key }}
+              </span>
+            </div>
+
             <!-- Actions -->
             <div class="flex items-center gap-2 pt-3 border-t border-slate-700">
               <button
@@ -341,6 +369,47 @@ async function doDelete() {
               <p class="text-xs text-slate-400 mt-1">Comma-separated</p>
             </div>
           </template>
+
+          <!-- Credential Fields -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <label class="block text-sm font-medium text-slate-400">
+                Credential Fields
+                <span class="text-xs text-slate-500 font-normal ml-1">— fields agents will request from the user</span>
+              </label>
+              <button type="button"
+                class="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 transition-colors"
+                @click="addCredentialField">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Add field
+              </button>
+            </div>
+            <div v-if="form.credentialFields.length === 0" class="text-xs text-slate-600 italic py-1">
+              No credential fields defined.
+            </div>
+            <div v-for="(field, i) in form.credentialFields" :key="i" class="flex items-center gap-2 mb-2">
+              <input
+                v-model="field.key"
+                type="text"
+                placeholder="key (e.g. mcp_token)"
+                class="w-32 px-2.5 py-1.5 rounded-lg border border-slate-600 bg-slate-800 text-white text-xs font-mono focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              />
+              <input
+                v-model="field.description"
+                type="text"
+                placeholder="Description shown to the user"
+                class="flex-1 px-2.5 py-1.5 rounded-lg border border-slate-600 bg-slate-800 text-white text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              />
+              <button type="button" @click="removeCredentialField(i)"
+                class="p-1 text-slate-500 hover:text-red-400 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
 
           <!-- Footer -->
           <div class="flex gap-3 pt-2">

@@ -52,6 +52,11 @@ export interface AgentTool {
   source: 'builtin' | 'registry' | 'external'
 }
 
+export interface CredentialField {
+  key: string
+  description: string
+}
+
 export interface McpServer {
   id: string
   name: string
@@ -62,6 +67,7 @@ export interface McpServer {
   command?: string | null
   args?: string[] | null
   headers?: Record<string, string> | null
+  credentialFields?: CredentialField[] | null
   active: boolean
   createdAt: string
   updatedAt: string

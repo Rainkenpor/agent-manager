@@ -235,7 +235,8 @@ export function buildToolDefinitions(
 					properties: {
 						mcp_server_id: {
 							type: 'string',
-							description: 'The MCP server ID to associate the credential with.'
+							description:
+								'The MCP server ID to associate the credential with. Use list_mcp_credential_fields tool to discover active MCP servers and their required credential fields.'
 						},
 						key: {
 							type: 'string',
@@ -268,6 +269,23 @@ export function buildToolDefinitions(
 						}
 					},
 					required: ['mcp_server_id', 'key']
+				}
+			}
+		},
+		{
+			type: 'function',
+			function: {
+				name: 'list_mcp_credential_fields',
+				description:
+					'List all configured MCP servers and the credential fields each one requires (e.g. email, token). Use this tool to discover what credentials the user needs to provide before calling a specific MCP server.',
+				parameters: {
+					type: 'object',
+					properties: {
+						mcp_server_id: {
+							type: 'string',
+							description: 'Optional. Filter to a single MCP server by ID. Omit to return all active servers.'
+						}
+					}
 				}
 			}
 		}
@@ -346,6 +364,7 @@ export async function executeToolCall(
 	mcpExternal?: typeof mcpExternalManager
 ): Promise<string> {
 	try {
+		originalParams.toolsCallbacks?.onToolCall(toolName, args) // Notificar a callbacks de herramienta invocada, si existe
 		switch (toolName) {
 			case 'update_draft': {
 				const callbacks = originalParams.toolsCallbacks?.draftCallbacks
@@ -383,6 +402,13 @@ export async function executeToolCall(
 				return `Credential '${args.key}' deleted successfully.`
 			}
 
+			case 'list_mcp_credential_fields': {
+				const credFields = await originalParams.toolsCallbacks?.credentialCallbacks
+				if (!credFields) return 'No active MCP servers found.'
+				const list = await credFields.getListCredentials()
+				return JSON.stringify(list, null, 2)
+			}
+
 			case 'spawn_subagent': {
 				const subType = args.agent_type as string
 				agentLogger.info(`[InternalAgent] Spawning sub-agent: ${subType}`)
@@ -398,14 +424,11 @@ export async function executeToolCall(
 				})
 				return `Sub-agent '${subType}' completed.\n${typeof subResult === 'string' ? subResult : ''}`
 			}
-
 			default:
-				// Comprobar primero si es una herramienta MCP externa
-				if (mcpExternal?.isMcpTool(toolName)) {
-					originalParams.toolsCallbacks?.onToolCall(toolName, args) // Notificar a callbacks de herramienta invocada, si existe
-					return await mcpExternal.callTool(toolName, args)
-				}
-				originalParams.toolsCallbacks?.onToolCall(toolName, args) // Notificar a callbacks de herramienta invocada, si existe
+				// Primero intenta herramientas externas MCP, luego las registradas en el registry. Las herramientas externas tienen prioridad si hay nombres coincidentes, asumiendo que son más específicas para el contexto de agentes.
+				if (mcpExternal?.isMcpTool(toolName)) return await mcpExternal.callTool(toolName, args)
+
+				// Si no es una herramienta externa, intenta llamar a una herramienta registrada en el registry de la aplicación. Esto permite que las herramientas definidas en el código sean accesibles para los agentes.
 				return await callRegisteredTool(toolName, args)
 		}
 	} catch (err) {
