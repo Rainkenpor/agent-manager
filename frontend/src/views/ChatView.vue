@@ -31,7 +31,7 @@ interface Conversation {
 
 interface RequestQuestion {
   id: string
-  type: 'text' | 'multi' | 'select'
+  type: 'text' | 'multi' | 'select' | 'confirm'
   label: string
   description: string
   options: Array<{ label: string; description: string }>
@@ -235,7 +235,7 @@ function parseRequestBlock(content: string): RequestQuestion[] | null {
   const parts = match[1].split(/(?=\[Q\d+\|)/)
 
   for (const part of parts) {
-    const header = part.match(/^\[Q(\d+)\|(text|multi|select)\]\s*(.+?)(?:\n|$)/)
+    const header = part.match(/^\[Q(\d+)\|(text|multi|select|confirm)\]\s*(.+?)(?:\n|$)/)
     if (!header) continue
 
     const rest = part.slice(header[0].length).trim()
@@ -251,7 +251,7 @@ function parseRequestBlock(content: string): RequestQuestion[] | null {
 
     questions.push({
       id: `Q${header[1]}`,
-      type: header[2] as 'text' | 'multi' | 'select',
+      type: header[2] as 'text' | 'multi' | 'select' | 'confirm',
       label: header[3].trim(),
       description: descLines.join('\n'),
       options,
@@ -297,13 +297,23 @@ function selectOption(msgId: string, questionId: string, option: string) {
 }
 
 function initFormAnswersFromMessages() {
-  for (const msg of messages.value) {
-    if (msg.role !== 'assistant' || msg.streaming || formAnswers.value[msg.id]) continue
+  for (let i = 0; i < messages.value.length; i++) {
+    const msg = messages.value[i]
+    if (msg.role !== 'assistant' || msg.streaming) continue
     const questions = parseRequestBlock(msg.content)
     if (!questions) continue
-    const answers: Record<string, { textValue: string; selectedOptions: string[] }> = {}
-    for (const q of questions) answers[q.id] = { textValue: '', selectedOptions: [] }
-    formAnswers.value[msg.id] = answers
+
+    if (!formAnswers.value[msg.id]) {
+      const answers: Record<string, { textValue: string; selectedOptions: string[] }> = {}
+      for (const q of questions) answers[q.id] = { textValue: '', selectedOptions: [] }
+      formAnswers.value[msg.id] = answers
+    }
+
+    // Auto-mark as submitted if any subsequent message exists (user already replied)
+    const hasSubsequentMessage = messages.value.slice(i + 1).some((m) => !m.streaming)
+    if (hasSubsequentMessage && !submittedForms.value.includes(msg.id)) {
+      submittedForms.value.push(msg.id)
+    }
   }
 }
 
@@ -322,6 +332,9 @@ async function submitRequestForm(msgId: string, questions: RequestQuestion[]) {
       const parts = [...a.selectedOptions]
       if (a.textValue.trim()) parts.push(a.textValue.trim())
       answerText = parts.length > 0 ? parts.join(', ') : '(sin selección)'
+    } else if (q.type === 'confirm') {
+      answerText = a.selectedOptions[0] ?? (a.textValue.trim() || '(sin selección)')
+      if (a.textValue.trim() && a.textValue.trim() !== answerText) answerText += ` (${a.textValue.trim()})`
     } else {
       // select
       answerText = a.selectedOptions[0] ?? (a.textValue.trim() || '(sin selección)')
@@ -520,6 +533,19 @@ onMounted(fetchInitialData)
                         </label>
                       </div>
 
+                      <!-- Confirm: options as clickable buttons -->
+                      <div v-if="q.type === 'confirm' && q.options.length" class="flex flex-wrap gap-2">
+                        <button v-for="opt in q.options" :key="opt.label" type="button"
+                          @click="selectOption(msg.id, q.id, opt.label)"
+                          :title="opt.description || undefined"
+                          :class="formAnswers[msg.id][q.id].selectedOptions[0] === opt.label
+                            ? 'bg-indigo-600 border-indigo-500 text-white'
+                            : 'bg-slate-800 border-slate-600 text-slate-300 hover:border-indigo-500/60 hover:text-white'"
+                          class="px-4 py-1.5 rounded-lg border text-sm font-medium transition-colors">
+                          {{ opt.label }}
+                        </button>
+                      </div>
+
                       <!-- Select: predefined options (radio buttons, single choice) -->
                       <div v-if="q.type === 'select' && q.options.length" class="space-y-1.5 pl-0.5">
                         <label v-for="opt in q.options" :key="opt.label"
@@ -538,7 +564,7 @@ onMounted(fetchInitialData)
                       <!-- Text input (always shown) -->
                       <input :value="formAnswers[msg.id][q.id].textValue"
                         @input="(e) => (formAnswers[msg.id][q.id].textValue = (e.target as HTMLInputElement).value)"
-                        type="text" :placeholder="q.type === 'multi' || q.type === 'select'
+                        type="text" :placeholder="q.type === 'multi' || q.type === 'select' || q.type === 'confirm'
                           ? 'Otra respuesta (opcional)...'
                           : (q.description ? q.description.split('\n')[0] : 'Tu respuesta...')"
                         class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors" />
