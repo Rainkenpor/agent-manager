@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@biomejs/biome": "^2.4.8",
+    "@mdi/font": "^7.4.47",
     "@modelcontextprotocol/sdk": "^1.27.1",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.8.0",
