@@ -3,6 +3,7 @@ export interface ConversationRecord {
 	title: string
 	agentId: string
 	userId: string
+	draft: string | null
 	createdAt: string
 	updatedAt: string
 }

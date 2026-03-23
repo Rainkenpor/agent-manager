@@ -1,3 +1,16 @@
+export interface ToolCallbacks {
+	onToolCall: (toolName: string, args: any) => Promise<void>
+	draftCallbacks: {
+		onUpdate: (draft: string) => Promise<void>
+		onRead: () => Promise<string | null>
+	}
+	credentialCallbacks: {
+		getCredentials: (mcpServerId: string) => Promise<Record<string, string>>
+		setCredential: (mcpServerId: string, key: string, value: string) => Promise<void>
+		deleteCredential: (mcpServerId: string, key: string) => Promise<void>
+	}
+}
+
 export interface IAgentServiceExecute {
 	systemPrompt?: string // Permite pasar un prompt personalizado para este agente
 	agentSlug: string
@@ -6,6 +19,7 @@ export interface IAgentServiceExecute {
 	allowedTools?: Set<string> // Lista de herramientas permitidas para este agente
 	artifacts?: { name: string; content: string }[]
 	stream?: boolean // Indica si la respuesta debe ser en formato stream
+	toolsCallbacks?: ToolCallbacks // Callbacks para invocar herramientas y manejar borradores
 }
 
 export interface IAgentService {

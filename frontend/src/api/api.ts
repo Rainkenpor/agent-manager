@@ -124,6 +124,17 @@ export const sendMessage = (conversationId: string, content: string) =>
 		body: JSON.stringify({ content })
 	})
 
+// MCP User Credentials
+export const getMcpCredentials = (mcpServerId?: string) =>
+	request<{ success: boolean; data: any[] }>(mcpServerId ? `/mcp-credentials/${mcpServerId}` : '/mcp-credentials')
+export const upsertMcpCredential = (mcpServerId: string, key: string, value: string) =>
+	request<{ success: boolean; data: any }>('/mcp-credentials', {
+		method: 'PUT',
+		body: JSON.stringify({ mcpServerId, key, value })
+	})
+export const deleteMcpCredential = (mcpServerId: string, key: string) =>
+	request<{ success: boolean }>(`/mcp-credentials/${mcpServerId}/${encodeURIComponent(key)}`, { method: 'DELETE' })
+
 export function streamMessage(conversationId: string, content: string): Promise<Response> {
 	const token = localStorage.getItem('token')
 	return fetch(`${BASE}/chat/conversations/${conversationId}/messages`, {

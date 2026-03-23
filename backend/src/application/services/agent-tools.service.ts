@@ -1,52 +1,59 @@
-import { registry } from "@applicationService/registry.service.js";
-import { mcpExternalManager } from "@infra/service/mcp-external.js";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+import { registry } from '@applicationService/registry.service.js'
+import { mcpExternalManager } from '@infra/service/mcp-external.js'
 
 export interface AvailableTool {
-	name: string;
-	description: string;
-	source: "builtin" | "registry" | "external";
+	name: string
+	description: string
+	source: 'builtin' | 'registry' | 'external'
 }
 
 const BASE_TOOLS: AvailableTool[] = [
 	{
-		name: "spawn_subagent",
-		description:
-			"Lanza un sub-agente especializado para completar una tarea de documentación enfocada.",
-		source: "builtin",
+		name: 'spawn_subagent',
+		description: 'Lanza un sub-agente especializado para completar una tarea de documentación enfocada.',
+		source: 'builtin'
 	},
-];
+	{
+		name: 'get_user_mcp_credentials',
+		description:
+			'Obtiene las credenciales de un usuario para un servicio específico (ej: GitHub, Jira, etc). Devuelve un objeto con las credenciales o null si no existen.',
+		source: 'registry'
+	},
+	{
+		name: 'set_user_mcp_credential',
+		description:
+			'Permite guardar o actualizar las credenciales de un usuario para un servicio específico (ej: GitHub, Jira, etc). Recibe el nombre del servicio y un objeto con las credenciales a guardar.',
+		source: 'registry'
+	}
+]
 
 // ── Cache para las herramientas externas ──────────────────────────────────────
-let _externalCache: AvailableTool[] | null = null;
-let _externalCacheTime = 0;
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos
+let _externalCache: AvailableTool[] | null = null
+let _externalCacheTime = 0
+const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutos
 
 async function getExternalTools(): Promise<AvailableTool[]> {
-	const now = Date.now();
+	const now = Date.now()
 	if (_externalCache && now - _externalCacheTime < CACHE_TTL_MS) {
-		return _externalCache;
+		return _externalCache
 	}
 
 	// Busca mcp.json subiendo desde la raíz del proyecto (4 niveles arriba desde services/)
 	const tools: AvailableTool[] = mcpExternalManager.getTools().map((t) => ({
 		name: t.function.name,
 		description: t.function.description,
-		source: "external" as const,
-	}));
+		source: 'external' as const
+	}))
 
-	_externalCache = tools;
-	_externalCacheTime = now;
-	return tools;
+	_externalCache = tools
+	_externalCacheTime = now
+	return tools
 }
 
 /** Invalida el cache de herramientas externas */
 export function invalidateExternalToolsCache(): void {
-	_externalCache = null;
-	_externalCacheTime = 0;
+	_externalCache = null
+	_externalCacheTime = 0
 }
 
 /**
@@ -58,14 +65,14 @@ export function invalidateExternalToolsCache(): void {
 export async function listAvailableAgentTools(): Promise<AvailableTool[]> {
 	const registryTools: AvailableTool[] = registry
 		.getRoutes()
-		.filter((r) => r.useBy?.includes("mcp") && r.toolName && r.toolDescription)
+		.filter((r) => r.useBy?.includes('mcp') && r.toolName && r.toolDescription)
 		.map((r) => ({
-			name: `clarify_${r.toolName}`,
+			name: `agent-manager_${r.toolName}`,
 			description: r.toolDescription as string,
-			source: "registry" as const,
-		}));
+			source: 'registry' as const
+		}))
 
-	const externalTools = await getExternalTools();
+	const externalTools = await getExternalTools()
 
-	return [...BASE_TOOLS, ...registryTools, ...externalTools];
+	return [...BASE_TOOLS, ...registryTools, ...externalTools]
 }

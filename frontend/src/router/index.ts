@@ -47,6 +47,12 @@ const router = createRouter({
       meta: { requiresAuth: true, resource: 'chat' },
     },
     {
+      path: '/mcp-credentials',
+      name: 'mcp-credentials',
+      component: () => import('@/views/McpCredentialsView.vue'),
+      meta: { requiresAuth: true, resource: 'mcp_credentials' },
+    },
+    {
       path: '/oauth/authorize/mcp',
       name: 'oauth-authorize-mcp',
       component: () => import('@/views/OAuthAuthorizeView.vue'),

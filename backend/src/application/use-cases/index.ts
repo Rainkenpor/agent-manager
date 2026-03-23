@@ -3,3 +3,4 @@ export * from "./user/index.js";
 export * from "./role/index.js";
 export * from "./auth/index.js";
 export * from "./chat/index.js";
+export * from "./mcp-credential/index.js";

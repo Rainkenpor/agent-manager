@@ -160,6 +160,22 @@ async function seedDefaultPermissions() {
 			createdAt: new Date().toISOString()
 		},
 
+		// MCP Credentials
+		{
+			id: randomUUID(),
+			resource: 'mcp_credentials',
+			action: 'read',
+			description: 'Ver credenciales MCP propias',
+			createdAt: new Date().toISOString()
+		},
+		{
+			id: randomUUID(),
+			resource: 'mcp_credentials',
+			action: 'write',
+			description: 'Crear y eliminar credenciales MCP propias',
+			createdAt: new Date().toISOString()
+		},
+
 		// Chat
 		{
 			id: randomUUID(),

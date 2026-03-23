@@ -22,7 +22,7 @@ export class ChatRepository implements IChatRepository {
 			createdAt: now,
 			updatedAt: now,
 		})
-		return { id, title: data.title, agentId: data.agentId, userId: data.userId, createdAt: now, updatedAt: now }
+		return { id, title: data.title, agentId: data.agentId, userId: data.userId, draft: null, createdAt: now, updatedAt: now }
 	}
 
 	async findConversationsByUser(userId: string): Promise<ConversationRecord[]> {
@@ -62,5 +62,9 @@ export class ChatRepository implements IChatRepository {
 
 	async touchConversation(id: string): Promise<void> {
 		await db.update(conversations).set({ updatedAt: new Date().toISOString() }).where(eq(conversations.id, id))
+	}
+
+	async updateDraft(id: string, draft: string): Promise<void> {
+		await db.update(conversations).set({ draft }).where(eq(conversations.id, id))
 	}
 }

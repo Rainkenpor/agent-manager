@@ -4,7 +4,8 @@ import type {
 	IPermissionRepository,
 	IAgentRepository,
 	IMcpServerRepository,
-	IChatRepository
+	IChatRepository,
+	IMcpUserCredentialRepository
 } from '@domain/repositories/index.js'
 
 import {
@@ -13,7 +14,8 @@ import {
 	RoleRepository,
 	PermissionRepository,
 	McpServerRepository,
-	ChatRepository
+	ChatRepository,
+	McpUserCredentialRepository
 } from '@infra/repository/index.js'
 
 import {
@@ -35,6 +37,10 @@ import {
 	GetConversationUseCase,
 	DeleteConversationUseCase,
 	StreamMessageUseCase,
+	// MCP Credential Use Cases
+	GetMcpCredentialsUseCase,
+	UpsertMcpCredentialUseCase,
+	DeleteMcpCredentialUseCase,
 } from './use-cases/index.js'
 
 /**
@@ -75,6 +81,12 @@ export class Container {
 	private _deleteConversationUseCase?: DeleteConversationUseCase
 	private _streamMessageUseCase?: StreamMessageUseCase
 
+	// MCP User Credential Repository & Use Cases
+	private _mcpUserCredentialRepository: IMcpUserCredentialRepository
+	private _getMcpCredentialsUseCase?: GetMcpCredentialsUseCase
+	private _upsertMcpCredentialUseCase?: UpsertMcpCredentialUseCase
+	private _deleteMcpCredentialUseCase?: DeleteMcpCredentialUseCase
+
 	constructor() {
 		// Initialize repositories with concrete implementations
 		this._userRepository = new UserRepository()
@@ -83,6 +95,7 @@ export class Container {
 		this._agentRepository = new AgentRepository()
 		this._mcpServerRepository = new McpServerRepository()
 		this._chatRepository = new ChatRepository()
+		this._mcpUserCredentialRepository = new McpUserCredentialRepository()
 	}
 
 	// ==========================================
@@ -221,9 +234,42 @@ export class Container {
 
 	get streamMessageUseCase(): StreamMessageUseCase {
 		if (!this._streamMessageUseCase) {
-			this._streamMessageUseCase = new StreamMessageUseCase(this._chatRepository, this._agentRepository)
+			this._streamMessageUseCase = new StreamMessageUseCase(
+				this._chatRepository,
+				this._agentRepository,
+				this._mcpUserCredentialRepository
+			)
 		}
 		return this._streamMessageUseCase
+	}
+
+	// ==========================================
+	// MCP CREDENTIAL USE CASES
+	// ==========================================
+
+	get mcpUserCredentialRepository(): IMcpUserCredentialRepository {
+		return this._mcpUserCredentialRepository
+	}
+
+	get getMcpCredentialsUseCase(): GetMcpCredentialsUseCase {
+		if (!this._getMcpCredentialsUseCase) {
+			this._getMcpCredentialsUseCase = new GetMcpCredentialsUseCase(this._mcpUserCredentialRepository)
+		}
+		return this._getMcpCredentialsUseCase
+	}
+
+	get upsertMcpCredentialUseCase(): UpsertMcpCredentialUseCase {
+		if (!this._upsertMcpCredentialUseCase) {
+			this._upsertMcpCredentialUseCase = new UpsertMcpCredentialUseCase(this._mcpUserCredentialRepository)
+		}
+		return this._upsertMcpCredentialUseCase
+	}
+
+	get deleteMcpCredentialUseCase(): DeleteMcpCredentialUseCase {
+		if (!this._deleteMcpCredentialUseCase) {
+			this._deleteMcpCredentialUseCase = new DeleteMcpCredentialUseCase(this._mcpUserCredentialRepository)
+		}
+		return this._deleteMcpCredentialUseCase
 	}
 }
 

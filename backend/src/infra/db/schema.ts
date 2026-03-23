@@ -197,6 +197,18 @@ export const conversations = sqliteTable('conversations', {
 	title: text('title').notNull(),
 	agentId: text('agent_id').notNull().references(() => agents.id, { onDelete: 'cascade' }),
 	userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	draft: text('draft'),
+	createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
+	updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString()),
+})
+
+// MCP User Credentials — key-value store per user+mcp pair
+export const mcpUserCredentials = sqliteTable('mcp_user_credentials', {
+	id: text('id').primaryKey(),
+	userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	mcpServerId: text('mcp_server_id').notNull().references(() => mcpServers.id, { onDelete: 'cascade' }),
+	key: text('key').notNull(),
+	value: text('value').notNull(),
 	createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
 	updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString()),
 })
@@ -235,6 +247,8 @@ export type OAuthClient = typeof oauthClients.$inferSelect;
 export type NewOAuthClient = typeof oauthClients.$inferInsert;
 export type OAuthCode = typeof oauthCodes.$inferSelect;
 export type OAuthRefreshToken = typeof oauthRefreshTokens.$inferSelect;
+export type McpUserCredential = typeof mcpUserCredentials.$inferSelect;
+export type NewMcpUserCredential = typeof mcpUserCredentials.$inferInsert;
 export type Conversation = typeof conversations.$inferSelect;
 export type NewConversation = typeof conversations.$inferInsert;
 export type Message = typeof messages.$inferSelect;

@@ -1,5 +1,6 @@
 import { systemPrompt } from '../../const'
 import { AgentService } from './agent.service'
+import type { ToolCallbacks } from '@domain/entities/agent.entity.js'
 
 export class MCPAgentService {
 	static async call(
@@ -52,7 +53,11 @@ export class MCPAgentService {
 	}
 	static async *asyncCall(
 		agent: { id: string; name: string; slug: string },
-		args: { instruction: string; history?: Array<{ role: 'user' | 'assistant'; content: string }> }
+		args: {
+			instruction: string
+			history?: Array<{ role: 'user' | 'assistant'; content: string }>
+			toolsCallbacks?: ToolCallbacks
+		}
 	): AsyncGenerator<any> {
 		// Forward to internal agent service (basic invocation — extend for streaming)
 		try {
@@ -72,7 +77,8 @@ export class MCPAgentService {
 						.filter(([_, enabled]) => enabled)
 						.map(([toolName]) => toolName)
 				),
-				history: args.history || []
+				history: args.history || [],
+				toolsCallbacks: args.toolsCallbacks
 			}
 
 			// Stream

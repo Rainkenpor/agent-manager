@@ -13,4 +13,5 @@ export interface IChatRepository {
 	addMessage(conversationId: string, role: 'user' | 'assistant', content: string): Promise<MessageRecord>
 	getMessages(conversationId: string): Promise<MessageRecord[]>
 	touchConversation(id: string): Promise<void>
+	updateDraft(id: string, draft: string): Promise<void>
 }

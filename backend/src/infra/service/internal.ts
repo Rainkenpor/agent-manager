@@ -763,27 +763,6 @@ export class InternalAgentService implements IAgentService {
 	}
 
 	/**
-	 * Load agent system prompt.
-	 * Priority: project .opencode dir → server agent dir → server subagents dir → default
-	 */
-	private loadSystemPrompt(basePath: string, agentType: string): string {
-		const candidates = [
-			nodePath.join(basePath, '.opencode', 'agent', `${agentType}.md`),
-			nodePath.join(process.cwd(), 'agent', `${agentType}.md`),
-			nodePath.join(process.cwd(), 'agent', 'subagents', `${agentType}.md`)
-		]
-
-		for (const candidate of candidates) {
-			if (fs.existsSync(candidate)) {
-				const raw = fs.readFileSync(candidate, 'utf-8').replace(/<<AGENT_MODEL>>/g, envs.AGENT_MODEL)
-				return stripFrontmatter(raw)
-			}
-		}
-
-		return `You are an AI agent of type '${agentType}'. Fulfill the given task by exploring the project directory using the available tools.`
-	}
-
-	/**
 	 * Cap a raw tool result to TOOL_RESULT_IN_HISTORY chars before storing in
 	 * message history. Long results (file reads, grep output) are the primary
 	 * source of context bloat — mirrors OpenCode's per-part size limit.
@@ -948,11 +927,6 @@ export class InternalAgentService implements IAgentService {
 					// malformed JSON — pass empty args
 				}
 
-				const id = new Date().getTime().toString(36) + Math.random().toString(36).slice(2)
-
-				// Yield visible progress so the user sees tool activity
-				yield `<<${id}::${toolCall.function.name}>>${JSON.stringify(toolArgs).slice(0, 200)}<<\\${id}>>`
-
 				agentLogger.info(`[InternalAgent] → ${toolCall.function.name}(${JSON.stringify(toolArgs).slice(0, 200)})`)
 
 				const result = await executeToolCall(
@@ -962,8 +936,6 @@ export class InternalAgentService implements IAgentService {
 					originalParams,
 					mcpExternal
 				)
-
-				yield `<<${id}>>$${result.slice(0, 500)}<<\\${id}>>`
 
 				agentLogger.info(`[InternalAgent] ← ${result.slice(0, 200).replace(/\n/g, '\\n').replace(/\r/g, '\\r')}`)
 
@@ -981,7 +953,7 @@ export class InternalAgentService implements IAgentService {
 	// ── Public API ────────────────────────────────────────────────────────────
 
 	async executeAgent(params: IAgentServiceExecute): Promise<unknown> {
-		const { query, agentSlug: agentType, systemPrompt, allowedTools } = params
+		const { query, agentSlug: agentType, systemPrompt, allowedTools, toolsCallbacks } = params
 
 		agentLogger.info(`[InternalAgent] ══════ START agent=${agentType} ══════`)
 		agentLogger.info(`[InternalAgent] model=${envs.AGENT_MODEL}`)
@@ -990,7 +962,7 @@ export class InternalAgentService implements IAgentService {
 		const parsed = this.parseModel(envs.AGENT_MODEL)
 		const config = this.buildRequestConfig(parsed)
 
-		const tools = buildToolDefinitions(mcpExternalManager, allowedTools ?? undefined)
+		const tools = buildToolDefinitions(mcpExternalManager, allowedTools ?? undefined, toolsCallbacks)
 
 		const messages: MessageParam[] = [
 			{ role: 'system', content: systemPrompt || '' },
@@ -1008,7 +980,7 @@ export class InternalAgentService implements IAgentService {
 
 	/** Streaming variant of executeAgent — yields content deltas and tool progress as they arrive */
 	async *executeAgentStream(params: IAgentServiceExecute): AsyncGenerator<string> {
-		const { query, agentSlug: agentType, artifacts, history, systemPrompt, allowedTools } = params
+		const { query, agentSlug: agentType, artifacts, history, systemPrompt, allowedTools, toolsCallbacks } = params
 
 		agentLogger.info(`[InternalAgent] ══════ START stream agent=${agentType} ══════`)
 		agentLogger.info(`[InternalAgent] model=${envs.AGENT_MODEL}`)
@@ -1017,7 +989,7 @@ export class InternalAgentService implements IAgentService {
 		const parsed = this.parseModel(envs.AGENT_MODEL)
 		const config = this.buildRequestConfig(parsed)
 
-		const tools = buildToolDefinitions(mcpExternalManager, allowedTools ?? undefined)
+		const tools = buildToolDefinitions(mcpExternalManager, allowedTools ?? undefined, toolsCallbacks)
 
 		let userContent = query
 		if (artifacts?.length) {

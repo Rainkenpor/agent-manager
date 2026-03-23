@@ -1,10 +1,12 @@
 import type { IChatRepository } from '@domain/repositories/chat.repository.js'
 import type { IAgentRepository } from '@domain/repositories/agent.repository.js'
+import type { IMcpUserCredentialRepository } from '@domain/repositories/mcp-user-credential.repository.js'
 import { MCPAgentService } from '@infra/service/mcp-agent.service'
 
 export type SseEvent =
 	| { type: 'chunk'; content: string }
 	| { type: 'tool'; name: string }
+	| { type: 'draft_updated'; draft: string }
 	| {
 			type: 'done'
 			message: { id: string; conversationId: string; role: string; content: string; createdAt: string }
@@ -15,7 +17,8 @@ export type SseEvent =
 export class StreamMessageUseCase {
 	constructor(
 		private readonly chatRepository: IChatRepository,
-		private readonly agentRepository: IAgentRepository
+		private readonly agentRepository: IAgentRepository,
+		private readonly credentialRepository: IMcpUserCredentialRepository
 	) {}
 
 	async execute(conversationId: string, userContent: string, sendEvent: (event: SseEvent) => void): Promise<void> {
@@ -39,9 +42,42 @@ export class StreamMessageUseCase {
 		// Build history from messages already in DB before this turn
 		const history = conv.messages.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }))
 
+		const userId = conv.userId
+		const toolsCallbacks = {
+			onToolCall: async (toolName: string, args: any) => {
+				sendEvent({ type: 'tool', name: toolName })
+			},
+			draftCallbacks: {
+				onUpdate: async (draft: string) => {
+					await this.chatRepository.updateDraft(conversationId, draft)
+					sendEvent({ type: 'draft_updated', draft })
+				},
+				onRead: async () => {
+					const current = await this.chatRepository.findConversationById(conversationId)
+					return current?.draft ?? null
+				}
+			},
+			credentialCallbacks: {
+				getCredentials: async (mcpServerId: string): Promise<Record<string, string>> => {
+					const creds = await this.credentialRepository.findByUserAndMcp(userId, mcpServerId)
+					return Object.fromEntries(creds.map((c) => [c.key, c.value]))
+				},
+				setCredential: async (mcpServerId: string, key: string, value: string): Promise<void> => {
+					await this.credentialRepository.upsert({ userId, mcpServerId, key, value })
+				},
+				deleteCredential: async (mcpServerId: string, key: string): Promise<void> => {
+					await this.credentialRepository.delete(userId, mcpServerId, key)
+				}
+			}
+		}
+
 		const allChunks: string[] = []
 
-		for await (const chunk of MCPAgentService.asyncCall(agent, { instruction: userContent, history })) {
+		for await (const chunk of MCPAgentService.asyncCall(agent, {
+			instruction: userContent,
+			history,
+			toolsCallbacks
+		})) {
 			allChunks.push(chunk)
 			if (chunk.startsWith('<<')) {
 				// Tool invocation marker: <<id::toolName>>{args}<<\id>>
@@ -55,7 +91,7 @@ export class StreamMessageUseCase {
 
 		// Strip tool markers before persisting
 		const rawText = allChunks.join('')
-		const cleanText = rawText.replace(/<<[^>]+>>[^<]*<<\\[^>]+>>/g, '').trim() || rawText.trim()
+		const cleanText = rawText.trim()
 
 		const assistantMsg = await this.chatRepository.addMessage(conversationId, 'assistant', cleanText)
 		await this.chatRepository.touchConversation(conversationId)

@@ -42,6 +42,7 @@ const agents = ref<Agent[]>([])
 const conversations = ref<Conversation[]>([])
 const activeConversation = ref<Conversation | null>(null)
 const messages = ref<DisplayMessage[]>([])
+const draft = ref<string | null>(null)
 
 const selectedAgentId = ref('')
 const newChatTitle = ref('')
@@ -75,6 +76,7 @@ async function openConversation(conv: Conversation) {
     const res = await api.getConversation(conv.id)
     activeConversation.value = res.data
     messages.value = (res.data.messages ?? []) as DisplayMessage[]
+    draft.value = res.data.draft ?? null
     initFormAnswersFromMessages()
     await scrollToBottom()
   } catch (e: any) {
@@ -176,6 +178,8 @@ async function sendMessage() {
               toolCalls: messages.value[idx].toolCalls,
             }
           }
+        } else if (event.type === 'draft_updated') {
+          draft.value = event.draft
         } else if (event.type === 'error') {
           throw new Error(event.error)
         }
@@ -660,15 +664,25 @@ onMounted(fetchInitialData)
 
       </div>
 
-      <div class="w-52 shrink-0 flex flex-col border-r border-slate-800 bg-slate-900">
-        <div class="px-4 py-4 border-b border-slate-800 flex items-center justify-between">
+      <!-- Draft panel -->
+      <div class="w-64 shrink-0 flex flex-col border-l border-slate-800 bg-slate-900/60">
+        <div class="px-4 py-4 border-b border-slate-800 flex items-center gap-2">
+          <svg class="w-3.5 h-3.5 text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
           <h2 class="text-sm font-semibold text-white">Borrador</h2>
-
+          <span v-if="draft" class="ml-auto w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" title="Con contenido" />
         </div>
 
-        <!-- Conversation list -->
-        <div class="flex-1 overflow-y-auto">
-
+        <div class="flex-1 overflow-y-auto px-4 py-3">
+          <div v-if="!activeConversation" class="text-xs text-slate-600 text-center mt-8">
+            Abre una conversación para ver el borrador
+          </div>
+          <div v-else-if="!draft" class="text-xs text-slate-600 text-center mt-8 leading-relaxed">
+            El agente actualizará el borrador con información relevante durante la conversación
+          </div>
+          <pre v-else class="text-xs text-slate-300 whitespace-pre-wrap font-mono leading-relaxed break-words">{{ draft }}</pre>
         </div>
       </div>
     </div>

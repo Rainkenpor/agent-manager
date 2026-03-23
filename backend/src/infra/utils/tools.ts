@@ -1,11 +1,10 @@
 import { z, type ZodRawShape } from 'zod'
-import type { RegisteredRoute } from '@application/interfaces/route.interface.js'
 import type { IAgentServiceExecute } from '@domain/entities/agent.entity.js'
 import { registry } from '@applicationService/registry.service.js'
-import nodePath from 'node:path'
-import fs from 'node:fs'
 import { agentLogger } from '../service/logger.service.js'
 import type { mcpExternalManager } from '../service/mcp-external.js'
+import nodePath from 'node:path'
+import fs from 'node:fs'
 
 interface Tool {
 	type: 'function'
@@ -135,7 +134,8 @@ async function callRegisteredTool(toolName: string, params: Record<string, unkno
 	const routes = registry.getRoutes()
 	const route = routes.find(
 		(r) =>
-			r.useBy?.includes('mcp') && (r.toolName === toolName || r.toolName === `clarify_${toolName}` || toolName === `clarify_${r.toolName}`)
+			r.useBy?.includes('mcp') &&
+			(r.toolName === toolName || r.toolName === `agent-manager_${toolName}` || toolName === `agent-manager_${r.toolName}`)
 	)
 
 	if (!route?.handler) {
@@ -163,7 +163,11 @@ async function callRegisteredTool(toolName: string, params: Record<string, unkno
 }
 
 /** Tool definitions for function-calling */
-export function buildToolDefinitions(mcpExternal?: typeof mcpExternalManager, allowedTools?: Set<string>): Tool[] {
+export function buildToolDefinitions(
+	mcpExternal?: typeof mcpExternalManager,
+	allowedTools?: Set<string>,
+	toolsCallbacks?: import('@domain/entities/agent.entity.js').ToolCallbacks
+): Tool[] {
 	const mcpRoutes = registry.getRoutes().filter((r) => r.useBy?.includes('mcp'))
 
 	const baseTools: Tool[] = [
@@ -201,6 +205,71 @@ export function buildToolDefinitions(mcpExternal?: typeof mcpExternalManager, al
 					required: ['agent_type', 'query']
 				}
 			}
+		},
+		{
+			type: 'function',
+			function: {
+				name: 'get_user_mcp_credentials',
+				description:
+					'Retrieve the stored credentials (key-value pairs) for the authenticated user and a specific MCP server. Use this tool to obtain authentication data (emails, tokens, API keys, etc.) that the user has previously configured for the given MCP server.',
+				parameters: {
+					type: 'object',
+					properties: {
+						mcp_server_id: {
+							type: 'string',
+							description: 'The MCP server ID whose credentials to retrieve.'
+						}
+					},
+					required: ['mcp_server_id']
+				}
+			}
+		},
+		{
+			type: 'function',
+			function: {
+				name: 'set_user_mcp_credential',
+				description:
+					'Store or update a single credential (key-value pair) for the authenticated user and a specific MCP server. Use this to persist authentication data provided by the user during the conversation.',
+				parameters: {
+					type: 'object',
+					properties: {
+						mcp_server_id: {
+							type: 'string',
+							description: 'The MCP server ID to associate the credential with.'
+						},
+						key: {
+							type: 'string',
+							description: 'Credential key, e.g. "email", "token", "api_key".'
+						},
+						value: {
+							type: 'string',
+							description: 'Credential value to store.'
+						}
+					},
+					required: ['mcp_server_id', 'key', 'value']
+				}
+			}
+		},
+		{
+			type: 'function',
+			function: {
+				name: 'delete_user_mcp_credential',
+				description: 'Delete a stored credential for the authenticated user and a specific MCP server.',
+				parameters: {
+					type: 'object',
+					properties: {
+						mcp_server_id: {
+							type: 'string',
+							description: 'The MCP server ID.'
+						},
+						key: {
+							type: 'string',
+							description: 'Credential key to delete.'
+						}
+					},
+					required: ['mcp_server_id', 'key']
+				}
+			}
 		}
 	]
 
@@ -223,15 +292,49 @@ export function buildToolDefinitions(mcpExternal?: typeof mcpExternalManager, al
 
 	const externalMcpTools: Tool[] = mcpExternal ? (mcpExternal.getTools() as Tool[]) : []
 
+	// Draft tools are always available when draftCallbacks are provided — cannot be disabled via allowedTools
+	const draftTools: Tool[] = toolsCallbacks?.draftCallbacks
+		? [
+				{
+					type: 'function',
+					function: {
+						name: 'update_draft',
+						description:
+							'Update the conversation draft with important information gathered so far. The draft is a persistent scratchpad visible to the user in real time. Call this tool whenever you collect data that should be preserved (requirements, decisions, summaries, structured output, etc.).',
+						parameters: {
+							type: 'object',
+							properties: {
+								content: {
+									type: 'string',
+									description: 'Full new content of the draft. Each call replaces the previous draft entirely.'
+								}
+							},
+							required: ['content']
+						}
+					}
+				},
+				{
+					type: 'function',
+					function: {
+						name: 'read_draft',
+						description: 'Read the current draft content for this conversation.',
+						parameters: {
+							type: 'object',
+							properties: {}
+						}
+					}
+				}
+			]
+		: []
+
 	if (allowedTools && allowedTools.size > 0) {
 		const filterBaseTools = baseTools.filter((t) => allowedTools.has(t.function.name))
-
-		const filteredMcp = mcpTools.filter((t) => allowedTools.has(`clarify_${t.function.name}`))
+		const filteredMcp = mcpTools.filter((t) => allowedTools.has(`agent-manager_${t.function.name}`))
 		const filteredExternal = externalMcpTools.filter((t) => allowedTools.has(t.function.name))
-		return [...filterBaseTools, ...filteredMcp, ...filteredExternal]
+		return [...draftTools, ...filterBaseTools, ...filteredMcp, ...filteredExternal]
 	}
 
-	return [...baseTools, ...mcpTools, ...externalMcpTools]
+	return [...draftTools, ...baseTools, ...mcpTools, ...externalMcpTools]
 }
 
 /** Execute a single tool call and return a string result */
@@ -244,6 +347,42 @@ export async function executeToolCall(
 ): Promise<string> {
 	try {
 		switch (toolName) {
+			case 'update_draft': {
+				const callbacks = originalParams.toolsCallbacks?.draftCallbacks
+				if (!callbacks) return 'Error: draft callbacks not available in this context'
+				await callbacks.onUpdate(args.content as string)
+				return 'Draft updated successfully'
+			}
+
+			case 'read_draft': {
+				const callbacks = originalParams.toolsCallbacks?.draftCallbacks
+				if (!callbacks) return 'Error: draft callbacks not available in this context'
+				const draft = await callbacks.onRead()
+				return draft ?? '(draft is empty)'
+			}
+
+			case 'get_user_mcp_credentials': {
+				const credCb = originalParams.toolsCallbacks?.credentialCallbacks
+				if (!credCb) return 'Error: credential callbacks not available in this context'
+				const credentials = await credCb.getCredentials(args.mcp_server_id as string)
+				if (Object.keys(credentials).length === 0) return 'No credentials stored for this MCP server.'
+				return JSON.stringify(credentials, null, 2)
+			}
+
+			case 'set_user_mcp_credential': {
+				const credCb = originalParams.toolsCallbacks?.credentialCallbacks
+				if (!credCb) return 'Error: credential callbacks not available in this context'
+				await credCb.setCredential(args.mcp_server_id as string, args.key as string, args.value as string)
+				return `Credential '${args.key}' stored successfully.`
+			}
+
+			case 'delete_user_mcp_credential': {
+				const credCb = originalParams.toolsCallbacks?.credentialCallbacks
+				if (!credCb) return 'Error: credential callbacks not available in this context'
+				await credCb.deleteCredential(args.mcp_server_id as string, args.key as string)
+				return `Credential '${args.key}' deleted successfully.`
+			}
+
 			case 'spawn_subagent': {
 				const subType = args.agent_type as string
 				agentLogger.info(`[InternalAgent] Spawning sub-agent: ${subType}`)
@@ -263,8 +402,10 @@ export async function executeToolCall(
 			default:
 				// Comprobar primero si es una herramienta MCP externa
 				if (mcpExternal?.isMcpTool(toolName)) {
+					originalParams.toolsCallbacks?.onToolCall(toolName, args) // Notificar a callbacks de herramienta invocada, si existe
 					return await mcpExternal.callTool(toolName, args)
 				}
+				originalParams.toolsCallbacks?.onToolCall(toolName, args) // Notificar a callbacks de herramienta invocada, si existe
 				return await callRegisteredTool(toolName, args)
 		}
 	} catch (err) {

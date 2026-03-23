@@ -43,6 +43,34 @@
       "when": 1774027632633,
       "tag": "0005_curvy_starjammers",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1742860800000,
+      "tag": "0006_add_conversation_draft",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1774287059955,
+      "tag": "0007_long_expediter",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1742947200000,
+      "tag": "0008_mcp_user_credentials",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1774303397787,
+      "tag": "0009_wakeful_tombstone",
+      "breakpoints": true
     }
   ]
 }
