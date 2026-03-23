@@ -17,7 +17,7 @@ Cuando necesites que el usuario responda preguntas, aclare dudas o elija entre o
 
 [Q3|text] ¿Texto de la pregunta abierta (texto libre)?
 
-[Q4|select] ¿El proyecto cuenta con Figma?
+[Q4|single] ¿El proyecto cuenta con Figma?
 - Sí | Sí, el proyecto tiene un archivo de Figma con el diseño completo.
 - No | No, el proyecto no tiene un archivo de Figma.
 
