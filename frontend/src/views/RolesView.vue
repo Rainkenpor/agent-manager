@@ -310,7 +310,7 @@ async function saveToolSelection() {
       <!-- Header -->
       <div class="flex items-center justify-between mb-8">
         <div>
-          <h1 class="text-2xl font-bold text-slate-800">Roles</h1>
+          <h1 class="text-2xl font-bold text-white">Roles</h1>
           <p class="text-slate-500 text-sm mt-0.5">Manage roles, MCP servers and agent assignments</p>
         </div>
         <button
@@ -332,23 +332,23 @@ async function saveToolSelection() {
       </div>
 
       <!-- Table -->
-      <div v-else class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div v-else class="bg-slate-900 rounded-xl shadow-sm border border-slate-800 overflow-hidden">
         <table class="w-full text-sm">
           <thead>
-            <tr class="border-b border-slate-200 bg-slate-50">
-              <th class="text-left px-6 py-3.5 font-semibold text-slate-600">Name</th>
-              <th class="text-left px-6 py-3.5 font-semibold text-slate-600">Description</th>
-              <th class="text-left px-6 py-3.5 font-semibold text-slate-600">Status</th>
-              <th class="text-right px-6 py-3.5 font-semibold text-slate-600">Actions</th>
+            <tr class="border-b border-slate-700 bg-slate-800">
+              <th class="text-left px-6 py-3.5 font-semibold text-slate-400">Name</th>
+              <th class="text-left px-6 py-3.5 font-semibold text-slate-400">Description</th>
+              <th class="text-left px-6 py-3.5 font-semibold text-slate-400">Status</th>
+              <th class="text-right px-6 py-3.5 font-semibold text-slate-400">Actions</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-100">
-            <tr v-for="role in roles" :key="role.id" class="hover:bg-slate-50 transition-colors cursor-pointer"
+          <tbody class="divide-y divide-slate-700">
+            <tr v-for="role in roles" :key="role.id" class="hover:bg-slate-800 transition-colors cursor-pointer"
               @click="openAssocModal(role)">
               <td class="px-6 py-4">
-                <span class="font-medium text-slate-800">{{ role.name }}</span>
+                <span class="font-medium text-white">{{ role.name }}</span>
               </td>
-              <td class="px-6 py-4 text-slate-500">{{ role.description || '—' }}</td>
+              <td class="px-6 py-4 text-slate-400">{{ role.description || '—' }}</td>
               <td class="px-6 py-4">
                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
                   :class="role.active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'">
@@ -386,10 +386,10 @@ async function saveToolSelection() {
     <!-- Role Create / Edit Modal -->
     <div v-if="showRoleModal" class="fixed inset-0 z-40 flex items-center justify-center">
       <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="closeRoleModal" />
-      <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
-        <div class="px-6 py-5 border-b border-slate-200 flex items-center justify-between">
-          <h2 class="text-lg font-semibold text-slate-800">{{ editingRole ? 'Edit Role' : 'Create Role' }}</h2>
-          <button class="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition"
+      <div class="relative bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+        <div class="px-6 py-5 border-b border-slate-700 flex items-center justify-between">
+          <h2 class="text-lg font-semibold text-white">{{ editingRole ? 'Edit Role' : 'Create Role' }}</h2>
+          <button class="p-2 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition"
             @click="closeRoleModal">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -398,19 +398,19 @@ async function saveToolSelection() {
         </div>
         <form class="px-6 py-5 space-y-4" @submit.prevent="saveRole">
           <div>
-            <label class="block text-sm font-medium text-slate-700 mb-1.5">Name <span
+            <label class="block text-sm font-medium text-slate-400 mb-1.5">Name <span
                 class="text-red-500">*</span></label>
             <input v-model="roleForm.name" type="text" placeholder="Role name" required
-              class="w-full px-3 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              class="w-full px-3 py-2.5 rounded-lg border border-slate-700 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" />
           </div>
           <div>
-            <label class="block text-sm font-medium text-slate-700 mb-1.5">Description</label>
+            <label class="block text-sm font-medium text-slate-400 mb-1.5">Description</label>
             <textarea v-model="roleForm.description" placeholder="Optional description" rows="3"
-              class="w-full px-3 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none" />
+              class="w-full px-3 py-2.5 rounded-lg border border-slate-700 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none" />
           </div>
           <div class="flex gap-3 pt-2">
             <button type="button"
-              class="flex-1 px-4 py-2.5 rounded-lg border border-slate-300 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+              class="flex-1 px-4 py-2.5 rounded-lg border border-slate-700 text-sm font-medium text-slate-400 hover:bg-slate-800 transition-colors"
               @click="closeRoleModal">
               Cancel
             </button>
@@ -429,7 +429,7 @@ async function saveToolSelection() {
 
       <!-- Main panel -->
       <div
-        class="relative bg-white rounded-2xl shadow-2xl mx-4 flex flex-col max-h-[85vh] overflow-hidden transition-all"
+        class="relative bg-slate-900 rounded-2xl shadow-2xl mx-4 flex flex-col max-h-[85vh] overflow-hidden transition-all"
         :class="toolPanelMcp ? 'w-full max-w-4xl' : 'w-full max-w-lg'">
         <div class="flex flex-1 min-h-0">
 
@@ -437,12 +437,12 @@ async function saveToolSelection() {
           <div class="flex flex-col flex-1 min-w-0 min-h-0">
 
             <!-- Header -->
-            <div class="px-6 py-5 border-b border-slate-200 flex items-center justify-between shrink-0">
+            <div class="px-6 py-5 border-b border-slate-700 flex items-center justify-between shrink-0">
               <div>
-                <h2 class="text-lg font-semibold text-slate-800">{{ assocModalRole.name }}</h2>
+                <h2 class="text-lg font-semibold text-white">{{ assocModalRole.name }}</h2>
                 <p class="text-sm text-slate-500">Manage MCP servers and agents</p>
               </div>
-              <button class="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition"
+              <button class="p-2 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition"
                 @click="closeAssocModal">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -451,7 +451,7 @@ async function saveToolSelection() {
             </div>
 
             <!-- Tabs -->
-            <div class="flex border-b border-slate-200 shrink-0 px-6">
+            <div class="flex border-b border-slate-700 shrink-0 px-6">
               <button class="px-4 py-3 text-sm font-medium border-b-2 transition-colors"
                 :class="assocTab === 'mcps' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'"
                 @click="assocTab = 'mcps'">
@@ -509,8 +509,8 @@ async function saveToolSelection() {
                     first.</RouterLink>
                 </div>
                 <div v-for="mcp in allMcps" :key="mcp.id"
-                  class="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-slate-50 transition-colors border"
-                  :class="hasMcp(mcp.id) ? 'border-blue-200 bg-blue-50/50' : 'border-transparent'">
+                  class="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-slate-700 transition-colors border"
+                  :class="hasMcp(mcp.id) ? 'border-slate-600 bg-slate-800' : 'border-transparent'">
                   <!-- Checkbox -->
                   <input type="checkbox" :checked="hasMcp(mcp.id)" :disabled="toggling === mcp.id"
                     class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer shrink-0"
@@ -518,7 +518,7 @@ async function saveToolSelection() {
                   <!-- Info (clickable to toggle) -->
                   <div class="flex-1 min-w-0 cursor-pointer" @click="toggleMcp(mcp.id)">
                     <div class="flex items-center gap-2">
-                      <p class="text-sm font-medium text-slate-800">{{ mcp.displayName || mcp.name }}</p>
+                      <p class="text-sm font-medium text-white">{{ mcp.displayName || mcp.name }}</p>
                       <span class="px-1.5 py-0.5 rounded text-xs font-medium"
                         :class="mcp.type === 'http' ? 'bg-blue-100 text-blue-600' : 'bg-amber-100 text-amber-600'">
                         {{ mcp.type }}
@@ -534,7 +534,7 @@ async function saveToolSelection() {
                     class="shrink-0 flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors"
                     :class="toolPanelMcp?.id === mcp.id
                       ? 'bg-indigo-600 text-white'
-                      : 'text-indigo-600 hover:bg-indigo-50 border border-indigo-200'"
+                      : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'"
                     :title="'Configure tools for ' + (mcp.displayName || mcp.name)"
                     @click.stop="toolPanelMcp?.id === mcp.id ? (toolPanelMcp = null) : openToolPanel(mcp)">
                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -564,15 +564,15 @@ async function saveToolSelection() {
                 <template v-if="allAgents.some(a => a.mode === 'primary')">
                   <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Primary Agents</p>
                   <div v-for="agent in allAgents.filter(a => a.mode === 'primary')" :key="agent.id"
-                    class="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer border border-transparent"
-                    :class="hasAgent(agent.id) ? 'border-violet-200 bg-violet-50/50' : ''"
+                    class="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-slate-700 transition-colors cursor-pointer border border-transparent"
+                    :class="hasAgent(agent.id) ? 'border-slate-600 bg-slate-800' : 'border-transparent'"
                     @click="toggleAgent(agent.id)">
                     <input type="checkbox" :checked="hasAgent(agent.id)" :disabled="toggling === agent.id"
                       class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
                       @click.stop @change="toggleAgent(agent.id)" />
                     <div class="flex-1 min-w-0">
                       <div class="flex items-center gap-2">
-                        <p class="text-sm font-medium text-slate-800">{{ agent.name }}</p>
+                        <p class="text-sm font-medium text-white">{{ agent.name }}</p>
                         <span
                           class="px-1.5 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-600">primary</span>
                       </div>
@@ -589,15 +589,15 @@ async function saveToolSelection() {
                 <template v-if="allAgents.some(a => a.mode === 'subagent')">
                   <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mt-4 mb-2">Subagents</p>
                   <div v-for="agent in allAgents.filter(a => a.mode === 'subagent')" :key="agent.id"
-                    class="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer border border-transparent"
-                    :class="hasAgent(agent.id) ? 'border-violet-200 bg-violet-50/50' : ''"
+                    class="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-slate-700 transition-colors cursor-pointer border border-transparent"
+                    :class="hasAgent(agent.id) ? 'border-slate-600 bg-slate-800' : 'border-transparent'"
                     @click="toggleAgent(agent.id)">
                     <input type="checkbox" :checked="hasAgent(agent.id)" :disabled="toggling === agent.id"
                       class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
                       @click.stop @change="toggleAgent(agent.id)" />
                     <div class="flex-1 min-w-0">
                       <div class="flex items-center gap-2">
-                        <p class="text-sm font-medium text-slate-800">{{ agent.name }}</p>
+                        <p class="text-sm font-medium text-white">{{ agent.name }}</p>
                         <span
                           class="px-1.5 py-0.5 rounded text-xs font-medium bg-violet-100 text-violet-600">subagent</span>
                       </div>
@@ -622,15 +622,15 @@ async function saveToolSelection() {
                     <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">{{ resource }}</p>
                     <div class="space-y-1">
                       <div v-for="perm in perms" :key="perm.id"
-                        class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer border"
-                        :class="hasPermission(perm.id) ? 'border-emerald-200 bg-emerald-50/50' : 'border-transparent'"
+                        class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-700 transition-colors cursor-pointer border"
+                        :class="hasPermission(perm.id) ? 'border-slate-600 bg-slate-800' : 'border-transparent'"
                         @click="togglePermission(perm.id)">
                         <input type="checkbox" :checked="hasPermission(perm.id)" :disabled="toggling === perm.id"
                           class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer shrink-0"
                           @click.stop @change="togglePermission(perm.id)" />
                         <div class="flex-1 min-w-0">
                           <div class="flex items-center gap-2">
-                            <span class="text-xs font-mono font-medium text-slate-700">{{ perm.action }}</span>
+                            <span class="text-xs font-mono font-medium text-white">{{ perm.action }}</span>
                           </div>
                           <p v-if="perm.description" class="text-xs text-slate-400 mt-0.5">{{ perm.description }}</p>
                         </div>
@@ -647,7 +647,7 @@ async function saveToolSelection() {
             </div>
 
             <!-- Footer -->
-            <div class="px-6 py-4 border-t border-slate-200 shrink-0">
+            <div class="px-6 py-4 border-t border-slate-700 shrink-0">
               <button
                 class="w-full px-4 py-2.5 rounded-lg bg-slate-800 text-white text-sm font-medium hover:bg-slate-700 transition-colors"
                 @click="closeAssocModal">
@@ -661,7 +661,7 @@ async function saveToolSelection() {
             <!-- Panel header -->
             <div class="px-4 py-4 border-b border-slate-200 shrink-0">
               <div class="flex items-center justify-between mb-0.5">
-                <p class="text-sm font-semibold text-slate-800">Select Tools</p>
+                <p class="text-sm font-semibold text-white">Select Tools</p>
                 <button class="p-1 text-slate-400 hover:text-slate-600 rounded" @click="toolPanelMcp = null">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -687,12 +687,12 @@ async function saveToolSelection() {
               </div>
               <div v-else class="space-y-0.5 px-2">
                 <label v-for="tool in availableTools" :key="tool.toolName"
-                  class="flex items-start gap-2.5 px-2 py-2 rounded-md hover:bg-slate-50 cursor-pointer">
+                  class="flex items-start gap-2.5 px-2 py-2 rounded-md hover:bg-slate-700 cursor-pointer">
                   <input type="checkbox" :checked="selectedTools.has(tool.toolName)"
                     class="w-3.5 h-3.5 mt-0.5 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer shrink-0"
                     @change="toggleToolSelection(tool.toolName)" />
                   <div class="min-w-0">
-                    <p class="text-xs font-mono font-medium text-slate-700 truncate">{{ tool.toolName }}</p>
+                    <p class="text-xs font-mono font-medium text-white truncate">{{ tool.toolName }}</p>
                     <p v-if="tool.description" class="text-xs text-slate-400 mt-0.5 line-clamp-2">{{ tool.description }}
                     </p>
                   </div>
