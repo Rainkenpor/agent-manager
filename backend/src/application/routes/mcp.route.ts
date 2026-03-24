@@ -143,7 +143,7 @@ async function applyRoleBasedTools(server: McpServer, user: Record<string, unkno
 				const inputSchema = jsonSchemaToZodShape(tool.inputSchema as Record<string, unknown>)
 
 				server.tool(tool.toolId, tool.description, inputSchema, async (args: Record<string, unknown>) => {
-					const result = await mcpExternalManager.callTool(tool.toolId, args)
+					const result = await mcpExternalManager.callTool(tool.toolId, args, userId)
 					return { content: [{ type: 'text' as const, text: result }] }
 				})
 			}

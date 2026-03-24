@@ -1,6 +1,6 @@
 import { systemPrompt } from '../../const'
 import { AgentService } from './agent.service'
-import type { ToolCallbacks } from '@domain/entities/agent.entity.js'
+import type { IAgentServiceExecute, ToolCallbacks } from '@domain/entities/agent.entity.js'
 
 export class MCPAgentService {
 	static async call(
@@ -57,6 +57,7 @@ export class MCPAgentService {
 			instruction: string
 			history?: Array<{ role: 'user' | 'assistant'; content: string }>
 			toolsCallbacks?: ToolCallbacks
+			userId?: string
 		}
 	): AsyncGenerator<any> {
 		// Forward to internal agent service (basic invocation — extend for streaming)
@@ -68,7 +69,7 @@ export class MCPAgentService {
 			if (!agentEntity.success) {
 				throw new Error(`Agent not found: ${agent.id}`)
 			}
-			const params = {
+			const params: IAgentServiceExecute = {
 				systemPrompt: `${systemPrompt}\n${agentEntity.data.content}`,
 				agentSlug: agentEntity.data.slug,
 				query: args.instruction,
@@ -78,7 +79,8 @@ export class MCPAgentService {
 						.map(([toolName]) => toolName)
 				),
 				history: args.history || [],
-				toolsCallbacks: args.toolsCallbacks
+				toolsCallbacks: args.toolsCallbacks,
+				userId: args.userId
 			}
 
 			// Stream

@@ -18,7 +18,7 @@ function decryptRow(row: typeof mcpUserCredentials.$inferSelect): McpUserCredent
 }
 
 export class McpUserCredentialRepository implements IMcpUserCredentialRepository {
-	async findByUserAndMcp(userId: string, mcpServerId: string): Promise<McpUserCredential[]> {
+	async findByUserAndMcp(userId: string, mcpServerId: string, showValue?: boolean): Promise<McpUserCredential[]> {
 		const mcpServer = await db.select().from(mcpServers).where(eq(mcpServers.name, mcpServerId)).limit(1)
 		if (mcpServer.length > 0) {
 			mcpServerId = mcpServer[0].id
@@ -27,7 +27,10 @@ export class McpUserCredentialRepository implements IMcpUserCredentialRepository
 			.select()
 			.from(mcpUserCredentials)
 			.where(and(eq(mcpUserCredentials.userId, userId), eq(mcpUserCredentials.mcpServerId, mcpServerId)))
-		return rows.map(decryptRow)
+		if (showValue) {
+			return rows.map(decryptRow)
+		}
+		return rows.map((row) => ({ ...row, value: '*****' }) as McpUserCredential)
 	}
 
 	async findByUser(userId: string): Promise<McpUserCredential[]> {

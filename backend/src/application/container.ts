@@ -5,8 +5,10 @@ import type {
 	IAgentRepository,
 	IMcpServerRepository,
 	IChatRepository,
-	IMcpUserCredentialRepository
+	IMcpUserCredentialRepository,
+	IMcpCredentialProvider
 } from '@domain/repositories/index.js'
+import { mcpExternalManager } from '@infra/service/mcp-external.js'
 
 import {
 	AgentRepository,
@@ -42,6 +44,19 @@ import {
 	UpsertMcpCredentialUseCase,
 	DeleteMcpCredentialUseCase
 } from './use-cases/index.js'
+
+/**
+ * Adaptador que implementa IMcpCredentialProvider usando IMcpUserCredentialRepository.
+ * Traduce McpUserCredential[] → Record<string, string> para el manager de infraestructura.
+ */
+class McpCredentialProviderAdapter implements IMcpCredentialProvider {
+	constructor(private readonly repo: IMcpUserCredentialRepository) {}
+
+	async getCredentials(userId: string, mcpServerId: string, showValue?: boolean): Promise<Record<string, string>> {
+		const creds = await this.repo.findByUserAndMcp(userId, mcpServerId, showValue)
+		return Object.fromEntries(creds.map((c) => [c.key, c.value]))
+	}
+}
 
 /**
  * Dependency Injection Container
@@ -96,6 +111,9 @@ export class Container {
 		this._mcpServerRepository = new McpServerRepository()
 		this._chatRepository = new ChatRepository()
 		this._mcpUserCredentialRepository = new McpUserCredentialRepository()
+
+		// Inyectar el adaptador de credenciales en McpExternalManager (dependency inversion)
+		mcpExternalManager.setCredentialProvider(new McpCredentialProviderAdapter(this._mcpUserCredentialRepository))
 	}
 
 	// ==========================================

@@ -10,6 +10,7 @@
 import { spawn, type ChildProcess } from 'node:child_process'
 import { agentLogger } from '../service/logger.service.js'
 import { ZodRawShape } from 'zod'
+import type { IMcpCredentialProvider } from '../../domain/repositories/mcp-credential-provider.repository.js'
 
 // ── MCP config types ──────────────────────────────────────────────────────────
 
@@ -361,6 +362,13 @@ export class McpExternalManager {
 	private serverDbIds = new Map<string, string>()
 	/** Stores base config per serverName for credential injection */
 	private serverConfigs = new Map<string, StoredServerConfig>()
+	/** Puerto para resolver credenciales de usuario (inyectado desde la capa de aplicación) */
+	private credentialProvider?: IMcpCredentialProvider
+
+	/** Inyecta el proveedor de credenciales (llamar desde el contenedor IoC). */
+	setCredentialProvider(provider: IMcpCredentialProvider): void {
+		this.credentialProvider = provider
+	}
 
 	/** Carga todos los servidores activos desde la base de datos e inicializa cada uno */
 	async initializeFromDatabase(
@@ -508,16 +516,25 @@ export class McpExternalManager {
 		return this.tools
 	}
 
-	async callTool(toolId: string, args: Record<string, unknown>): Promise<string> {
+	/**
+	 * Llama a una herramienta MCP.
+	 * Si se proporciona `userId` y hay un `credentialProvider` inyectado, las credenciales
+	 * del usuario se inyectan automáticamente:
+	 *   - Servidores HTTP → como cabeceras adicionales en la petición
+	 *   - Servidores stdio → como variables de entorno en un proceso temporal
+	 */
+	async callTool(toolId: string, args: Record<string, unknown>, userId?: string): Promise<string> {
 		const entry = this.toolMap.get(toolId) ?? parseMcpToolId(toolId) ?? undefined
 		if (!entry) return `External MCP tool not found: ${toolId}`
 
 		const { serverName, toolName } = entry
 
+		const credentials = await this.resolveCredentials(serverName, userId)
+
 		const http = this.httpClients.get(serverName)
 		if (http) {
 			try {
-				return await http.callTool(toolName, args)
+				return await http.callTool(toolName, args, credentials)
 			} catch (err) {
 				return `MCP HTTP error (${serverName}/${toolName}): ${err instanceof Error ? err.message : String(err)}`
 			}
@@ -525,6 +542,24 @@ export class McpExternalManager {
 
 		const stdio = this.stdioClients.get(serverName)
 		if (stdio) {
+			if (Object.keys(credentials).length > 0) {
+				// Spawn proceso temporal con credenciales en env para no contaminar el proceso persistente
+				const cfg = this.serverConfigs.get(serverName)
+				if (cfg?.type === 'stdio' && cfg.command) {
+					const tempClient = new McpStdioClient(serverName, cfg.command, cfg.args ?? [], {
+						...cfg.baseEnv,
+						...credentials
+					})
+					try {
+						await tempClient.initialize()
+						return await tempClient.callTool(toolName, args)
+					} catch (err) {
+						return `MCP stdio error (${serverName}/${toolName}): ${err instanceof Error ? err.message : String(err)}`
+					} finally {
+						tempClient.cleanup()
+					}
+				}
+			}
 			try {
 				return await stdio.callTool(toolName, args)
 			} catch (err) {
@@ -535,16 +570,18 @@ export class McpExternalManager {
 		return `No active client for MCP server '${serverName}'`
 	}
 
-	/** Libera todos los recursos (mata procesos stdio) */
-	// cleanup(): void {
-	// 	for (const client of this.stdioClients.values()) {
-	// 		client.cleanup();
-	// 	}
-	// 	this.stdioClients.clear();
-	// 	this.httpClients.clear();
-	// 	this.toolMap.clear();
-	// 	this.tools = [];
-	// }
+	/** Resuelve las credenciales del usuario para el servidor dado (vacío si no aplica). */
+	private async resolveCredentials(serverName: string, userId?: string): Promise<Record<string, string>> {
+		if (!userId || !this.credentialProvider) return {}
+		const serverId = this.serverDbIds.get(serverName)
+		if (!serverId) return {}
+		try {
+			return await this.credentialProvider.getCredentials(userId, serverId, true)
+		} catch (err) {
+			agentLogger.warn(`[McpExternal] Failed to resolve credentials for user=${userId} server=${serverName}: ${err}`)
+			return {}
+		}
+	}
 }
 
 const manager = new McpExternalManager()

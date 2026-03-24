@@ -426,7 +426,7 @@ export async function executeToolCall(
 			}
 			default:
 				// Primero intenta herramientas externas MCP, luego las registradas en el registry. Las herramientas externas tienen prioridad si hay nombres coincidentes, asumiendo que son más específicas para el contexto de agentes.
-				if (mcpExternal?.isMcpTool(toolName)) return await mcpExternal.callTool(toolName, args)
+				if (mcpExternal?.isMcpTool(toolName)) return await mcpExternal.callTool(toolName, args, originalParams.userId)
 
 				// Si no es una herramienta externa, intenta llamar a una herramienta registrada en el registry de la aplicación. Esto permite que las herramientas definidas en el código sean accesibles para los agentes.
 				return await callRegisteredTool(toolName, args)

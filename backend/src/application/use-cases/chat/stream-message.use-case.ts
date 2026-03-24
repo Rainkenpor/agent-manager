@@ -94,7 +94,8 @@ export class StreamMessageUseCase {
 		for await (const chunk of MCPAgentService.asyncCall(agent, {
 			instruction: userContent,
 			history,
-			toolsCallbacks
+			toolsCallbacks,
+			userId
 		})) {
 			allChunks.push(chunk)
 			if (chunk.startsWith('<<')) {
