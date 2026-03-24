@@ -68,6 +68,14 @@ export class StreamMessageUseCase {
 					const server = await this.mcpServerRepository.findByName(mcpServerId)
 					if (server) mcpServerId = server.id
 
+          const serverValid = await this.mcpServerRepository.findById(mcpServerId)
+          if (!serverValid) {
+            throw new Error(`MCP Server not found: ${mcpServerId}`)
+          }
+          if (serverValid.credentialFields?.find((f) => f.key === key) === undefined) {
+            throw new Error(`Credential key not valid for this MCP Server: ${key}, valid keys are: ${serverValid.credentialFields?.map((f) => f.key).join(', ')}`)
+          }
+
 					await this.credentialRepository.upsert({ userId, mcpServerId, key, value })
 				},
 				deleteCredential: async (mcpServerId: string, key: string): Promise<void> => {

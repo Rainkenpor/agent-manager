@@ -12,6 +12,7 @@ import { mcpExternalManager } from '@infra/service/mcp-external.js'
 import { AgentService } from '@infra/service/agent.service.js'
 import { systemPrompt } from '../../const.js'
 import { MCPAgentService } from '@infra/service/mcp-agent.service.js'
+import { container } from '../container.js'
 
 let oauthService: McpOAuthService | null = null
 
@@ -75,7 +76,6 @@ function jsonSchemaToZodShape(jsonSchema: Record<string, unknown>): ZodRawShape 
  * Called once per MCP session after the McpServer instance is created.
  */
 async function applyRoleBasedTools(server: McpServer, user: Record<string, unknown>): Promise<void> {
-	const { container } = await import('@application/container.js')
 
 	const userId = user.userId as string | undefined
 	if (!userId) return
@@ -173,7 +173,7 @@ export async function callMCPAgent(
 ): Promise<{ content: Array<{ type: 'text'; text: string }> } | AsyncGenerator<any>> {
 	// Forward to internal agent service (basic invocation — extend for streaming)
 	try {
-		const { container } = await import('@application/container.js')
+
 		const agentEntity = await container.getAgentUseCase.execute(agent.id)
 		const agentService = new AgentService()
 
@@ -406,7 +406,6 @@ export function registerMCPOauthRoutes(oauthService: McpOAuthService): express.R
 		middlewares.push(async (req: Request, res: Response, next: NextFunction) => {
 			try {
 				const rawInput = { ...req.params, ...req.query, ...req.body }
-				const { z } = await import('zod')
 				const inputSchema = route.inputSchema instanceof z.ZodObject ? route.inputSchema : z.object(route.inputSchema)
 				const parseResult = inputSchema.safeParse(rawInput)
 				if (!parseResult.success) {

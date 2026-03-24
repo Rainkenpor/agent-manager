@@ -144,7 +144,6 @@ export function registerAgentRoutes(): void {
 		requiresAuth: true,
 		requiredPermission: { resource: 'agents', action: 'update' },
 		handler: async ({ input, context: { req, res } }) => {
-			const { container } = await import('@application/container.js')
 			try {
 				await container.mcpServerRepository.assignAgentToRole(input.roleId, input.agentId)
 				return { message: 'Agent assigned to role' }
@@ -163,7 +162,6 @@ export function registerAgentRoutes(): void {
 		requiresAuth: true,
 		requiredPermission: { resource: 'agents', action: 'update' },
 		handler: async ({ input, context: { req, res } }) => {
-			const { container } = await import('@application/container.js')
 			try {
 				await container.mcpServerRepository.removeAgentFromRole(input.roleId, input.agentId)
 				return { success: true, message: 'Agent removed from role' }
@@ -181,7 +179,6 @@ export function registerAgentRoutes(): void {
 		inputSchema: z.object({ roleId: z.string() }).shape,
 		requiresAuth: true,
 		handler: async ({ input, context: { req, res } }) => {
-			const { container } = await import('@application/container.js')
 			try {
 				const agentList = await container.mcpServerRepository.getAgentsByRole(input.roleId)
 				return { success: true, data: agentList }

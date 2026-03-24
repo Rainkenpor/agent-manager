@@ -4,6 +4,7 @@ import { envs } from '../../envs.js'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { JWT_SECRET } from '@infra/service/passport.service.js'
+import { container } from '../container.js'
 
 /**
  * Registers OAuth 2.0 endpoints (RFC 6749) and well-known discovery documents.
@@ -106,7 +107,6 @@ export function registerOAuthRoutes(): void {
 			}
 
 			// Authenticate user — either via JWT token (Azure) or username/password
-			const { container } = await import('@application/container.js')
 			let user: any
 
 			if (token) {

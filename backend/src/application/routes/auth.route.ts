@@ -7,6 +7,7 @@ import jwt from 'jsonwebtoken'
 import NodeCache from 'node-cache'
 import { envs } from '../../envs.js'
 import { JWT_SECRET } from '@infra/service/passport.service.js'
+import { container } from '../container.js'
 
 // Cache para CSRF state del flujo OAuth (TTL 10 min)
 const oauthStateCache = new NodeCache({ stdTTL: 600 })
@@ -45,7 +46,6 @@ export function registerAuthRoutes() {
 					}
 
 					try {
-						const { container } = await import('@application/container.js')
 						const loginUseCase = container.loginUseCase
 						const result = await loginUseCase.execute(user)
 
@@ -71,7 +71,6 @@ export function registerAuthRoutes() {
 				return res.status(401).json({ error: 'No autorizado' })
 			}
 
-			const { container } = await import('@application/container.js')
 			const userRepository = container.userRepository
 
 			try {
@@ -192,7 +191,7 @@ export function registerAuthRoutes() {
 					return res.redirect(`${FRONTEND_URL}/login?error=no_email`)
 				}
 
-				const { container } = await import('@application/container.js')
+
 				const userRepository = container.userRepository
 
 				// Buscar o crear usuario
@@ -244,7 +243,6 @@ export function registerAuthRoutes() {
 				return res.status(401).json({ error: 'No autorizado' })
 			}
 
-			const { container } = await import('@application/container.js')
 			const checkPermissionUseCase = container.checkPermissionUseCase
 
 			try {

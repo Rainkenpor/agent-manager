@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { CreateRoleSchema, UpdateRoleSchema } from '@domain/entities/role.entity.js'
 import { registry } from '@application/services/registry.service.js'
+import { container } from '../container.js'
 
 export function registerRoleRoutes() {
 	// Crear rol
@@ -9,7 +10,6 @@ export function registerRoleRoutes() {
 		path: '/api/roles',
 		method: 'POST',
 		handler: async ({ context: { req, res } }) => {
-			const { container } = await import('@application/container.js')
 			const roleRepository = container.roleRepository
 
 			try {
@@ -30,7 +30,6 @@ export function registerRoleRoutes() {
 		path: '/api/roles',
 		method: 'GET',
 		handler: async ({ context: { req, res, next } }) => {
-			const { container } = await import('@application/container.js')
 			const roleRepository = container.roleRepository
 
 			try {
@@ -50,7 +49,6 @@ export function registerRoleRoutes() {
 		path: '/api/roles/:id',
 		method: 'GET',
 		handler: async ({ input, context: { req, res, next } }) => {
-			const { container } = await import('@application/container.js')
 			const roleRepository = container.roleRepository
 
 			try {
@@ -76,7 +74,6 @@ export function registerRoleRoutes() {
 		path: '/api/roles/:id',
 		method: 'PUT',
 		handler: async ({ context: { req, res, next } }) => {
-			const { container } = await import('@application/container.js')
 			const roleRepository = container.roleRepository
 
 			try {
@@ -97,7 +94,6 @@ export function registerRoleRoutes() {
 		path: '/api/roles/:id',
 		method: 'DELETE',
 		handler: async ({ input, context: { res } }) => {
-			const { container } = await import('@application/container.js')
 			const roleRepository = container.roleRepository
 
 			try {
@@ -118,7 +114,6 @@ export function registerRoleRoutes() {
 		path: '/api/permissions',
 		method: 'GET',
 		handler: async ({ context: { res } }) => {
-			const { container } = await import('@application/container.js')
 			const permissionRepository = container.permissionRepository
 			try {
 				const perms = await permissionRepository.findAll()
@@ -137,7 +132,6 @@ export function registerRoleRoutes() {
 		path: '/api/roles/:id/permissions',
 		method: 'GET',
 		handler: async ({ input, context: { res } }) => {
-			const { container } = await import('@application/container.js')
 			const roleRepository = container.roleRepository
 			try {
 				const perms = await roleRepository.getPermissions(input.id)
@@ -157,7 +151,6 @@ export function registerRoleRoutes() {
 		path: '/api/roles/:roleId/permissions/:permissionId',
 		method: 'POST',
 		handler: async ({ input, context: { res } }) => {
-			const { container } = await import('@application/container.js')
 			const assignPermissionUseCase = container.assignPermissionUseCase
 
 			try {
@@ -184,7 +177,6 @@ export function registerRoleRoutes() {
 		path: '/api/roles/:roleId/permissions/:permissionId',
 		method: 'DELETE',
 		handler: async ({ input, context: { res } }) => {
-			const { container } = await import('@application/container.js')
 			const roleRepository = container.roleRepository
 
 			try {

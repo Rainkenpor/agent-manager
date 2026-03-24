@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { registry } from '@application/services/registry.service.js'
 import { CreateMcpServerSchema, UpdateMcpServerSchema } from '@domain/entities/mcp-server.entity.js'
+import { container } from '../container.js'
 
 export function registerMcpServerRoutes(): void {
 	// List all MCP servers
@@ -12,7 +13,6 @@ export function registerMcpServerRoutes(): void {
 		requiresAuth: true,
 		requiredPermission: { resource: 'mcp_servers', action: 'read' },
 		handler: async () => {
-			const { container } = await import('@application/container.js')
 			const servers = await container.mcpServerRepository.findAll()
 			return { success: true, data: servers }
 		}
@@ -27,7 +27,6 @@ export function registerMcpServerRoutes(): void {
 		requiresAuth: true,
 		requiredPermission: { resource: 'mcp_servers', action: 'read' },
 		handler: async ({ input, context: { req, res } }) => {
-			const { container } = await import('@application/container.js')
 			const server = await container.mcpServerRepository.findById(input.id)
 			if (!server) return res.status(404).json({ error: 'MCP server not found' })
 			return server
@@ -43,7 +42,6 @@ export function registerMcpServerRoutes(): void {
 		requiresAuth: true,
 		requiredPermission: { resource: 'mcp_servers', action: 'create' },
 		handler: async ({ context: { req, res } }) => {
-			const { container } = await import('@application/container.js')
 			try {
 				const server = await container.mcpServerRepository.create(req.body)
 				res.status(201).json(server)
@@ -62,7 +60,6 @@ export function registerMcpServerRoutes(): void {
 		requiresAuth: true,
 		requiredPermission: { resource: 'mcp_servers', action: 'update' },
 		handler: async ({ context: { req, res } }) => {
-			const { container } = await import('@application/container.js')
 			try {
 				const server = await container.mcpServerRepository.update(req.params.id as string, req.body)
 				return server
@@ -81,7 +78,6 @@ export function registerMcpServerRoutes(): void {
 		requiresAuth: true,
 		requiredPermission: { resource: 'mcp_servers', action: 'delete' },
 		handler: async ({ input, context: { req, res } }) => {
-			const { container } = await import('@application/container.js')
 			try {
 				await container.mcpServerRepository.delete(input.id)
 				return { success: true, message: 'MCP server deleted' }
@@ -100,7 +96,6 @@ export function registerMcpServerRoutes(): void {
 		requiresAuth: true,
 		requiredPermission: { resource: 'mcp_servers', action: 'update' },
 		handler: async ({ input, context: { req, res } }) => {
-			const { container } = await import('@application/container.js')
 			try {
 				await container.mcpServerRepository.assignToRole(input.roleId, input.mcpServerId)
 				return { message: 'MCP server assigned to role' }
@@ -119,7 +114,6 @@ export function registerMcpServerRoutes(): void {
 		requiresAuth: true,
 		requiredPermission: { resource: 'mcp_servers', action: 'delete' },
 		handler: async ({ input, context: { req, res } }) => {
-			const { container } = await import('@application/container.js')
 			try {
 				await container.mcpServerRepository.removeFromRole(input.roleId, input.mcpServerId)
 				return { success: true, message: 'MCP server removed from role' }
@@ -138,7 +132,6 @@ export function registerMcpServerRoutes(): void {
 		requiresAuth: true,
 		requiredPermission: { resource: 'mcp_servers', action: 'read' },
 		handler: async ({ input, context: { req, res } }) => {
-			const { container } = await import('@application/container.js')
 			try {
 				const mcps = await container.mcpServerRepository.getByRole(input.roleId)
 				return { success: true, data: mcps }
@@ -159,7 +152,6 @@ export function registerMcpServerRoutes(): void {
 		requiresAuth: true,
 		requiredPermission: { resource: 'mcp_servers', action: 'read' },
 		handler: async ({ context: { req } }) => {
-			const { container } = await import('@application/container.js')
 			const tools = await container.mcpServerRepository.getRoleMcpTools(req.params.roleId as string, req.params.mcpServerId as string)
 			return { success: true, data: tools }
 		}
@@ -178,7 +170,6 @@ export function registerMcpServerRoutes(): void {
 		requiresAuth: true,
 		requiredPermission: { resource: 'mcp_servers', action: 'update' },
 		handler: async ({ context: { req, res } }) => {
-			const { container } = await import('@application/container.js')
 			try {
 				const toolNames: string[] = req.body.tools ?? []
 				await container.mcpServerRepository.setRoleMcpTools(req.params.roleId as string, req.params.mcpServerId as string, toolNames)
@@ -198,7 +189,6 @@ export function registerMcpServerRoutes(): void {
 		requiresAuth: true,
 		requiredPermission: { resource: 'mcp_servers', action: 'read' },
 		handler: async ({ context: { req, res } }) => {
-			const { container } = await import('@application/container.js')
 			const { mcpExternalManager } = await import('@infra/service/mcp-external.js')
 			try {
 				const server = await container.mcpServerRepository.findById(req.params.id as string)

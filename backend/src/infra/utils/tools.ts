@@ -1,10 +1,11 @@
+import type { IAgentServiceExecute, ToolCallbacks } from '@domain/entities/agent.entity.js'
+import type { mcpExternalManager } from '../service/mcp-external.js'
 import { z, type ZodRawShape } from 'zod'
-import type { IAgentServiceExecute } from '@domain/entities/agent.entity.js'
 import { registry } from '@applicationService/registry.service.js'
 import { agentLogger } from '../service/logger.service.js'
-import type { mcpExternalManager } from '../service/mcp-external.js'
 import nodePath from 'node:path'
 import fs from 'node:fs'
+import { NextFunction, Request, Response } from 'express'
 
 interface Tool {
 	type: 'function'
@@ -150,9 +151,9 @@ async function callRegisteredTool(toolName: string, params: Record<string, unkno
 		const result = await route.handler({
 			input: params as never,
 			context: {
-				req: {} as import('express').Request,
-				res: {} as import('express').Response,
-				next: (() => {}) as import('express').NextFunction
+				req: {} as Request,
+				res: {} as Response,
+				next: (() => {}) as NextFunction
 			},
 			oauthService: null as never
 		})
@@ -166,7 +167,7 @@ async function callRegisteredTool(toolName: string, params: Record<string, unkno
 export function buildToolDefinitions(
 	mcpExternal?: typeof mcpExternalManager,
 	allowedTools?: Set<string>,
-	toolsCallbacks?: import('@domain/entities/agent.entity.js').ToolCallbacks
+	toolsCallbacks?: ToolCallbacks
 ): Tool[] {
 	const mcpRoutes = registry.getRoutes().filter((r) => r.useBy?.includes('mcp'))
 

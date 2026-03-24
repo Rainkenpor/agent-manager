@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { CreateUserSchema, UpdateUserSchema } from '@domain/entities/user.entity.js'
 import { registry } from '@application/services/registry.service.js'
+import { container } from '../container.js'
 
 export function registerUserRoutes() {
 	// Listar usuarios
@@ -9,7 +10,6 @@ export function registerUserRoutes() {
 		path: '/api/users',
 		method: 'GET',
 		handler: async ({ context: { res } }) => {
-			const { container } = await import('@application/container.js')
 			const userRepository = container.userRepository
 
 			try {
@@ -37,7 +37,6 @@ export function registerUserRoutes() {
 		path: '/api/users/:id',
 		method: 'GET',
 		handler: async ({ input, context: { req, res } }) => {
-			const { container } = await import('@application/container.js')
 			const userRepository = container.userRepository
 
 			try {
@@ -66,7 +65,6 @@ export function registerUserRoutes() {
 		path: '/api/users/:id',
 		method: 'PUT',
 		handler: async ({ input, context: { req, res } }) => {
-			const { container } = await import('@application/container.js')
 			const userRepository = container.userRepository
 
 			try {
@@ -88,7 +86,6 @@ export function registerUserRoutes() {
 		path: '/api/users/:id',
 		method: 'DELETE',
 		handler: async ({ input, context: { req, res } }) => {
-			const { container } = await import('@application/container.js')
 			const userRepository = container.userRepository
 
 			try {
@@ -109,7 +106,6 @@ export function registerUserRoutes() {
 		path: '/api/users/register',
 		method: 'POST',
 		handler: async ({ context: { req, res } }) => {
-			const { container } = await import('@application/container.js')
 			const createUserUseCase = container.createUserUseCase
 
 			try {
@@ -131,7 +127,6 @@ export function registerUserRoutes() {
 		path: '/api/users/:userId/roles/:roleId',
 		method: 'POST',
 		handler: async ({ input, context: { req, res } }) => {
-			const { container } = await import('@application/container.js')
 			const assignRoleUseCase = container.assignRoleUseCase
 
 			try {
@@ -158,7 +153,6 @@ export function registerUserRoutes() {
 		path: '/api/users/:userId/roles/:roleId',
 		method: 'DELETE',
 		handler: async ({ input, context: { req, res } }) => {
-			const { container } = await import('@application/container.js')
 			const userRepository = container.userRepository
 
 			try {
