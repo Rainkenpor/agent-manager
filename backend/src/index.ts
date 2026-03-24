@@ -188,9 +188,9 @@ async function startServers() {
 	// 8.5. MCP External Manager Initialization
 	// ==========================================
 	console.log('🔄 Initializing MCP External Manager in background...')
-	const basePath = path.resolve(__dirname, '../../')
-	mcpExternalManager
-		.initializeServer(basePath)
+	container.mcpServerRepository
+		.findAll()
+		.then((servers) => mcpExternalManager.initializeFromDatabase(servers))
 		.then(() => {
 			console.log('✅ MCP External Manager initialized successfully')
 		})

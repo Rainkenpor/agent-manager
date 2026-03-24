@@ -278,9 +278,36 @@ function getContentBeforeRequest(content: string): string {
   return idx > 0 ? content.slice(0, idx).trim() : ''
 }
 
+function getContentAfterRequest(content: string): string {
+  const match = content.match(/```request[\s\S]*?```/)
+  if (!match || match.index === undefined) return ''
+  const endIdx = match.index + match[0].length
+  return content.slice(endIdx).trim()
+}
+
 function getRequestQuestions(msg: DisplayMessage): RequestQuestion[] | null {
   if (msg.role !== 'assistant' || msg.streaming) return null
   return parseRequestBlock(msg.content)
+}
+
+function maskTokens(text: string): string {
+  // JWT: eyJ...header.payload.signature
+  text = text.replace(
+    /eyJ[a-zA-Z0-9+/_-]+=*\.[a-zA-Z0-9+/_-]+=*\.[a-zA-Z0-9+/_-]+=*/g,
+    (m) => m.slice(0, 5) + '*****',
+  )
+  // Known prefixes: sk-, ghp_, Bearer, etc.
+  text = text.replace(
+    /\b(sk-|ghp_|ghs_|github_pat_|xoxb-|xoxp-|Bearer\s+)[a-zA-Z0-9+/_.-]{8,}/gi,
+    (m) => m.slice(0, 5) + '*****',
+  )
+  // Generic: 25+ char alphanum string with upper+lower+digit mix (high entropy)
+  text = text.replace(/[a-zA-Z0-9+/_-]{25,}/g, (m) => {
+    if (/[A-Z]/.test(m) && /[a-z]/.test(m) && /[0-9]/.test(m))
+      return m.slice(0, 5) + '*****'
+    return m
+  })
+  return text
 }
 
 function renderInlineMarkdown(text: string): string {
@@ -288,6 +315,50 @@ function renderInlineMarkdown(text: string): string {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/`(.+?)`/g, '<code class="bg-slate-700/80 px-1 rounded text-xs font-mono">$1</code>')
+}
+
+function renderMarkdown(text: string): string {
+  text = maskTokens(text)
+  const isTableRow = (line: string) => /^\|.+\|$/.test(line.trim())
+  const isSeparator = (line: string) => /^\|[\s\-:|]+\|$/.test(line.trim())
+
+  function parseRow(line: string): string[] {
+    return line.trim().slice(1, -1).split('|').map((c) => c.trim())
+  }
+
+  function renderTable(lines: string[]): string {
+    const headers = parseRow(lines[0])
+    const body = lines.slice(2)
+    const th = headers
+      .map((h) => `<th style="text-align:left;padding:6px 12px;border-bottom:1px solid #475569;color:#cbd5e1;font-weight:600;white-space:nowrap">${renderInlineMarkdown(h)}</th>`)
+      .join('')
+    const trs = body
+      .map((row) =>
+        '<tr style="border-bottom:1px solid #1e293b">' +
+        parseRow(row)
+          .map((cell) => `<td style="padding:5px 12px;color:#e2e8f0">${renderInlineMarkdown(cell)}</td>`)
+          .join('') +
+        '</tr>'
+      )
+      .join('')
+    return `<table style="border-collapse:collapse;width:100%;font-size:0.8rem;margin:8px 0;background:#0f172a;border-radius:8px;overflow:hidden"><thead><tr>${th}</tr></thead><tbody>${trs}</tbody></table>`
+  }
+
+  const lines = text.split('\n')
+  const out: string[] = []
+  let i = 0
+  while (i < lines.length) {
+    if (isTableRow(lines[i]) && i + 1 < lines.length && isSeparator(lines[i + 1])) {
+      const tableLines = [lines[i], lines[i + 1]]
+      i += 2
+      while (i < lines.length && isTableRow(lines[i])) { tableLines.push(lines[i++]) }
+      out.push(renderTable(tableLines))
+    } else {
+      out.push(renderInlineMarkdown(lines[i]))
+      i++
+    }
+  }
+  return out.join('\n')
 }
 
 function stripMarkdown(text: string): string {
@@ -518,8 +589,8 @@ onMounted(fetchInitialData)
 
                   <!-- ── Active request form ── -->
                   <template v-if="getRequestQuestions(msg) && !submittedForms.includes(msg.id) && formAnswers[msg.id]">
-                    <p v-if="getContentBeforeRequest(msg.content)" class="whitespace-pre-wrap mb-3 text-slate-300">{{
-                      getContentBeforeRequest(msg.content) }}</p>
+                    <p v-if="getContentBeforeRequest(msg.content)" class="whitespace-pre-wrap mb-3 text-slate-300"
+                      v-html="renderMarkdown(getContentBeforeRequest(msg.content))" />
 
                     <div class="space-y-4 border border-slate-600/40 rounded-xl p-4 bg-slate-900/60">
                       <p class="text-xs font-semibold text-indigo-400 uppercase tracking-wider">Completa el formulario
@@ -589,12 +660,14 @@ onMounted(fetchInitialData)
                         Enviar respuestas
                       </button>
                     </div>
+                    <p v-if="getContentAfterRequest(msg.content)" class="whitespace-pre-wrap mt-3 text-slate-300"
+                      v-html="renderMarkdown(getContentAfterRequest(msg.content))" />
                   </template>
 
                   <!-- ── Submitted form notice ── -->
                   <template v-else-if="getRequestQuestions(msg)">
-                    <p v-if="getContentBeforeRequest(msg.content)" class="whitespace-pre-wrap mb-2 text-slate-300">{{
-                      getContentBeforeRequest(msg.content) }}</p>
+                    <p v-if="getContentBeforeRequest(msg.content)" class="whitespace-pre-wrap mb-2 text-slate-300"
+                      v-html="renderMarkdown(getContentBeforeRequest(msg.content))" />
                     <span class="inline-flex items-center gap-1.5 text-xs text-slate-500">
                       <svg class="w-3.5 h-3.5 text-green-400 shrink-0" fill="none" stroke="currentColor"
                         viewBox="0 0 24 24">
@@ -602,11 +675,13 @@ onMounted(fetchInitialData)
                       </svg>
                       Formulario enviado
                     </span>
+                    <p v-if="getContentAfterRequest(msg.content)" class="whitespace-pre-wrap mt-2 text-slate-300"
+                      v-html="renderMarkdown(getContentAfterRequest(msg.content))" />
                   </template>
 
                   <!-- ── Plain text content ── -->
                   <template v-else>
-                    <span class="whitespace-pre-wrap">{{ msg.content }}</span>
+                    <span class="whitespace-pre-wrap" v-html="renderMarkdown(msg.content)" />
                     <span v-if="msg.streaming"
                       class="inline-block w-0.5 h-4 bg-slate-300 ml-0.5 align-middle animate-pulse" />
                   </template>

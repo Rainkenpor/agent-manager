@@ -15,6 +15,13 @@ const SERVER_URL = process.env.SERVER_URL || "http://localhost:3001";
 const SERVER_API_PATH = process.env.SERVER_API_PATH || "/api";
 const SERVER_DATA_PATH = process.env.SERVER_DATA_PATH || "./data";
 
+// Credential encryption — required
+const CREDENTIAL_ENCRYPTION_KEY = process.env.CREDENTIAL_ENCRYPTION_KEY ?? ''
+if (!CREDENTIAL_ENCRYPTION_KEY) {
+	console.error('❌  CREDENTIAL_ENCRYPTION_KEY is not set. Add it to your .env file.')
+	process.exit(1)
+}
+
 // Agent Model
 const AGENT_MODEL = process.env.AGENT_MODEL || "";
 const AGENT_BASE_URL = process.env.AGENT_BASE_URL || null;
@@ -40,6 +47,7 @@ const SERVER_AUTH_PATH = `${SERVER_DATA_PATH}/auth`;
 export const envs = {
 	VITE_SERVER_URL,
 	VITE_SERVER_API_PATH,
+	CREDENTIAL_ENCRYPTION_KEY,
 
 	SERVER_PORT,
 	SERVER_URL,

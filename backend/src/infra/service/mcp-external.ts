@@ -1,18 +1,14 @@
 /**
  * mcp-external.ts — Cliente MCP externo para el agente interno
  *
- * Gestiona conexiones a servidores MCP definidos en mcp.json:
- *   - Servidores HTTP (Streamable HTTP / SSE)  → { "url": "http://..." }
- *   - Servidores stdio (child_process)          → { "command": "npx", "args": [...] }
+ * Gestiona conexiones a servidores MCP registrados en la base de datos:
+ *   - Servidores HTTP (Streamable HTTP / SSE)  → type: 'http', url: '...'
+ *   - Servidores stdio (child_process)          → type: 'stdio', command: '...'
  *
  * Convención de nombres de herramientas:  mcp__<serverName>__<toolName>
  */
-import fs from 'node:fs'
-import nodePath from 'node:path'
 import { spawn, type ChildProcess } from 'node:child_process'
 import { agentLogger } from '../service/logger.service.js'
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { ZodRawShape } from 'zod'
 
 // ── MCP config types ──────────────────────────────────────────────────────────
@@ -30,10 +26,6 @@ interface McpServerStdioConfig {
 }
 
 type McpServerConfig = McpServerHttpConfig | McpServerStdioConfig
-
-interface McpJsonFile {
-	servers: Record<string, McpServerConfig>
-}
 
 // ── MCP Protocol types ────────────────────────────────────────────────────────
 
@@ -80,7 +72,7 @@ export function buildMcpToolId(serverName: string, toolName: string): string {
 	return `${MCP_PREFIX}${serverName}__${toolName}`
 }
 
-function parseMcpToolId(id: string): { serverName: string; toolName: string } | null {
+export function parseMcpToolId(id: string): { serverName: string; toolName: string } | null {
 	if (!id.startsWith(MCP_PREFIX)) return null
 	const rest = id.slice(MCP_PREFIX.length)
 	const sep = rest.indexOf('__')
@@ -99,25 +91,30 @@ class McpHttpClient {
 		private readonly extraHeaders: Record<string, string> = {}
 	) {}
 
-	private buildHeaders(): Record<string, string> {
+	private buildHeaders(additional?: Record<string, string>): Record<string, string> {
 		const h: Record<string, string> = {
 			'content-type': 'application/json',
 			accept: 'application/json, text/event-stream',
-			...this.extraHeaders
+			...this.extraHeaders,
+			...(additional ?? {})
 		}
 		if (this.sessionId) h['mcp-session-id'] = this.sessionId
 		return h
 	}
 
-	private async post(payload: unknown): Promise<Response> {
+	private async post(payload: unknown, additionalHeaders?: Record<string, string>): Promise<Response> {
 		return fetch(this.url, {
 			method: 'POST',
-			headers: this.buildHeaders(),
+			headers: this.buildHeaders(additionalHeaders),
 			body: JSON.stringify(payload)
 		})
 	}
 
-	private async sendRequest(method: string, params?: Record<string, unknown>): Promise<unknown> {
+	private async sendRequest(
+		method: string,
+		params?: Record<string, unknown>,
+		additionalHeaders?: Record<string, string>
+	): Promise<unknown> {
 		const id = this.nextId++
 		const body: JsonRpcRequest = {
 			jsonrpc: '2.0',
@@ -126,7 +123,7 @@ class McpHttpClient {
 			params: params ?? {}
 		}
 
-		const res = await this.post(body)
+		const res = await this.post(body, additionalHeaders)
 
 		const newSession = res.headers.get('mcp-session-id')
 		if (newSession) this.sessionId = newSession
@@ -188,11 +185,15 @@ class McpHttpClient {
 		return result?.tools ?? []
 	}
 
-	async callTool(toolName: string, args: Record<string, unknown>): Promise<string> {
-		const result = (await this.sendRequest('tools/call', {
-			name: toolName,
-			arguments: args
-		})) as {
+	async callTool(toolName: string, args: Record<string, unknown>, additionalHeaders?: Record<string, string>): Promise<string> {
+		const result = (await this.sendRequest(
+			'tools/call',
+			{
+				name: toolName,
+				arguments: args
+			},
+			additionalHeaders
+		)) as {
 			content?: Array<{ type: string; text?: string }>
 			isError?: boolean
 		} | null
@@ -342,56 +343,53 @@ class McpStdioClient {
 
 // ── McpExternalManager ────────────────────────────────────────────────────────
 
+interface StoredServerConfig {
+	type: 'http' | 'stdio'
+	url?: string
+	command?: string
+	args?: string[]
+	baseEnv?: Record<string, string>
+	baseHeaders?: Record<string, string>
+}
+
 export class McpExternalManager {
 	private httpClients = new Map<string, McpHttpClient>()
 	private stdioClients = new Map<string, McpStdioClient>()
 	private toolMap = new Map<string, { serverName: string; toolName: string }>()
 	private tools: AgentTool[] = []
+	/** Maps serverName → DB primary key, set when initialized from DB */
+	private serverDbIds = new Map<string, string>()
+	/** Stores base config per serverName for credential injection */
+	private serverConfigs = new Map<string, StoredServerConfig>()
 
-	/** Busca mcp.json subiendo desde el directorio dado hasta la raíz */
-	static findMcpJson(startPath: string): string | undefined {
-		let dir = fs.existsSync(startPath)
-			? fs.statSync(startPath).isDirectory()
-				? startPath
-				: nodePath.dirname(startPath)
-			: nodePath.dirname(startPath)
+	/** Carga todos los servidores activos desde la base de datos e inicializa cada uno */
+	async initializeFromDatabase(
+		servers: Array<{
+			id: string
+			name: string
+			type: 'http' | 'stdio'
+			url?: string | null
+			command?: string | null
+			args?: string[] | null
+			headers?: Record<string, string> | null
+			active: boolean
+		}>
+	): Promise<void> {
+		const active = servers.filter((s) => s.active)
+		agentLogger.info(`[McpExternal] Initializing ${active.length} MCP server(s) from database`)
 
-		for (let i = 0; i < 6; i++) {
-			const candidate = nodePath.join(dir, 'mcp.json')
-			if (fs.existsSync(candidate)) return candidate
-			const parent = nodePath.dirname(dir)
-			if (parent === dir) break
-			dir = parent
-		}
-		return undefined
-	}
-
-	async initializeServer(basePath: string) {
-		const mcpJsonPath = McpExternalManager.findMcpJson(basePath)
-		await this.initialize(mcpJsonPath).catch(() => {})
-	}
-
-	/** Carga mcp.json e inicializa todos los servidores configurados */
-	async initialize(mcpJsonPath?: string): Promise<void> {
-		let config: McpJsonFile
-
-		if (!mcpJsonPath) {
-			agentLogger.info(`[McpExternal] No mcp.json found, skipping MCP server initialization`)
-			return
-		}
-
-		try {
-			const raw = fs.readFileSync(mcpJsonPath, 'utf-8')
-			config = JSON.parse(raw) as McpJsonFile
-		} catch (err) {
-			agentLogger.warn(`[McpExternal] Cannot read mcp.json at ${mcpJsonPath}: ${err}`)
-			return
-		}
-
-		const entries = Object.entries(config.servers ?? {})
-		agentLogger.info(`[McpExternal] Initializing ${entries.length} MCP server(s) from ${mcpJsonPath}`)
-
-		const results = await Promise.allSettled(entries.map(([name, cfg]) => this.initServer(name, cfg)))
+		const results = await Promise.allSettled(
+			active.map((s) => {
+				this.serverDbIds.set(s.name, s.id)
+				if (s.type === 'http' && s.url) {
+					return this.initServer(s.name, { url: s.url, headers: s.headers ?? {} })
+				} else if (s.type === 'stdio' && s.command) {
+					return this.initServer(s.name, { command: s.command, args: s.args ?? [] })
+				}
+				agentLogger.warn(`[McpExternal] Skipping server '${s.name}': missing url/command`)
+				return Promise.resolve()
+			})
+		)
 
 		const failed = results.filter((r) => r.status === 'rejected')
 		if (failed.length) {
@@ -404,16 +402,20 @@ export class McpExternalManager {
 		let tools: McpTool[]
 
 		if ('url' in cfg && cfg.url) {
-			const client = new McpHttpClient(cfg.url, cfg.headers ?? {})
+			const headers = cfg.headers ?? {}
+			const client = new McpHttpClient(cfg.url, headers)
 			await client.initialize()
 			tools = await client.listTools()
 			this.httpClients.set(name, client)
+			this.serverConfigs.set(name, { type: 'http', url: cfg.url, baseHeaders: headers })
 			agentLogger.info(`[McpExternal] '${name}' (HTTP) → ${tools.length} tool(s)`)
 		} else if ('command' in cfg && cfg.command) {
-			const client = new McpStdioClient(name, cfg.command, cfg.args ?? [], cfg.env ?? {})
+			const env = cfg.env ?? {}
+			const client = new McpStdioClient(name, cfg.command, cfg.args ?? [], env)
 			await client.initialize()
 			tools = await client.listTools()
 			this.stdioClients.set(name, client)
+			this.serverConfigs.set(name, { type: 'stdio', command: cfg.command, args: cfg.args ?? [], baseEnv: env })
 			agentLogger.info(`[McpExternal] '${name}' (stdio) → ${tools.length} tool(s)`)
 		} else {
 			agentLogger.warn(`[McpExternal] Unknown config for server '${name}'`)
@@ -452,11 +454,14 @@ export class McpExternalManager {
 			command?: string | null
 			args?: string[] | null
 			headers?: Record<string, string> | null
-		}
+		},
+		serverId?: string
 	): Promise<void> {
 		if (this.httpClients.has(serverName) || this.stdioClients.has(serverName)) {
+			if (serverId) this.serverDbIds.set(serverName, serverId)
 			return // already up
 		}
+		if (serverId) this.serverDbIds.set(serverName, serverId)
 		if (config.type === 'http' && config.url) {
 			await this.initServer(serverName, {
 				url: config.url,
@@ -468,6 +473,11 @@ export class McpExternalManager {
 				args: config.args ?? []
 			})
 		}
+	}
+
+	/** Returns the DB primary key for a server initialized from the DB, if known. */
+	getServerDbId(serverName: string): string | undefined {
+		return this.serverDbIds.get(serverName)
 	}
 
 	/**
