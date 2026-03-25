@@ -9,7 +9,10 @@
       "Bash(find /c/Users/WO199/OneDrive/Documents/Proyectos/agent-manager -name .env* -type f)",
       "mcp__agent-manager__mcp__clarify__list_projects",
       "mcp__agent-manager__agent_user-story",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(grep -E \"\\\\.\\(ts|tsx|vue|js\\)$\")",
+      "Bash(grep -E \"\\\\.\\(ts|js\\)$\")",
+      "Bash(xargs grep:*)"
     ]
   }
 }

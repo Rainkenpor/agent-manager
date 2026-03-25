@@ -46,7 +46,7 @@ function jsonSchemaPropertyToZod(prop: Record<string, unknown>, required: boolea
 		schema = z.array(itemSchema)
 	} else if (type === 'object' || prop.properties) {
 		const nestedShape = jsonSchemaToZodShape(prop as Record<string, unknown>)
-		schema = z.object(nestedShape)
+		schema = z.object(nestedShape).loose()
 	} else {
 		schema = z.unknown()
 	}

@@ -9,11 +9,11 @@ const auth = useAuthStore()
 
 const allNavLinks = [
   { to: '/', label: 'Home', icon: 'mdi-home', resource: null },
+  { to: '/chat', label: 'Chat', icon: 'mdi-chat', resource: 'chat' },
   { to: '/users', label: 'Users', icon: 'mdi-account', resource: 'users' },
   { to: '/roles', label: 'Roles', icon: 'mdi-shield-account', resource: 'roles' },
   { to: '/agents', label: 'Agents', icon: 'mdi-robot', resource: 'agents' },
   { to: '/mcps', label: 'MCP Servers', icon: 'mdi-server', resource: 'mcp_servers' },
-  { to: '/chat', label: 'Chat', icon: 'mdi-chat', resource: 'chat' },
   { to: '/mcp-credentials', label: 'My Credentials', icon: 'mdi-key', resource: 'mcp_credentials' },
 ]
 
