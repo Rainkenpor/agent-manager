@@ -7,7 +7,6 @@ import { env } from 'node:process'
 
 export default defineConfig((env) => {
 	const envars = loadEnv(env.mode, '../')
-	console.log(envars)
 	return {
 		plugins: [tailwindcss(), vue()],
 		resolve: {

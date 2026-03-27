@@ -36,8 +36,6 @@ export function registerAuthRoutes() {
 						return resolve(null)
 					}
 
-					console.log(req.body)
-
 					if (!user) {
 						res.status(401).json({
 							error: info?.message || 'Credenciales inválidas'

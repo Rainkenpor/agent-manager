@@ -311,49 +311,15 @@ export function buildToolDefinitions(
 
 	const externalMcpTools: Tool[] = mcpExternal ? (mcpExternal.getTools() as Tool[]) : []
 
-	// Draft tools are always available when draftCallbacks are provided — cannot be disabled via allowedTools
-	const draftTools: Tool[] = toolsCallbacks?.draftCallbacks
-		? [
-				{
-					type: 'function',
-					function: {
-						name: 'update_draft',
-						description:
-							'Update the conversation draft with important information gathered so far. The draft is a persistent scratchpad visible to the user in real time. Call this tool whenever you collect data that should be preserved (requirements, decisions, summaries, structured output, etc.).',
-						parameters: {
-							type: 'object',
-							properties: {
-								content: {
-									type: 'string',
-									description: 'Full new content of the draft. Each call replaces the previous draft entirely.'
-								}
-							},
-							required: ['content']
-						}
-					}
-				},
-				{
-					type: 'function',
-					function: {
-						name: 'read_draft',
-						description: 'Read the current draft content for this conversation.',
-						parameters: {
-							type: 'object',
-							properties: {}
-						}
-					}
-				}
-			]
-		: []
 
 	if (allowedTools && allowedTools.size > 0) {
 		const filterBaseTools = baseTools.filter((t) => allowedTools.has(t.function.name))
 		const filteredMcp = mcpTools.filter((t) => allowedTools.has(`agent-manager_${t.function.name}`))
 		const filteredExternal = externalMcpTools.filter((t) => allowedTools.has(t.function.name))
-		return [...draftTools, ...filterBaseTools, ...filteredMcp, ...filteredExternal]
+		return [ ...filterBaseTools, ...filteredMcp, ...filteredExternal]
 	}
 
-	return [...draftTools, ...baseTools, ...mcpTools, ...externalMcpTools]
+	return [ ...baseTools, ...mcpTools, ...externalMcpTools]
 }
 
 /** Execute a single tool call and return a string result */
@@ -367,20 +333,7 @@ export async function executeToolCall(
 	try {
 		originalParams.toolsCallbacks?.onToolCall(toolName, args) // Notificar a callbacks de herramienta invocada, si existe
 		switch (toolName) {
-			case 'update_draft': {
-				const callbacks = originalParams.toolsCallbacks?.draftCallbacks
-				if (!callbacks) return 'Error: draft callbacks not available in this context'
-				await callbacks.onUpdate(args.content as string)
-				return 'Draft updated successfully'
-			}
-
-			case 'read_draft': {
-				const callbacks = originalParams.toolsCallbacks?.draftCallbacks
-				if (!callbacks) return 'Error: draft callbacks not available in this context'
-				const draft = await callbacks.onRead()
-				return draft ?? '(draft is empty)'
-			}
-
+			
 			case 'get_user_mcp_credentials': {
 				const credCb = originalParams.toolsCallbacks?.credentialCallbacks
 				if (!credCb) return 'Error: credential callbacks not available in this context'

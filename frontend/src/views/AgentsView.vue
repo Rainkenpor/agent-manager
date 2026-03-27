@@ -96,6 +96,7 @@ function openCreate() {
     form.tools[tool.name] = false
   }
   agentForm.value = form
+  selectedToolSource.value = toolGroups.value[0]?.key ?? ''
   showModal.value = true
 }
 
@@ -120,6 +121,7 @@ function openEdit(agent: Agent) {
     }
   }
   agentForm.value = form
+  selectedToolSource.value = toolGroups.value[0]?.key ?? ''
   showModal.value = true
 }
 
@@ -194,14 +196,36 @@ function toggleSubagent(id: string) {
   }
 }
 
-function toolsBySource(source: string) {
-  return availableTools.value.filter((t) => t.source === source)
+function toolDisplayName(toolName: string): string {
+  if (toolName.startsWith('mcp__')) {
+    const idx = toolName.indexOf('__', 5)
+    return idx !== -1 ? toolName.slice(idx + 2) : toolName
+  }
+  return toolName
 }
 
-const toolSources = computed(() => {
-  const s = new Set(availableTools.value.map((t) => t.source))
-  return Array.from(s)
+const toolGroups = computed(() => {
+  const byKey: Record<string, AgentTool[]> = {}
+  for (const tool of availableTools.value) {
+    const key =
+      tool.source === 'external' && tool.name.startsWith('mcp__')
+        ? tool.name.slice(5).split('__')[0]
+        : tool.source
+    if (!byKey[key]) byKey[key] = []
+    byKey[key].push(tool)
+  }
+  const order = ['builtin', 'registry']
+  const result: Array<{ key: string; label: string; tools: AgentTool[] }> = []
+  for (const k of order) {
+    if (byKey[k]?.length) result.push({ key: k, label: k, tools: byKey[k] })
+  }
+  for (const [k, tools] of Object.entries(byKey)) {
+    if (!order.includes(k)) result.push({ key: k, label: k, tools })
+  }
+  return result
 })
+
+const selectedToolSource = ref<string>('')
 </script>
 
 <template>
@@ -370,142 +394,189 @@ const toolSources = computed(() => {
     </div>
 
     <!-- Agent Create / Edit Modal -->
-    <div v-if="showModal" class="fixed inset-0 z-40 flex items-center justify-center">
+    <div v-if="showModal" class="fixed inset-0 z-40 flex items-center justify-center h-full overflow-auto">
       <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="closeModal" />
       <div
-        class="relative bg-slate-900 rounded-2xl shadow-2xl w-full max-w-2xl mx-4 flex flex-col max-h-[92vh] overflow-hidden">
+        class="relative bg-slate-900 rounded-2xl shadow-2xl w-full max-w-5xl mx-4 flex flex-col  h-[92vh] overflow-auto ">
         <!-- Header -->
-        <div class="px-6 py-5 border-b border-slate-700 flex items-center justify-between shrink-0">
-          <h2 class="text-lg font-semibold text-white">{{ editingAgent ? 'Edit Agent' : 'Create Agent' }}</h2>
-          <button class="p-2 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-700 transition"
-            @click="closeModal">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        <!-- Body -->
-        <div class="flex-1 overflow-y-auto px-6 py-5">
-          <form id="agent-form" class="space-y-5" @submit.prevent="saveAgent">
-            <!-- Name + Slug -->
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-white mb-1.5">Name <span
-                    class="text-red-500">*</span></label>
-                <input v-model="agentForm.name" type="text" placeholder="My Agent" required
-                  class="w-full px-3 py-2.5 rounded-lg border border-slate-300 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-white mb-1.5">Slug <span
-                    class="text-red-500">*</span></label>
-                <input v-model="agentForm.slug" type="text" placeholder="my-agent" required
-                  class="w-full px-3 py-2.5 rounded-lg border border-slate-300 text-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
-              </div>
+        <div class="flex flex-1 overflow-auto">
+          <!-- Body -->
+          <div class="flex-1 flex flex-col overflow-auto px-6 py-5  ">
+            <div class=" px-2 py-2 border-b border-slate-700 flex items-center justify-between shrink-0 ">
+              <h2 class="text-lg font-semibold text-white">{{ editingAgent ? 'Edit Agent' : 'Create Agent' }}</h2>
+              <button class="p-2 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-700 transition"
+                @click="closeModal">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
-
-            <!-- Description -->
-            <div>
-              <label class="block text-sm font-medium text-white mb-1.5">Description</label>
-              <input v-model="agentForm.description" type="text" placeholder="What does this agent do?"
-                class="w-full px-3 py-2.5 rounded-lg border border-slate-300 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
-            </div>
-
-            <!-- Mode + Active -->
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-white mb-1.5">Mode <span
-                    class="text-red-500">*</span></label>
-                <select v-model="agentForm.mode"
-                  class="w-full px-3 py-2.5 rounded-lg border border-slate-300 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ">
-                  <option class="bg-slate-800" value="primary">Primary</option>
-                  <option class="bg-slate-800" value="subagent">Subagent</option>
-                </select>
-              </div>
-              <div class="flex flex-col">
-                <label class="block text-sm font-medium text-white mb-1.5">Status</label>
-                <label class="flex items-center gap-2.5 cursor-pointer mt-2">
-                  <input v-model="agentForm.isActive" type="checkbox"
-                    class="w-4 h-4 text-indigo-600 rounded border-slate-300 text-white focus:ring-indigo-500" />
-                  <span class="text-sm text-white">Active</span>
-                </label>
-              </div>
-            </div>
-
-            <!-- Model + Temperature -->
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-white mb-1.5">Model <span
-                    class="text-red-500">*</span></label>
-                <input v-model="agentForm.model" type="text" placeholder="gpt-4o" required
-                  class="w-full px-3 py-2.5 rounded-lg border border-slate-300 text-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-white mb-1.5">Temperature</label>
-                <input v-model="agentForm.temperature" type="text" placeholder="0.7"
-                  class="w-full px-3 py-2.5 rounded-lg border border-slate-300 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
-              </div>
-            </div>
-
-            <!-- Content (system prompt) -->
-            <div>
-              <label class="block text-sm font-medium text-white mb-1.5">System Prompt / Content</label>
-              <textarea v-model="agentForm.content" placeholder="Write the agent system prompt here..." rows="6"
-                class="w-full px-3 py-2.5 rounded-lg border border-slate-300 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-y font-mono" />
-            </div>
-
-            <!-- Tools -->
-            <div v-if="availableTools.length">
-              <label class="block text-sm font-medium text-white mb-2">Tools</label>
-              <div class="border border-slate-200 rounded-lg overflow-hidden">
-                <div v-for="source in toolSources" :key="source">
-                  <div class="px-4 py-2 bg-slate-800 border-b border-slate-200">
-                    <span class="text-xs font-semibold text-white uppercase tracking-wider">{{ source }}</span>
+            <div class=" overflow-auto p-2 ">
+              <form id="agent-form" class="space-y-5" @submit.prevent="saveAgent">
+                <!-- Name + Slug -->
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm font-medium text-white mb-1.5">Name <span
+                        class="text-red-500">*</span></label>
+                    <input v-model="agentForm.name" type="text" placeholder="My Agent" required
+                      class="w-full px-3 py-2.5 rounded-lg border border-slate-300 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
                   </div>
-                  <div class="divide-y divide-slate-100">
-                    <label v-for="tool in toolsBySource(source)" :key="tool.name"
-                      class="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-700 cursor-pointer transition-colors">
-                      <input v-model="agentForm.tools[tool.name]" type="checkbox"
-                        class="w-4 h-4 rounded border-slate-300 text-white focus:ring-indigo-500" />
-                      <div class="flex-1 min-w-0">
-                        <span class="text-sm font-medium text-white">{{ tool.name }}</span>
-                        <span v-if="tool.description" class="text-xs text-slate-400 ml-2">{{ tool.description }}</span>
-                      </div>
+                  <div>
+                    <label class="block text-sm font-medium text-white mb-1.5">Slug <span
+                        class="text-red-500">*</span></label>
+                    <input v-model="agentForm.slug" type="text" placeholder="my-agent" required
+                      class="w-full px-3 py-2.5 rounded-lg border border-slate-300 text-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
+                  </div>
+                </div>
+
+                <!-- Description -->
+                <div>
+                  <label class="block text-sm font-medium text-white mb-1.5">Description</label>
+                  <input v-model="agentForm.description" type="text" placeholder="What does this agent do?"
+                    class="w-full px-3 py-2.5 rounded-lg border border-slate-300 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
+                </div>
+
+                <!-- Mode + Active -->
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm font-medium text-white mb-1.5">Mode <span
+                        class="text-red-500">*</span></label>
+                    <select v-model="agentForm.mode"
+                      class="w-full px-3 py-2.5 rounded-lg border border-slate-300 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ">
+                      <option class="bg-slate-800" value="primary">Primary</option>
+                      <option class="bg-slate-800" value="subagent">Subagent</option>
+                    </select>
+                  </div>
+                  <div class="flex flex-col">
+                    <label class="block text-sm font-medium text-white mb-1.5">Status</label>
+                    <label class="flex items-center gap-2.5 cursor-pointer mt-2">
+                      <input v-model="agentForm.isActive" type="checkbox"
+                        class="w-4 h-4 text-indigo-600 rounded border-slate-300 text-white focus:ring-indigo-500" />
+                      <span class="text-sm text-white">Active</span>
                     </label>
                   </div>
                 </div>
-              </div>
-            </div>
-            <div v-else class="text-xs text-slate-400">No tools available</div>
 
-            <!-- Subagents (only for primary) -->
-            <div v-if="agentForm.mode === 'primary' && subagents.length">
-              <label class="block text-sm font-medium text-white mb-2">Assign Subagents</label>
-              <div class="border border-slate-200 rounded-lg divide-y divide-slate-100 overflow-hidden">
-                <label v-for="sub in subagents" :key="sub.id"
-                  class="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 cursor-pointer transition-colors">
-                  <input type="checkbox" :checked="agentForm.subagentIds.includes(sub.id)"
-                    class="w-4 h-4 text-indigo-600 rounded border-slate-300 text-white focus:ring-indigo-500"
-                    @change="toggleSubagent(sub.id)" />
+                <!-- Model + Temperature -->
+                <div class="grid grid-cols-2 gap-4">
                   <div>
-                    <span class="text-sm font-medium text-white">{{ sub.name }}</span>
-                    <span class="text-xs text-slate-400 font-mono ml-2">{{ sub.slug }}</span>
+                    <label class="block text-sm font-medium text-white mb-1.5">Model <span
+                        class="text-red-500">*</span></label>
+                    <input v-model="agentForm.model" type="text" placeholder="gpt-4o" required
+                      class="w-full px-3 py-2.5 rounded-lg border border-slate-300 text-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
                   </div>
-                </label>
+                  <div>
+                    <label class="block text-sm font-medium text-white mb-1.5">Temperature</label>
+                    <input v-model="agentForm.temperature" type="text" placeholder="0.7"
+                      class="w-full px-3 py-2.5 rounded-lg border border-slate-300 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
+                  </div>
+                </div>
+
+                <!-- Content (system prompt) -->
+                <div>
+                  <label class="block text-sm font-medium text-white mb-1.5">System Prompt / Content</label>
+                  <textarea v-model="agentForm.content" placeholder="Write the agent system prompt here..." rows="6"
+                    class="w-full px-3 py-2.5 rounded-lg border border-slate-300 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-y font-mono" />
+                </div>
+
+
+              </form>
+            </div>
+          </div>
+
+          <!-- Right: tool selection panel -->
+          <div class="w-80 border-l border-slate-200 flex flex-col  overflow-auto h-full shrink-0">
+            <!-- Panel header -->
+            <div class="px-4 py-4 border-b border-slate-200 shrink-0">
+              <div class="flex items-center justify-between mb-0.5">
+                <p class="text-sm font-semibold text-white">Select Tools</p>
+                <button class="p-1 text-slate-400 hover:text-slate-600 rounded" @click="closeModal">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+            </div>
+
+            <!-- Tools list -->
+            <div class="flex-1 flex flex-col overflow-auto p-2">
+              <!-- Tools -->
+              <div v-if="availableTools.length" class="overflow-auto flex-1 flex flex-col mb-3">
+                <label class="block text-sm font-medium text-white mb-2">Tools</label>
+                <div class="border border-slate-700 rounded-lg flex flex-col overflow-auto  ">
+                  <!-- Left sidebar: groups (builtin, registry, MCP servers) -->
+                  <div class="flex-1 overflow-auto border-r border-slate-700  shrink-0 bg-slate-800/50">
+                    <div v-for="group in toolGroups" :key="group.key">
+                      <button type="button"
+                        class="w-full text-left px-3 py-2.5 transition-colors flex items-center justify-between gap-1 border-l-2"
+                        :class="selectedToolSource === group.key
+                          ? 'bg-indigo-600/20 border-indigo-500 text-white'
+                          : 'border-transparent text-slate-400 hover:bg-slate-700 hover:text-white'"
+                        @click="selectedToolSource = group.key">
+                        <span class="text-xs font-semibold uppercase tracking-wider truncate">{{ group.label }}</span>
+                        <span class="text-xs shrink-0"
+                          :class="selectedToolSource === group.key ? 'text-indigo-400' : 'text-slate-600'">
+                          {{group.tools.filter(t => agentForm.tools[t.name]).length}}/{{ group.tools.length }}
+                        </span>
+                      </button>
+                      <div v-if="group.label === selectedToolSource">
+                        <label v-for="tool in group.tools ?? []" :key="tool.name"
+                          class="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-700 cursor-pointer transition-colors">
+                          <input v-model="agentForm.tools[tool.name]" type="checkbox"
+                            class="w-4 h-4 rounded border-slate-600 text-indigo-600 focus:ring-indigo-500 shrink-0" />
+                          <div class="flex-1 min-w-0">
+                            <span class="text-sm font-mono font-medium text-white">{{ toolDisplayName(tool.name)
+                            }}</span>
+                            <p v-if="tool.description" class="text-xs text-slate-400 mt-0.5 line-clamp-2">{{
+                              tool.description }}</p>
+                          </div>
+                        </label>
+                      </div>
+                    </div>
+
+                  </div>
+                  <!-- Right: tools for selected group -->
+                  <div class="overflow-y-auto divide-y divide-slate-700/50">
+                    <template v-if="selectedToolSource">
+                    </template>
+                    <div v-else class="flex items-center justify-center h-full text-slate-500 text-xs">
+                      Select a source
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div v-else class="text-xs text-slate-400 mb-20">No tools available</div>
+
+              <!-- Subagents (only for primary) -->
+              <div v-if="agentForm.mode === 'primary' && subagents.length" class="overflow-auto flex flex-col">
+                <label class="block text-sm font-medium text-white mb-2">Assign Subagents</label>
+                <div class="border border-slate-200 rounded-lg divide-y divide-slate-100 overflow-auto max-h-50">
+                  <label v-for="sub in subagents" :key="sub.id"
+                    class="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 cursor-pointer transition-colors">
+                    <input type="checkbox" :checked="agentForm.subagentIds.includes(sub.id)"
+                      class="w-4 h-4 text-indigo-600 rounded border-slate-300 text-white focus:ring-indigo-500"
+                      @change="toggleSubagent(sub.id)" />
+                    <div>
+                      <span class="text-sm font-medium text-white">{{ sub.name }}</span>
+                      <span class="text-xs text-slate-400 font-mono ml-2">{{ sub.slug }}</span>
+                    </div>
+                  </label>
+                </div>
               </div>
             </div>
-          </form>
+          </div>
         </div>
 
         <!-- Footer -->
-        <div class="px-6 py-4 border-t border-slate-200 flex gap-3 shrink-0">
+        <div class="px-6 py-4 border-t border-slate-200 flex gap-3 h-20 shrink-0 justify-between">
           <button type="button"
-            class="flex-1 px-4 py-2.5 rounded-lg border border-slate-300 text-white text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+            class="px-4 py-2.5 rounded-lg border border-slate-300 text-white text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
             @click="closeModal">
             Cancel
           </button>
           <button type="submit" form="agent-form" :disabled="saving"
-            class="flex-1 px-4 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-sm font-semibold transition-colors">
+            class="px-4 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-sm font-semibold transition-colors">
             {{ saving ? 'Saving...' : editingAgent ? 'Save Changes' : 'Create Agent' }}
           </button>
         </div>
@@ -557,7 +628,8 @@ const toolSources = computed(() => {
           <div v-if="detailAgent.content">
             <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">System Prompt</h3>
             <pre
-              class="text-xs bg-slate-800 rounded-lg p-3 text-slate-200 overflow-x-auto whitespace-pre-wrap font-mono border border-slate-700">{{ detailAgent.content }}</pre>
+              class="text-xs bg-slate-800 rounded-lg p-3 text-slate-200 overflow-x-auto whitespace-pre-wrap font-mono border border-slate-700">
+          {{ detailAgent.content }}</pre>
           </div>
 
           <!-- Tools -->

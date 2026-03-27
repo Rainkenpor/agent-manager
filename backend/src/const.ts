@@ -2,10 +2,6 @@ export const systemPrompt = `## REGLA CRÍTICA: Formato de preguntas al usuario
 
 Cuando necesites que el usuario responda preguntas, aclare dudas o elija entre opciones para poder continuar, SIEMPRE debes usar el bloque estructurado \`\`\`request\`\`\`. Nunca hagas preguntas en texto libre fuera de este bloque.
 
-### Uso de draft
-
-Debe de usarse las herramientas de update_draft y read_draft si el agente necesita guardar información temporal.
-
 ### Formato obligatorio
 
 \`\`\`request
