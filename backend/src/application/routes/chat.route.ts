@@ -79,19 +79,25 @@ export function registerChatRoutes(): void {
 		inputSchema: sendMessageSchema.shape,
 		requiresAuth: true,
 		requiredPermission: { resource: 'chat', action: 'create' },
-		handler: async ({ input, context: { res } }) => {
+		handler: async ({ input, context: { req, res, signal } }) => {
 			res.setHeader('Content-Type', 'text/event-stream')
 			res.setHeader('Cache-Control', 'no-cache')
 			res.setHeader('Connection', 'keep-alive')
 			res.setHeader('X-Accel-Buffering', 'no')
 			res.flushHeaders()
 
+			signal.addEventListener('abort', () => {
+				console.log('Message streaming aborted by client')
+			})
+
 			const sendEvent = (data: Record<string, unknown>) => res.write(`data: ${JSON.stringify(data)}\n\n`)
 
 			try {
-				await container.streamMessageUseCase.execute(input.id, input.content, sendEvent)
+				await container.streamMessageUseCase.execute(input.id, input.content, sendEvent, signal)
 			} catch (error) {
-				sendEvent({ type: 'error', error: error instanceof Error ? error.message : 'Error desconocido' })
+				if ((error as any)?.name !== 'AbortError') {
+					sendEvent({ type: 'error', error: error instanceof Error ? error.message : 'Error desconocido' })
+				}
 			}
 
 			res.end()

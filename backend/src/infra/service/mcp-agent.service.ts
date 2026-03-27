@@ -58,6 +58,7 @@ export class MCPAgentService {
 			history?: Array<{ role: 'user' | 'assistant'; content: string }>
 			toolsCallbacks?: ToolCallbacks
 			userId?: string
+			signal?: AbortSignal
 		}
 	): AsyncGenerator<any> {
 		// Forward to internal agent service (basic invocation — extend for streaming)
@@ -80,7 +81,8 @@ export class MCPAgentService {
 				),
 				history: args.history || [],
 				toolsCallbacks: args.toolsCallbacks,
-				userId: args.userId
+				userId: args.userId,
+				signal: args.signal
 			}
 
 			// Stream

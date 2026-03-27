@@ -591,7 +591,8 @@ export class InternalAgentService implements IAgentService {
 	 */
 	private async *fetchCompletionStream(
 		config: RequestConfig,
-		body: Record<string, unknown>
+		body: Record<string, unknown>,
+		signal?: AbortSignal
 	): AsyncGenerator<string, CompletionMessage, void> {
 		// ── Codex / Responses API ────────────────────────────────────────────
 		if (config.provider === 'openai') {
@@ -599,7 +600,8 @@ export class InternalAgentService implements IAgentService {
 			const res = await fetch(config.baseURL, {
 				method: 'POST',
 				headers: config.headers,
-				body: JSON.stringify(codexBody)
+				body: JSON.stringify(codexBody),
+				signal
 			})
 			if (!res.ok) throw new Error(`API error ${res.status}: ${await res.text()}`)
 			if (!res.body) throw new Error('Response body is null')
@@ -684,7 +686,8 @@ export class InternalAgentService implements IAgentService {
 		const res = await fetch(`${config.baseURL}/chat/completions`, {
 			method: 'POST',
 			headers: config.headers,
-			body: JSON.stringify({ ...body, tool_choice: 'auto', stream: true, cache_prompt: true })
+			body: JSON.stringify({ ...body, tool_choice: 'auto', stream: true, cache_prompt: true }),
+			signal
 		})
 		if (!res.ok) throw new Error(`API error ${res.status} ${res.statusText}: ${await res.text()}`)
 		if (!res.body) throw new Error('Response body is null')
@@ -885,7 +888,9 @@ export class InternalAgentService implements IAgentService {
 		maxIterations = 60,
 		mcpExternal?: typeof mcpExternalManager
 	): AsyncGenerator<string> {
+		const signal = originalParams.signal
 		for (let i = 0; i < maxIterations; i++) {
+			if (signal?.aborted) return
 			agentLogger.info(`[InternalAgent] Stream iteration ${i + 1}/${maxIterations}`)
 			this.pruneMessages(messages)
 
@@ -898,7 +903,7 @@ export class InternalAgentService implements IAgentService {
 			}
 
 			// Consume the streaming generator, forwarding content deltas to caller
-			const gen = this.fetchCompletionStream(config, body)
+			const gen = this.fetchCompletionStream(config, body, signal)
 			let iterResult = await gen.next()
 			while (!iterResult.done) {
 				yield iterResult.value

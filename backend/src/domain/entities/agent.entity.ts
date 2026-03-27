@@ -29,6 +29,7 @@ export interface IAgentServiceExecute {
 	stream?: boolean // Indica si la respuesta debe ser en formato stream
 	toolsCallbacks?: ToolCallbacks // Callbacks para invocar herramientas y manejar borradores
 	userId?: string // ID del usuario que inicia la ejecución (para inyección de credenciales MCP)
+	signal?: AbortSignal // Señal para cancelar la ejecución del agente
 }
 
 export interface IAgentService {

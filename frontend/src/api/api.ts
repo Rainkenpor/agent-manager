@@ -141,7 +141,7 @@ export const upsertMcpCredential = (mcpServerId: string, key: string, value: str
 export const deleteMcpCredential = (mcpServerId: string, key: string) =>
 	request<{ success: boolean }>(`/mcp-credentials/${mcpServerId}/${encodeURIComponent(key)}`, { method: 'DELETE' })
 
-export function streamMessage(conversationId: string, content: string): Promise<Response> {
+export function streamMessage(conversationId: string, content: string, signal?: AbortSignal): Promise<Response> {
 	const token = localStorage.getItem('token')
 	return fetch(`${BASE}/chat/conversations/${conversationId}/messages`, {
 		method: 'POST',
@@ -149,6 +149,7 @@ export function streamMessage(conversationId: string, content: string): Promise<
 			'Content-Type': 'application/json',
 			...(token ? { Authorization: `Bearer ${token}` } : {})
 		},
-		body: JSON.stringify({ content })
+		body: JSON.stringify({ content }),
+		signal,
 	})
 }

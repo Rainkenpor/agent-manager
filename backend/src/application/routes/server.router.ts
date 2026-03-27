@@ -48,13 +48,20 @@ export function registerServerRoutes(oauthService?: McpOAuthService): express.Ro
 					})
 				}
 
+				const abortController = new AbortController()
+				const { signal } = abortController
+				req.on('close', () => {
+					abortController.abort()
+				})
+
 				// Execute handler with context
 				const result = await route.handler({
 					input: parseResult.data,
 					context: {
 						req,
 						res,
-						next
+						next,
+						signal
 					},
 					oauthService
 				})

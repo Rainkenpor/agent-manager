@@ -53,6 +53,7 @@ const showNewChatForm = ref(false)
 const error = ref('')
 
 const messagesContainer = ref<HTMLElement | null>(null)
+let abortController: AbortController | null = null
 
 // Form state keyed by message id
 const formAnswers = ref<Record<string, Record<string, { textValue: string; selectedOptions: string[] }>>>({})
@@ -128,8 +129,10 @@ async function sendMessage() {
   messages.value.push(assistantMsg)
   await scrollToBottom()
 
+  abortController = new AbortController()
+
   try {
-    const response = await api.streamMessage(activeConversation.value.id, content)
+    const response = await api.streamMessage(activeConversation.value.id, content, abortController.signal)
 
     if (!response.ok) {
       const err = await response.json().catch(() => ({ error: response.statusText }))
@@ -186,13 +189,18 @@ async function sendMessage() {
       }
     }
   } catch (e: any) {
-    // Remove streaming placeholder on error
+    // Remove streaming placeholder on abort or error
     messages.value = messages.value.filter((m) => m.id !== streamingId)
-    error.value = e.message
+    if (e.name !== 'AbortError') error.value = e.message
   } finally {
+    abortController = null
     sending.value = false
     await scrollToBottom()
   }
+}
+
+function cancelRequest() {
+  abortController?.abort()
 }
 
 async function deleteConversation(conv: Conversation) {
@@ -719,47 +727,28 @@ onMounted(fetchInitialData)
               placeholder="Escribe un mensaje... (Enter para enviar, Shift+Enter para salto de línea)"
               class="flex-1 resize-none bg-transparent text-sm text-white placeholder-slate-500 focus:outline-none max-h-36"
               @keydown="handleKeydown" />
-            <button
-              class="shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-colors disabled:opacity-40"
-              :class="messageInput.trim() && activeConversation && !sending ? 'bg-indigo-600 hover:bg-indigo-500' : 'bg-slate-700'"
-              :disabled="!messageInput.trim() || !activeConversation || sending" @click="sendMessage">
-              <!-- Spinner while sending -->
-              <svg v-if="sending" class="w-4 h-4 text-slate-300 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+            <!-- Cancel button while sending -->
+            <button v-if="sending"
+              class="shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-colors bg-red-600 hover:bg-red-500"
+              @click="cancelRequest" title="Cancelar">
+              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
-              <!-- Send icon -->
-              <svg v-else class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            </button>
+            <!-- Send button -->
+            <button v-else
+              class="shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-colors disabled:opacity-40"
+              :class="messageInput.trim() && activeConversation ? 'bg-indigo-600 hover:bg-indigo-500' : 'bg-slate-700'"
+              :disabled="!messageInput.trim() || !activeConversation" @click="sendMessage">
+              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
               </svg>
             </button>
           </div>
         </div>
-
       </div>
 
-      <!-- Draft panel -->
-      <div class="w-64 shrink-0 flex flex-col border-l border-slate-800 bg-slate-900/60">
-        <div class="px-4 py-4 border-b border-slate-800 flex items-center gap-2">
-          <svg class="w-3.5 h-3.5 text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          <h2 class="text-sm font-semibold text-white">Borrador</h2>
-          <span v-if="draft" class="ml-auto w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" title="Con contenido" />
-        </div>
-
-        <div class="flex-1 overflow-y-auto px-4 py-3">
-          <div v-if="!activeConversation" class="text-xs text-slate-600 text-center mt-8">
-            Abre una conversación para ver el borrador
-          </div>
-          <div v-else-if="!draft" class="text-xs text-slate-600 text-center mt-8 leading-relaxed">
-            El agente actualizará el borrador con información relevante durante la conversación
-          </div>
-          <pre v-else class="text-xs text-slate-300 whitespace-pre-wrap font-mono leading-relaxed break-words">{{ draft }}</pre>
-        </div>
-      </div>
     </div>
 
 
