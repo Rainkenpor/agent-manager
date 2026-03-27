@@ -80,6 +80,12 @@ export const deleteAgent = (id: string) => request<any>(`/agents/${id}`, { metho
 export const getMcpServerTools = (mcpServerId: string) =>
 	request<{ success: boolean; data: Array<{ toolName: string; description: string }> }>(`/mcp-servers/${mcpServerId}/tools`)
 
+// MCP Server connection status & reconnect
+export const getMcpServerStatus = (mcpServerId: string) =>
+	request<{ success: boolean; data: { connected: boolean } }>(`/mcp-servers/${mcpServerId}/status`)
+export const reconnectMcpServer = (mcpServerId: string) =>
+	request<{ success: boolean; data: { connected: boolean } }>(`/mcp-servers/${mcpServerId}/reconnect`, { method: 'POST' })
+
 // Role MCP tool selection
 export const getRoleMcpTools = (roleId: string, mcpServerId: string) =>
 	request<{ success: boolean; data: string[] }>(`/roles/${roleId}/mcps/${mcpServerId}/tools`)

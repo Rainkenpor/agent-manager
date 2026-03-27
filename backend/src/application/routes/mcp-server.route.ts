@@ -180,6 +180,44 @@ export function registerMcpServerRoutes(): void {
 		}
 	})
 
+	// Get connection status of an MCP server
+	registry.register({
+		useBy: ['server'],
+		method: 'GET',
+		path: '/api/mcp-servers/:id/status',
+		inputSchema: z.object({ id: z.string() }).shape,
+		requiresAuth: true,
+		requiredPermission: { resource: 'mcp_servers', action: 'read' },
+		handler: async ({ context: { req, res } }) => {
+			const { mcpExternalManager } = await import('@infra/service/mcp-external.js')
+			const server = await container.mcpServerRepository.findById(req.params.id as string)
+			if (!server) return res.status(404).json({ error: 'MCP server not found' })
+			return { success: true, data: { connected: mcpExternalManager.isConnected(server.name) } }
+		}
+	})
+
+	// Reconnect an MCP server
+	registry.register({
+		useBy: ['server'],
+		method: 'POST',
+		path: '/api/mcp-servers/:id/reconnect',
+		inputSchema: z.object({ id: z.string() }).shape,
+		requiresAuth: true,
+		requiredPermission: { resource: 'mcp_servers', action: 'update' },
+		handler: async ({ context: { req, res } }) => {
+			const { mcpExternalManager } = await import('@infra/service/mcp-external.js')
+			try {
+				const server = await container.mcpServerRepository.findById(req.params.id as string)
+				if (!server) return res.status(404).json({ error: 'MCP server not found' })
+				mcpExternalManager.disconnect(server.name)
+				await mcpExternalManager.ensureServerInitialized(server.name, server, server.id)
+				return { success: true, data: { connected: mcpExternalManager.isConnected(server.name) } }
+			} catch (error: any) {
+				res.status(500).json({ error: error.message })
+			}
+		}
+	})
+
 	// Discover available tools from an MCP server (connects and lists)
 	registry.register({
 		useBy: ['server'],

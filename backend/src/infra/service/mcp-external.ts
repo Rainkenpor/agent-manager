@@ -488,6 +488,27 @@ export class McpExternalManager {
 		return this.serverDbIds.get(serverName)
 	}
 
+	/** Returns true if the server has an active client connection. */
+	isConnected(serverName: string): boolean {
+		return this.httpClients.has(serverName) || this.stdioClients.has(serverName)
+	}
+
+	/** Disconnects a server and removes its tools from the registry. */
+	disconnect(serverName: string): void {
+		const stdio = this.stdioClients.get(serverName)
+		if (stdio) {
+			stdio.cleanup()
+			this.stdioClients.delete(serverName)
+		}
+		this.httpClients.delete(serverName)
+
+		const prefix = `${MCP_PREFIX}${serverName}__`
+		for (const toolId of [...this.toolMap.keys()]) {
+			if (toolId.startsWith(prefix)) this.toolMap.delete(toolId)
+		}
+		this.tools = this.tools.filter((t) => !t.function.name.startsWith(prefix))
+	}
+
 	/**
 	 * Returns tools belonging to a specific server, with parsed metadata.
 	 */

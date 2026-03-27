@@ -10,6 +10,8 @@ const toast = useToastStore()
 
 const servers = ref<McpServer[]>([])
 const loading = ref(false)
+const connectionStatus = ref<Record<string, 'connected' | 'disconnected' | 'checking'>>({})
+const reconnecting = ref<Record<string, boolean>>({})
 
 // Modal
 const showModal = ref(false)
@@ -59,10 +61,38 @@ async function fetchServers() {
   try {
     const res = await api.getMcpServers()
     servers.value = res.data ?? (res as any)
+    fetchStatuses()
   } catch (e: any) {
     toast.error(e.message ?? 'Failed to load MCP servers')
   } finally {
     loading.value = false
+  }
+}
+
+async function fetchStatuses() {
+  for (const server of servers.value) {
+    connectionStatus.value[server.id] = 'checking'
+    api.getMcpServerStatus(server.id)
+      .then((res) => {
+        connectionStatus.value[server.id] = res.data.connected ? 'connected' : 'disconnected'
+      })
+      .catch(() => {
+        connectionStatus.value[server.id] = 'disconnected'
+      })
+  }
+}
+
+async function reconnect(server: McpServer) {
+  reconnecting.value[server.id] = true
+  try {
+    const res = await api.reconnectMcpServer(server.id)
+    connectionStatus.value[server.id] = res.data.connected ? 'connected' : 'disconnected'
+    toast.success(`${server.displayName || server.name} reconnected`)
+  } catch (e: any) {
+    connectionStatus.value[server.id] = 'disconnected'
+    toast.error(e.message ?? 'Failed to reconnect')
+  } finally {
+    reconnecting.value[server.id] = false
   }
 }
 
@@ -213,6 +243,24 @@ async function doDelete() {
                     :class="server.active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'">
                     {{ server.active ? 'active' : 'inactive' }}
                   </span>
+                  <!-- Connection status -->
+                  <span v-if="connectionStatus[server.id] === 'checking'"
+                    class="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-700 text-slate-400">
+                    <svg class="w-2.5 h-2.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                    </svg>
+                  </span>
+                  <span v-else-if="connectionStatus[server.id] === 'connected'"
+                    class="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-900/40 text-emerald-400">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                    connected
+                  </span>
+                  <span v-else-if="connectionStatus[server.id] === 'disconnected'"
+                    class="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-900/40 text-red-400">
+                    <span class="w-1.5 h-1.5 rounded-full bg-red-400"></span>
+                    disconnected
+                  </span>
                 </div>
               </div>
 
@@ -277,7 +325,16 @@ async function doDelete() {
                 </svg>
                 Edit
               </button>
-
+              <button v-if="connectionStatus[server.id] === 'disconnected'"
+                class="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium text-slate-200 hover:text-emerald-400 hover:bg-emerald-900/30 transition-colors disabled:opacity-50"
+                :disabled="reconnecting[server.id]"
+                @click="reconnect(server)">
+                <svg class="w-3.5 h-3.5" :class="{ 'animate-spin': reconnecting[server.id] }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                {{ reconnecting[server.id] ? 'Connecting...' : 'Reconnect' }}
+              </button>
             </div>
           </div>
         </div>
