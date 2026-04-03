@@ -289,6 +289,36 @@ export function buildToolDefinitions(
 					}
 				}
 			}
+		},
+		{
+			type: 'function',
+			function: {
+				name: 'get_skill',
+				description:
+					'Retrieve the full markdown content of a skill by its slug. Skills are reusable instruction blocks that provide specialized knowledge or behavior. The system prompt lists available skill slugs — call this tool to load one before applying its instructions.',
+				parameters: {
+					type: 'object',
+					properties: {
+						slug: {
+							type: 'string',
+							description: 'The slug identifier of the skill to retrieve (e.g. "analysis-framework", "code-review-checklist").'
+						}
+					},
+					required: ['slug']
+				}
+			}
+		},
+		{
+			type: 'function',
+			function: {
+				name: 'list_skills',
+				description:
+					'List all active skills with their name, slug and description. Use this tool to discover available skills before calling get_skill to load a specific one.',
+				parameters: {
+					type: 'object',
+					properties: {}
+				}
+			}
 		}
 	]
 
@@ -361,6 +391,22 @@ export async function executeToolCall(
 				if (!credFields) return 'No active MCP servers found.'
 				const list = await credFields.getListCredentials()
 				return JSON.stringify(list, null, 2)
+			}
+
+			case 'get_skill': {
+				const skillCb = originalParams.toolsCallbacks?.skillCallbacks
+				if (!skillCb) return 'Error: skill callbacks not available in this context.'
+				const skill = await skillCb.getBySlug(args.slug as string)
+				if (!skill) return `Skill '${args.slug}' not found or is inactive.`
+				return `# ${skill.name}\n\n${skill.content}`
+			}
+
+			case 'list_skills': {
+				const skillCb = originalParams.toolsCallbacks?.skillCallbacks
+				if (!skillCb) return 'Error: skill callbacks not available in this context.'
+				const skills = await skillCb.listSkills()
+				if (skills.length === 0) return 'No active skills available.'
+				return JSON.stringify(skills, null, 2)
 			}
 
 			case 'spawn_subagent': {

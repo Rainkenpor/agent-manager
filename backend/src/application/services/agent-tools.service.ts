@@ -30,6 +30,18 @@ const BASE_TOOLS: AvailableTool[] = [
 		description:
 			'Lista los campos de credenciales requeridos para cada servidor MCP activo. Devuelve un array con el id, nombre, displayName y campos de credenciales (key y descripción) de cada servidor MCP activo.',
 		source: 'registry'
+	},
+	{
+		name: 'get_skill',
+		description:
+			'Recupera el contenido markdown completo de un skill por su slug. Los skills son bloques de instrucciones reutilizables que proveen conocimiento especializado. El system prompt lista los slugs disponibles.',
+		source: 'builtin'
+	},
+	{
+		name: 'list_skills',
+		description:
+			'Lista todos los skills activos con su nombre, slug y descripción. Úsala para descubrir qué skills están disponibles antes de llamar a get_skill.',
+		source: 'builtin'
 	}
 ]
 

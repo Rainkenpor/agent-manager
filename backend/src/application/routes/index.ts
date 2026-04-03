@@ -6,6 +6,7 @@ import { registerMcpServerRoutes } from './mcp-server.route.js'
 import { registerOAuthRoutes } from './oauth.route.js'
 import { registerChatRoutes } from './chat.route.js'
 import { registerMcpCredentialRoutes } from './mcp-credential.route.js'
+import { registerSkillRoutes } from './skill.route.js'
 
 /**
  * Initializes the registry by calling all registration functions.
@@ -20,4 +21,5 @@ export function initializeRegistry(): void {
 	registerOAuthRoutes()
 	registerChatRoutes()
 	registerMcpCredentialRoutes()
+	registerSkillRoutes()
 }

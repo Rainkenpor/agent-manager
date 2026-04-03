@@ -1,3 +1,10 @@
+export interface SkillData {
+	name: string
+	slug: string
+	description: string | null
+	content: string
+}
+
 export interface ToolCallbacks {
 	onToolCall: (toolName: string, args: any) => Promise<void>
 	draftCallbacks: {
@@ -16,6 +23,10 @@ export interface ToolCallbacks {
 				credentialFields: { key: string; description: string }[]
 			}[]
 		>
+	}
+	skillCallbacks?: {
+		getBySlug: (slug: string) => Promise<SkillData | null>
+		listSkills: () => Promise<Pick<SkillData, 'name' | 'slug' | 'description'>[]>
 	}
 }
 

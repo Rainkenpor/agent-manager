@@ -197,6 +197,36 @@ async function seedDefaultPermissions() {
 			action: 'delete',
 			description: 'Eliminar conversaciones',
 			createdAt: new Date().toISOString()
+		},
+
+		// Skills
+		{
+			id: randomUUID(),
+			resource: 'skills',
+			action: 'create',
+			description: 'Crear skills',
+			createdAt: new Date().toISOString()
+		},
+		{
+			id: randomUUID(),
+			resource: 'skills',
+			action: 'read',
+			description: 'Ver skills',
+			createdAt: new Date().toISOString()
+		},
+		{
+			id: randomUUID(),
+			resource: 'skills',
+			action: 'update',
+			description: 'Actualizar skills',
+			createdAt: new Date().toISOString()
+		},
+		{
+			id: randomUUID(),
+			resource: 'skills',
+			action: 'delete',
+			description: 'Eliminar skills',
+			createdAt: new Date().toISOString()
 		}
 	]
 

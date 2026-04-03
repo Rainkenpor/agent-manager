@@ -58,6 +58,17 @@ const allSections = [
     icon: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />`,
   },
   {
+    to: '/skills',
+    resource: 'skills',
+    label: 'Skills',
+    description:
+      'Define bloques de instrucciones reutilizables en markdown. Los skills encapsulan conocimiento especializado que puede referenciarse desde agentes para extender su comportamiento.',
+    gradient: 'from-fuchsia-500 to-pink-600',
+    glow: 'shadow-fuchsia-500/20',
+    badge: 'bg-fuchsia-500/10 text-fuchsia-400 ring-1 ring-fuchsia-500/20',
+    icon: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z" />`,
+  },
+  {
     to: '/chat',
     resource: 'chat',
     label: 'Chat',

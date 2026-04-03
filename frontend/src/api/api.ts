@@ -141,6 +141,13 @@ export const upsertMcpCredential = (mcpServerId: string, key: string, value: str
 export const deleteMcpCredential = (mcpServerId: string, key: string) =>
 	request<{ success: boolean }>(`/mcp-credentials/${mcpServerId}/${encodeURIComponent(key)}`, { method: 'DELETE' })
 
+// Skills
+export const getSkills = () => request<{ success: boolean; data: any[] }>('/skills')
+export const getSkillById = (id: string) => request<{ success: boolean; data: any }>(`/skills/${id}`)
+export const createSkill = (data: any) => request<{ success: boolean; data: any }>('/skills', { method: 'POST', body: JSON.stringify(data) })
+export const updateSkill = (id: string, data: any) => request<{ success: boolean; data: any }>(`/skills/${id}`, { method: 'PUT', body: JSON.stringify(data) })
+export const deleteSkill = (id: string) => request<{ success: boolean }>(`/skills/${id}`, { method: 'DELETE' })
+
 export function streamMessage(conversationId: string, content: string, signal?: AbortSignal): Promise<Response> {
 	const token = localStorage.getItem('token')
 	return fetch(`${BASE}/chat/conversations/${conversationId}/messages`, {

@@ -53,6 +53,12 @@ const router = createRouter({
       meta: { requiresAuth: true, resource: 'mcp_credentials' },
     },
     {
+      path: '/skills',
+      name: 'skills',
+      component: () => import('@/views/SkillsView.vue'),
+      meta: { requiresAuth: true, resource: 'skills' },
+    },
+    {
       path: '/oauth/authorize/mcp',
       name: 'oauth-authorize-mcp',
       component: () => import('@/views/OAuthAuthorizeView.vue'),

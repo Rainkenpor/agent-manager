@@ -12,7 +12,8 @@
       "Bash(ls:*)",
       "Bash(grep -E \"\\\\.\\(ts|tsx|vue|js\\)$\")",
       "Bash(grep -E \"\\\\.\\(ts|js\\)$\")",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Bash(grep -l \"agent_skills\\\\|agent.*skill\" \"/c/Users/WO199/OneDrive/Documents/Proyectos/agent-manager/backend/drizzle\"/*.sql)"
     ]
   }
 }

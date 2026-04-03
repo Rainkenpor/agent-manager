@@ -14,6 +14,7 @@ const allNavLinks = [
   { to: '/roles', label: 'Roles', icon: 'mdi-shield-account', resource: 'roles' },
   { to: '/agents', label: 'Agents', icon: 'mdi-robot', resource: 'agents' },
   { to: '/mcps', label: 'MCP Servers', icon: 'mdi-server', resource: 'mcp_servers' },
+  { to: '/skills', label: 'Skills', icon: 'mdi-lightning-bolt', resource: 'skills' },
   { to: '/mcp-credentials', label: 'My Credentials', icon: 'mdi-key', resource: 'mcp_credentials' },
 ]
 

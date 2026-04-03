@@ -6,7 +6,8 @@ import type {
 	IMcpServerRepository,
 	IChatRepository,
 	IMcpUserCredentialRepository,
-	IMcpCredentialProvider
+	IMcpCredentialProvider,
+	ISkillRepository
 } from '@domain/repositories/index.js'
 import { mcpExternalManager } from '@infra/service/mcp-external.js'
 
@@ -17,7 +18,8 @@ import {
 	PermissionRepository,
 	McpServerRepository,
 	ChatRepository,
-	McpUserCredentialRepository
+	McpUserCredentialRepository,
+	SkillRepository
 } from '@infra/repository/index.js'
 
 import {
@@ -42,7 +44,13 @@ import {
 	// MCP Credential Use Cases
 	GetMcpCredentialsUseCase,
 	UpsertMcpCredentialUseCase,
-	DeleteMcpCredentialUseCase
+	DeleteMcpCredentialUseCase,
+	// Skill Use Cases
+	CreateSkillUseCase,
+	ListSkillsUseCase,
+	GetSkillUseCase,
+	UpdateSkillUseCase,
+	DeleteSkillUseCase
 } from './use-cases/index.js'
 
 /**
@@ -102,6 +110,14 @@ export class Container {
 	private _upsertMcpCredentialUseCase?: UpsertMcpCredentialUseCase
 	private _deleteMcpCredentialUseCase?: DeleteMcpCredentialUseCase
 
+	// Skill Repository & Use Cases
+	private _skillRepository: ISkillRepository
+	private _createSkillUseCase?: CreateSkillUseCase
+	private _listSkillsUseCase?: ListSkillsUseCase
+	private _getSkillUseCase?: GetSkillUseCase
+	private _updateSkillUseCase?: UpdateSkillUseCase
+	private _deleteSkillUseCase?: DeleteSkillUseCase
+
 	constructor() {
 		// Initialize repositories with concrete implementations
 		this._userRepository = new UserRepository()
@@ -111,6 +127,7 @@ export class Container {
 		this._mcpServerRepository = new McpServerRepository()
 		this._chatRepository = new ChatRepository()
 		this._mcpUserCredentialRepository = new McpUserCredentialRepository()
+		this._skillRepository = new SkillRepository()
 
 		// Inyectar el adaptador de credenciales en McpExternalManager (dependency inversion)
 		mcpExternalManager.setCredentialProvider(new McpCredentialProviderAdapter(this._mcpUserCredentialRepository))
@@ -289,6 +306,45 @@ export class Container {
 			this._deleteMcpCredentialUseCase = new DeleteMcpCredentialUseCase(this._mcpUserCredentialRepository)
 		}
 		return this._deleteMcpCredentialUseCase
+	}
+
+	// ==========================================
+	// SKILL USE CASES
+	// ==========================================
+
+	get createSkillUseCase(): CreateSkillUseCase {
+		if (!this._createSkillUseCase) {
+			this._createSkillUseCase = new CreateSkillUseCase(this._skillRepository)
+		}
+		return this._createSkillUseCase
+	}
+
+	get listSkillsUseCase(): ListSkillsUseCase {
+		if (!this._listSkillsUseCase) {
+			this._listSkillsUseCase = new ListSkillsUseCase(this._skillRepository)
+		}
+		return this._listSkillsUseCase
+	}
+
+	get getSkillUseCase(): GetSkillUseCase {
+		if (!this._getSkillUseCase) {
+			this._getSkillUseCase = new GetSkillUseCase(this._skillRepository)
+		}
+		return this._getSkillUseCase
+	}
+
+	get updateSkillUseCase(): UpdateSkillUseCase {
+		if (!this._updateSkillUseCase) {
+			this._updateSkillUseCase = new UpdateSkillUseCase(this._skillRepository)
+		}
+		return this._updateSkillUseCase
+	}
+
+	get deleteSkillUseCase(): DeleteSkillUseCase {
+		if (!this._deleteSkillUseCase) {
+			this._deleteSkillUseCase = new DeleteSkillUseCase(this._skillRepository)
+		}
+		return this._deleteSkillUseCase
 	}
 }
 

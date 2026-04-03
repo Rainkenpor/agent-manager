@@ -223,7 +223,21 @@ export const messages = sqliteTable('messages', {
 	createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
 })
 
+// Skills — reusable instruction blocks that can be referenced by agents
+export const skills = sqliteTable('skills', {
+	id: text('id').primaryKey(),
+	name: text('name').notNull().unique(),
+	slug: text('slug').notNull().unique(),
+	description: text('description'),
+	content: text('content').notNull().default(''),
+	isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+	createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
+	updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString()),
+})
+
 // Tipos inferidos
+export type Skill = typeof skills.$inferSelect
+export type NewSkill = typeof skills.$inferInsert
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Role = typeof roles.$inferSelect;
