@@ -142,6 +142,12 @@ export const deleteMcpCredential = (mcpServerId: string, key: string) =>
 	request<{ success: boolean }>(`/mcp-credentials/${mcpServerId}/${encodeURIComponent(key)}`, { method: 'DELETE' })
 
 // Skills
+export const getRoleSkills = (roleId: string) => request<{ success: boolean; data: any[] }>(`/roles/${roleId}/skills`)
+export const assignSkillToRole = (roleId: string, skillId: string) =>
+  request<{ success: boolean }>(`/roles/${roleId}/skills/${skillId}`, { method: 'POST' })
+export const removeSkillFromRole = (roleId: string, skillId: string) =>
+  request<{ success: boolean }>(`/roles/${roleId}/skills/${skillId}`, { method: 'DELETE' })
+
 export const getSkills = () => request<{ success: boolean; data: any[] }>('/skills')
 export const getSkillById = (id: string) => request<{ success: boolean; data: any }>(`/skills/${id}`)
 export const createSkill = (data: any) => request<{ success: boolean; data: any }>('/skills', { method: 'POST', body: JSON.stringify(data) })

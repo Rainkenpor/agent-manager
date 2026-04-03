@@ -235,9 +235,18 @@ export const skills = sqliteTable('skills', {
 	updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString()),
 })
 
+// Role ↔ Skills (many-to-many) — restricts which skills each role can access
+export const roleSkills = sqliteTable('role_skills', {
+	id: text('id').primaryKey(),
+	roleId: text('role_id').notNull().references(() => roles.id, { onDelete: 'cascade' }),
+	skillId: text('skill_id').notNull().references(() => skills.id, { onDelete: 'cascade' }),
+	assignedAt: text('assigned_at').notNull().$defaultFn(() => new Date().toISOString()),
+})
+
 // Tipos inferidos
 export type Skill = typeof skills.$inferSelect
 export type NewSkill = typeof skills.$inferInsert
+export type RoleSkill = typeof roleSkills.$inferSelect
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Role = typeof roles.$inferSelect;

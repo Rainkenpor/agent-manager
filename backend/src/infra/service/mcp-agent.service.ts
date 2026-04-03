@@ -2,14 +2,22 @@ import { systemPrompt } from '../../const'
 import { AgentService } from './agent.service'
 import type { IAgentServiceExecute, SkillData, ToolCallbacks } from '@domain/entities/agent.entity.js'
 
-/** Fetches active skills and returns both the skill list and a formatted system prompt section */
-async function fetchActiveSkills(): Promise<{ skills: SkillData[]; promptSection: string }> {
+/** Fetches skills allowed for the given user (role-filtered) and builds the system prompt section */
+async function fetchActiveSkills(userId?: string): Promise<{ skills: SkillData[]; promptSection: string }> {
 	try {
 		const { container } = await import('@application/container.js')
-		const result = await container.listSkillsUseCase.execute()
-		if (!result.success) return { skills: [], promptSection: '' }
 
-		const active = result.data.filter((s) => s.isActive)
+		let active: SkillData[]
+		if (userId) {
+			const result = await container.getSkillsAllowedForUserUseCase.execute(userId)
+			if (!result.success) return { skills: [], promptSection: '' }
+			active = result.data
+		} else {
+			const result = await container.listSkillsUseCase.execute()
+			if (!result.success) return { skills: [], promptSection: '' }
+			active = result.data.filter((s) => s.isActive)
+		}
+
 		if (active.length === 0) return { skills: [], promptSection: '' }
 
 		const lines = active.map((s) => `- \`${s.slug}\`${s.description ? `: ${s.description}` : ''}`)
@@ -37,7 +45,7 @@ export class MCPAgentService {
 
 			const { skills, promptSection } = await fetchActiveSkills()
 
-			const params = {
+			const params: IAgentServiceExecute = {
 				systemPrompt: `${systemPrompt}\n${agentEntity.data.content}${promptSection}`,
 				agentSlug: agentEntity.data.slug,
 				query: args.instruction,
@@ -96,7 +104,7 @@ export class MCPAgentService {
 				throw new Error(`Agent not found: ${agent.id}`)
 			}
 
-			const { skills, promptSection } = await fetchActiveSkills()
+			const { skills, promptSection } = await fetchActiveSkills(args.userId)
 
 			const params: IAgentServiceExecute = {
 				systemPrompt: `${systemPrompt}\n${agentEntity.data.content}${promptSection}`,

@@ -78,4 +78,45 @@ export function registerSkillRoutes(): void {
 			return await container.deleteSkillUseCase.execute(input.id)
 		},
 	})
+
+	// ── Role ↔ Skill assignment ─────────────────────────────────────────────────
+
+	registry.register({
+		useBy: ['server'],
+		method: 'GET',
+		path: '/api/roles/:roleId/skills',
+		inputSchema: z.object({ roleId: z.string() }).shape,
+		requiresAuth: true,
+		requiredPermission: { resource: 'skills', action: 'read' },
+		handler: async ({ input }) => {
+			const skills = await container.skillRepository.getByRole(input.roleId)
+			return { success: true, data: skills }
+		},
+	})
+
+	registry.register({
+		useBy: ['server'],
+		method: 'POST',
+		path: '/api/roles/:roleId/skills/:skillId',
+		inputSchema: z.object({ roleId: z.string(), skillId: z.string() }).shape,
+		requiresAuth: true,
+		requiredPermission: { resource: 'skills', action: 'update' },
+		handler: async ({ input }) => {
+			await container.skillRepository.assignToRole(input.roleId, input.skillId)
+			return { success: true }
+		},
+	})
+
+	registry.register({
+		useBy: ['server'],
+		method: 'DELETE',
+		path: '/api/roles/:roleId/skills/:skillId',
+		inputSchema: z.object({ roleId: z.string(), skillId: z.string() }).shape,
+		requiresAuth: true,
+		requiredPermission: { resource: 'skills', action: 'update' },
+		handler: async ({ input }) => {
+			await container.skillRepository.removeFromRole(input.roleId, input.skillId)
+			return { success: true }
+		},
+	})
 }

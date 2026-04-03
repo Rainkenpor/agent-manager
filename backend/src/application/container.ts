@@ -52,6 +52,7 @@ import {
 	UpdateSkillUseCase,
 	DeleteSkillUseCase
 } from './use-cases/index.js'
+import { GetSkillsAllowedForUserUseCase } from './use-cases/skill/get-skills-allowed-user.js'
 
 /**
  * Adaptador que implementa IMcpCredentialProvider usando IMcpUserCredentialRepository.
@@ -114,6 +115,7 @@ export class Container {
 	private _skillRepository: ISkillRepository
 	private _createSkillUseCase?: CreateSkillUseCase
 	private _listSkillsUseCase?: ListSkillsUseCase
+	private _getSkillsAllowedForUserUseCase?: GetSkillsAllowedForUserUseCase
 	private _getSkillUseCase?: GetSkillUseCase
 	private _updateSkillUseCase?: UpdateSkillUseCase
 	private _deleteSkillUseCase?: DeleteSkillUseCase
@@ -309,6 +311,14 @@ export class Container {
 	}
 
 	// ==========================================
+	// SKILL REPOSITORY (direct access)
+	// ==========================================
+
+	get skillRepository(): ISkillRepository {
+		return this._skillRepository
+	}
+
+	// ==========================================
 	// SKILL USE CASES
 	// ==========================================
 
@@ -324,6 +334,13 @@ export class Container {
 			this._listSkillsUseCase = new ListSkillsUseCase(this._skillRepository)
 		}
 		return this._listSkillsUseCase
+	}
+
+	get getSkillsAllowedForUserUseCase(): GetSkillsAllowedForUserUseCase {
+		if (!this._getSkillsAllowedForUserUseCase) {
+			this._getSkillsAllowedForUserUseCase = new GetSkillsAllowedForUserUseCase(this._skillRepository)
+		}
+		return this._getSkillsAllowedForUserUseCase
 	}
 
 	get getSkillUseCase(): GetSkillUseCase {

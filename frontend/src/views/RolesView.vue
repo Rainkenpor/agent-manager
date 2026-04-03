@@ -24,7 +24,7 @@ const deleting = ref(false)
 
 // Role associations modal
 const assocModalRole = ref<Role | null>(null)
-const assocTab = ref<'mcps' | 'agents' | 'permissions'>('mcps')
+const assocTab = ref<'mcps' | 'agents' | 'permissions' | 'skills'>('mcps')
 const assocLoading = ref(false)
 
 // Available items
@@ -40,6 +40,10 @@ const toggling = ref<string | null>(null)
 // Permissions
 const allPermissions = ref<Array<{ id: string; resource: string; action: string; description?: string }>>([])
 const assignedPermissions = ref<Array<{ id: string; resource: string; action: string }>>([])
+
+// Skills
+const allSkills = ref<Array<{ id: string; name: string; slug: string; description?: string | null; isActive: boolean }>>([])
+const assignedSkills = ref<Array<{ id: string; name: string; slug: string }>>([])
 
 // ── Tool selection sub-panel ──────────────────────────────────────────────────
 const toolPanelMcp = ref<McpServer | null>(null)
@@ -131,15 +135,18 @@ async function openAssocModal(role: Role) {
   assignedMcps.value = []
   assignedAgents.value = []
   assignedPermissions.value = []
+  assignedSkills.value = []
   toolPanelMcp.value = null
   try {
-    const [mcpsRes, agentsRes, mcpAssignedRes, agentAssignedRes, allPermsRes, rolePermsRes] = await Promise.all([
+    const [mcpsRes, agentsRes, mcpAssignedRes, agentAssignedRes, allPermsRes, rolePermsRes, allSkillsRes, roleSkillsRes] = await Promise.all([
       api.getMcpServers(),
       api.getAgents(),
       api.getRoleMcps(role.id),
       api.getRoleAgents(role.id),
       api.getPermissions(),
       api.getRolePermissions(role.id),
+      api.getSkills(),
+      api.getRoleSkills(role.id),
     ])
     allMcps.value = mcpsRes.data ?? (mcpsRes as any)
     allAgents.value = agentsRes.data ?? (agentsRes as any)
@@ -147,6 +154,8 @@ async function openAssocModal(role: Role) {
     assignedAgents.value = agentAssignedRes.data ?? (agentAssignedRes as any)
     allPermissions.value = allPermsRes ?? []
     assignedPermissions.value = rolePermsRes ?? []
+    allSkills.value = allSkillsRes.data ?? []
+    assignedSkills.value = roleSkillsRes.data ?? []
   } catch (e: any) {
     toast.error(e.message ?? 'Failed to load associations')
   } finally {
@@ -232,6 +241,33 @@ async function togglePermission(permId: string) {
     }
   } catch (e: any) {
     toast.error(e.message ?? 'Failed to update permission')
+  } finally {
+    toggling.value = null
+  }
+}
+
+// ── Skills tab ─────────────────────────────────────────────────────────────
+
+function hasSkill(skillId: string): boolean {
+  return assignedSkills.value.some((s) => s.id === skillId)
+}
+
+async function toggleSkill(skillId: string) {
+  if (!assocModalRole.value) return
+  toggling.value = skillId
+  try {
+    if (hasSkill(skillId)) {
+      await api.removeSkillFromRole(assocModalRole.value.id, skillId)
+      assignedSkills.value = assignedSkills.value.filter((s) => s.id !== skillId)
+      toast.success('Skill removed from role')
+    } else {
+      await api.assignSkillToRole(assocModalRole.value.id, skillId)
+      const skill = allSkills.value.find((s) => s.id === skillId)
+      if (skill) assignedSkills.value.push({ id: skill.id, name: skill.name, slug: skill.slug })
+      toast.success('Skill assigned to role')
+    }
+  } catch (e: any) {
+    toast.error(e.message ?? 'Failed to update skill')
   } finally {
     toggling.value = null
   }
@@ -430,7 +466,7 @@ async function saveToolSelection() {
       <!-- Main panel -->
       <div
         class="relative bg-slate-900 rounded-2xl shadow-2xl mx-4 flex flex-col max-h-[85vh] overflow-hidden transition-all"
-        :class="toolPanelMcp ? 'w-full max-w-4xl' : 'w-full max-w-lg'">
+        :class="toolPanelMcp ? 'w-full max-w-4xl' : 'w-full max-w-2xl'">
         <div class="flex flex-1 min-h-0">
 
           <!-- Left: role associations -->
@@ -488,6 +524,17 @@ async function saveToolSelection() {
                   Permissions
                   <span class="bg-emerald-100 text-emerald-700 text-xs font-semibold px-1.5 py-0.5 rounded-full">{{
                     assignedPermissions.length }}</span>
+                </span>
+              </button>
+              <button class="px-4 py-3 text-sm font-medium border-b-2 transition-colors"
+                :class="assocTab === 'skills' ? 'border-fuchsia-600 text-fuchsia-500' : 'border-transparent text-slate-500 hover:text-slate-700'"
+                @click="assocTab = 'skills'">
+                <span class="flex items-center gap-2">
+                  <i class="mdi mdi-lightning-bolt w-4 h-4" />
+                  Skills
+                  <span v-if="assignedSkills.length" class="bg-fuchsia-100 text-fuchsia-700 text-xs font-semibold px-1.5 py-0.5 rounded-full">
+                    {{ assignedSkills.length }}
+                  </span>
                 </span>
               </button>
             </div>
@@ -610,6 +657,39 @@ async function saveToolSelection() {
                     </svg>
                   </div>
                 </template>
+              </div>
+
+              <!-- Skills tab -->
+              <div v-else-if="assocTab === 'skills'" class="space-y-2">
+                <p class="text-xs text-slate-400 mb-3">
+                  <span v-if="assignedSkills.length" class="text-fuchsia-400 font-medium">{{ assignedSkills.length }} skill{{ assignedSkills.length !== 1 ? 's' : '' }} asignado{{ assignedSkills.length !== 1 ? 's' : '' }}</span>
+                  <span v-else>Sin skills asignados — el rol no tendrá acceso a ningún skill.</span>
+                </p>
+                <div v-if="!allSkills.filter(s => s.isActive).length" class="text-center text-slate-400 py-10 text-sm">
+                  No hay skills configurados.
+                  <RouterLink to="/skills" class="text-fuchsia-500 hover:underline ml-1" @click="closeAssocModal">Crea
+                    algunos
+                    primero.</RouterLink>
+                </div>
+                <div v-for="skill in allSkills.filter(s => s.isActive)" :key="skill.id"
+                  class="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-slate-700 transition-colors cursor-pointer border"
+                  :class="hasSkill(skill.id) ? 'border-slate-600 bg-slate-800' : 'border-transparent'"
+                  @click="toggleSkill(skill.id)">
+                  <input type="checkbox" :checked="hasSkill(skill.id)" :disabled="toggling === skill.id"
+                    class="w-4 h-4 text-fuchsia-600 rounded border-slate-300 focus:ring-fuchsia-500 cursor-pointer shrink-0"
+                    @click.stop @change="toggleSkill(skill.id)" />
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-white">{{ skill.name }}</p>
+                    <p class="text-xs text-fuchsia-400 font-mono mt-0.5">{{ skill.slug }}</p>
+                    <p v-if="skill.description" class="text-xs text-slate-400 mt-0.5 truncate">{{ skill.description }}
+                    </p>
+                  </div>
+                  <svg v-if="toggling === skill.id" class="animate-spin h-4 w-4 text-fuchsia-400 shrink-0" fill="none"
+                    viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                </div>
               </div>
 
               <!-- Permissions tab -->
