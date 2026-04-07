@@ -148,13 +148,13 @@ async function openAssocModal(role: Role) {
       api.getSkills(),
       api.getRoleSkills(role.id),
     ])
-    allMcps.value = mcpsRes.data ?? (mcpsRes as any)
-    allAgents.value = agentsRes.data ?? (agentsRes as any)
+    allMcps.value = (mcpsRes.data ?? (mcpsRes as any)).filter((m: McpServer) => m.active)
+    allAgents.value = (agentsRes.data ?? (agentsRes as any)).filter((a: Agent) => a.isActive)
     assignedMcps.value = mcpAssignedRes.data ?? (mcpAssignedRes as any)
     assignedAgents.value = agentAssignedRes.data ?? (agentAssignedRes as any)
     allPermissions.value = allPermsRes ?? []
     assignedPermissions.value = rolePermsRes ?? []
-    allSkills.value = allSkillsRes.data ?? []
+    allSkills.value = (allSkillsRes.data ?? []).filter((s: { isActive: boolean }) => s.isActive)
     assignedSkills.value = roleSkillsRes.data ?? []
   } catch (e: any) {
     toast.error(e.message ?? 'Failed to load associations')
@@ -532,7 +532,8 @@ async function saveToolSelection() {
                 <span class="flex items-center gap-2">
                   <i class="mdi mdi-lightning-bolt w-4 h-4" />
                   Skills
-                  <span v-if="assignedSkills.length" class="bg-fuchsia-100 text-fuchsia-700 text-xs font-semibold px-1.5 py-0.5 rounded-full">
+                  <span v-if="assignedSkills.length"
+                    class="bg-fuchsia-100 text-fuchsia-700 text-xs font-semibold px-1.5 py-0.5 rounded-full">
                     {{ assignedSkills.length }}
                   </span>
                 </span>
@@ -662,7 +663,10 @@ async function saveToolSelection() {
               <!-- Skills tab -->
               <div v-else-if="assocTab === 'skills'" class="space-y-2">
                 <p class="text-xs text-slate-400 mb-3">
-                  <span v-if="assignedSkills.length" class="text-fuchsia-400 font-medium">{{ assignedSkills.length }} skill{{ assignedSkills.length !== 1 ? 's' : '' }} asignado{{ assignedSkills.length !== 1 ? 's' : '' }}</span>
+                  <span v-if="assignedSkills.length" class="text-fuchsia-400 font-medium">{{ assignedSkills.length }}
+                    skill{{
+                      assignedSkills.length !== 1 ? 's' : '' }} asignado{{ assignedSkills.length !== 1 ? 's' : ''
+                    }}</span>
                   <span v-else>Sin skills asignados — el rol no tendrá acceso a ningún skill.</span>
                 </p>
                 <div v-if="!allSkills.filter(s => s.isActive).length" class="text-center text-slate-400 py-10 text-sm">
