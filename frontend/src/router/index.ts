@@ -59,6 +59,18 @@ const router = createRouter({
       meta: { requiresAuth: true, resource: 'skills' },
     },
     {
+      path: '/traceability',
+      name: 'traceability',
+      component: () => import('@/views/TraceabilityView.vue'),
+      meta: { requiresAuth: true, resource: 'traceability' },
+    },
+    {
+      path: '/traceability/:id',
+      name: 'traceability-detail',
+      component: () => import('@/views/TraceabilityDetailView.vue'),
+      meta: { requiresAuth: true, resource: 'traceability' },
+    },
+    {
       path: '/oauth/authorize/mcp',
       name: 'oauth-authorize-mcp',
       component: () => import('@/views/OAuthAuthorizeView.vue'),
