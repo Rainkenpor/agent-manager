@@ -211,7 +211,8 @@ onMounted(fetchData)
       <!-- Main content -->
       <div class="flex-1 min-w-0">
         <!-- Back -->
-        <button @click="router.push('/traceability')" class="flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-5 transition-colors">
+        <button @click="router.push('/traceability')"
+          class="flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-5 transition-colors">
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
           </svg>
@@ -228,9 +229,11 @@ onMounted(fetchData)
             <div v-if="!editingTitle" class="flex items-start gap-3">
               <div class="flex-1">
                 <h1 class="text-2xl font-bold text-white">{{ traceability.title }}</h1>
-                <p v-if="traceability.description" class="text-slate-400 text-sm mt-1">{{ traceability.description }}</p>
+                <p v-if="traceability.description" class="text-slate-400 text-sm mt-1">{{ traceability.description }}
+                </p>
                 <div class="flex items-center gap-3 mt-2 text-xs text-slate-500">
-                  <span v-if="traceability.templateName">Template: <span class="text-slate-400">{{ traceability.templateName }}</span></span>
+                  <span v-if="traceability.templateName">Template: <span class="text-slate-400">{{
+                      traceability.templateName }}</span></span>
                   <span class="px-2 py-0.5 rounded-full font-medium"
                     :class="traceability.status === 'completed' ? 'bg-emerald-500/10 text-emerald-400' : traceability.status === 'archived' ? 'bg-slate-500/10 text-slate-400' : 'bg-blue-500/10 text-blue-400'">
                     {{ traceability.status }}
@@ -243,14 +246,19 @@ onMounted(fetchData)
               </button>
             </div>
             <div v-else class="bg-slate-900 rounded-xl border border-slate-700 p-4 space-y-3">
-              <input v-model="editForm.title" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-              <textarea v-model="editForm.description" rows="2" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none" />
-              <select v-model="editForm.status" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none">
+              <input v-model="editForm.title"
+                class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              <textarea v-model="editForm.description" rows="2"
+                class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none" />
+              <select v-model="editForm.status"
+                class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none">
                 <option v-for="s in statusOptions" :key="s.value" :value="s.value">{{ s.label }}</option>
               </select>
               <div class="flex gap-2">
-                <button @click="editingTitle = false" class="px-3 py-1.5 text-xs rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors">Cancelar</button>
-                <button @click="saveEdit" class="px-3 py-1.5 text-xs rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-colors">Guardar</button>
+                <button @click="editingTitle = false"
+                  class="px-3 py-1.5 text-xs rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors">Cancelar</button>
+                <button @click="saveEdit"
+                  class="px-3 py-1.5 text-xs rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-colors">Guardar</button>
               </div>
             </div>
           </div>
@@ -278,13 +286,16 @@ onMounted(fetchData)
                         <h3 class="font-medium text-white text-sm truncate">{{ stage.name }}</h3>
                       </div>
                       <p v-if="stage.role" class="text-xs text-slate-500 mb-2">{{ roleNameById(stage.role) }}</p>
-                      <span class="text-xs px-2 py-0.5 rounded-full font-medium" :class="stageStatusClass[stage.status]">
+                      <span class="text-xs px-2 py-0.5 rounded-full font-medium"
+                        :class="stageStatusClass[stage.status]">
                         {{ stageStatusLabel[stage.status] }}
                       </span>
                     </div>
                     <div class="shrink-0 text-right text-xs text-slate-500">
-                      <div>{{ stage.tasks?.filter((t: any) => t.status === 'done').length ?? 0 }}/{{ stage.tasks?.length ?? 0 }} tareas</div>
-                      <div v-if="stage.links?.length" class="mt-0.5">{{ stage.links.length }} link{{ stage.links.length > 1 ? 's' : '' }}</div>
+                      <div>{{stage.tasks?.filter((t: any) => t.status === 'done').length ?? 0}}/{{ stage.tasks?.length
+                        ?? 0 }} tareas</div>
+                      <div v-if="stage.links?.length" class="mt-0.5">{{ stage.links.length }} link{{ stage.links.length
+                        > 1 ? 's' : '' }}</div>
                     </div>
                   </div>
                 </div>
@@ -302,7 +313,8 @@ onMounted(fetchData)
       </div>
 
       <!-- Side panel: stage detail -->
-      <div v-if="activeStage" class="w-96 shrink-0 bg-slate-900 rounded-2xl border border-slate-800 p-5 h-fit sticky top-6 max-h-[calc(100vh-3rem)] overflow-y-auto">
+      <div v-if="activeStage"
+        class="w-96 shrink-0 bg-slate-900 rounded-2xl border border-slate-800 p-5 h-fit sticky top-6 max-h-[calc(100vh-3rem)] overflow-y-auto">
         <div class="flex items-center justify-between mb-4">
           <div>
             <h3 class="font-semibold text-white">{{ activeStage.name }}</h3>
@@ -328,11 +340,13 @@ onMounted(fetchData)
             <textarea v-model="taskForm.description" placeholder="Descripción..." rows="2"
               class="w-full bg-slate-700 border border-slate-600 rounded px-2.5 py-1.5 text-white text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none" />
             <div class="flex gap-2">
-              <select v-model="taskForm.type" class="flex-1 bg-slate-700 border border-slate-600 rounded px-2 py-1.5 text-white text-xs focus:outline-none">
+              <select v-model="taskForm.type"
+                class="flex-1 bg-slate-700 border border-slate-600 rounded px-2 py-1.5 text-white text-xs focus:outline-none">
                 <option value="task">Tarea</option>
                 <option value="bug">Bug</option>
               </select>
-              <select v-model="taskForm.status" class="flex-1 bg-slate-700 border border-slate-600 rounded px-2 py-1.5 text-white text-xs focus:outline-none">
+              <select v-model="taskForm.status"
+                class="flex-1 bg-slate-700 border border-slate-600 rounded px-2 py-1.5 text-white text-xs focus:outline-none">
                 <option value="todo">Por hacer</option>
                 <option value="in-progress">En progreso</option>
                 <option value="done">Hecho</option>
@@ -340,8 +354,10 @@ onMounted(fetchData)
               </select>
             </div>
             <div class="flex gap-2">
-              <button @click="showTaskForm = false" class="flex-1 py-1 text-xs rounded bg-slate-600 hover:bg-slate-500 text-slate-300 transition-colors">Cancelar</button>
-              <button @click="createTask" :disabled="!taskForm.title" class="flex-1 py-1 text-xs rounded bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white transition-colors">Crear</button>
+              <button @click="showTaskForm = false"
+                class="flex-1 py-1 text-xs rounded bg-slate-600 hover:bg-slate-500 text-slate-300 transition-colors">Cancelar</button>
+              <button @click="createTask" :disabled="!taskForm.title"
+                class="flex-1 py-1 text-xs rounded bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white transition-colors">Crear</button>
             </div>
           </div>
 
@@ -352,7 +368,8 @@ onMounted(fetchData)
               <button v-if="canUpdate" @click="updateTask(task, { status: task.status === 'done' ? 'todo' : 'done' })"
                 class="mt-0.5 w-4 h-4 shrink-0 rounded border transition-colors"
                 :class="task.status === 'done' ? 'bg-emerald-500 border-emerald-500' : 'border-slate-600 hover:border-emerald-500'">
-                <svg v-if="task.status === 'done'" class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg v-if="task.status === 'done'" class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24"
+                  stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
                 </svg>
               </button>
@@ -361,14 +378,17 @@ onMounted(fetchData)
                   <span class="text-xs" :class="task.type === 'bug' ? 'text-red-400' : 'text-slate-500'">
                     {{ task.type === 'bug' ? '🐛' : '✓' }}
                   </span>
-                  <span class="text-xs font-medium" :class="[task.status === 'done' ? 'line-through text-slate-500' : 'text-white', taskStatusClass[task.status]]">
+                  <span class="text-xs font-medium"
+                    :class="[task.status === 'done' ? 'line-through text-slate-500' : 'text-white', taskStatusClass[task.status]]">
                     {{ task.title }}
                   </span>
                 </div>
                 <div v-if="task.description" class="text-xs text-slate-500 mt-0.5 truncate">{{ task.description }}</div>
                 <div class="flex items-center gap-2 mt-1">
-                  <select v-if="canUpdate" :value="task.status" @change="updateTask(task, { status: ($event.target as HTMLSelectElement).value })"
-                    class="text-xs bg-transparent border-0 p-0 focus:outline-none" :class="taskStatusClass[task.status]">
+                  <select v-if="canUpdate" :value="task.status"
+                    @change="updateTask(task, { status: ($event.target as HTMLSelectElement).value })"
+                    class="text-xs bg-transparent border-0 p-0 focus:outline-none"
+                    :class="taskStatusClass[task.status]">
                     <option value="todo">Por hacer</option>
                     <option value="in-progress">En progreso</option>
                     <option value="done">Hecho</option>
@@ -401,7 +421,8 @@ onMounted(fetchData)
               class="w-full bg-slate-700 border border-slate-600 rounded px-2.5 py-1.5 text-white text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500" />
             <input v-model="linkForm.url" placeholder="https://..." type="url"
               class="w-full bg-slate-700 border border-slate-600 rounded px-2.5 py-1.5 text-white text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500" />
-            <select v-model="linkForm.platform" class="w-full bg-slate-700 border border-slate-600 rounded px-2 py-1.5 text-white text-xs focus:outline-none">
+            <select v-model="linkForm.platform"
+              class="w-full bg-slate-700 border border-slate-600 rounded px-2 py-1.5 text-white text-xs focus:outline-none">
               <option value="jira">Jira</option>
               <option value="confluence">Confluence</option>
               <option value="github">GitHub</option>
@@ -409,8 +430,10 @@ onMounted(fetchData)
               <option value="generic">Genérico</option>
             </select>
             <div class="flex gap-2">
-              <button @click="showLinkForm = false" class="flex-1 py-1 text-xs rounded bg-slate-600 hover:bg-slate-500 text-slate-300 transition-colors">Cancelar</button>
-              <button @click="createLink" :disabled="!linkForm.label || !linkForm.url" class="flex-1 py-1 text-xs rounded bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white transition-colors">Añadir</button>
+              <button @click="showLinkForm = false"
+                class="flex-1 py-1 text-xs rounded bg-slate-600 hover:bg-slate-500 text-slate-300 transition-colors">Cancelar</button>
+              <button @click="createLink" :disabled="!linkForm.label || !linkForm.url"
+                class="flex-1 py-1 text-xs rounded bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white transition-colors">Añadir</button>
             </div>
           </div>
 
@@ -419,7 +442,8 @@ onMounted(fetchData)
             <div v-for="link in activeStage.links" :key="link.id"
               class="flex items-center gap-2 p-2 rounded-lg bg-slate-800/50 hover:bg-slate-800 transition-colors group">
               <span class="text-sm">{{ platformIcons[link.platform] ?? '🔗' }}</span>
-              <a :href="link.url" target="_blank" class="flex-1 min-w-0 text-xs text-indigo-400 hover:text-indigo-300 truncate transition-colors">
+              <a :href="link.url" target="_blank"
+                class="flex-1 min-w-0 text-xs text-indigo-400 hover:text-indigo-300 truncate transition-colors">
                 {{ link.label }}
               </a>
               <button v-if="canUpdate" @click="deleteLink(link)"

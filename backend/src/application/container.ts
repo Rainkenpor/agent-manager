@@ -37,6 +37,7 @@ import {
 	GetAgentUseCase,
 	UpdateAgentUseCase,
 	DeleteAgentUseCase,
+	DuplicateAgentUseCase,
 	// Chat Use Cases
 	CreateConversationUseCase,
 	ListConversationsUseCase,
@@ -74,6 +75,7 @@ import {
 	DeleteLinkUseCase
 } from './use-cases/index.js'
 import { GetSkillsAllowedForUserUseCase } from './use-cases/skill/get-skills-allowed-user.js'
+import { TraceabilityAgentTriggerService } from '@infra/service/traceability-agent-trigger.service.js'
 
 /**
  * Adaptador que implementa IMcpCredentialProvider usando IMcpUserCredentialRepository.
@@ -112,6 +114,7 @@ export class Container {
 	private _getAgentUseCase?: GetAgentUseCase
 	private _updateAgentUseCase?: UpdateAgentUseCase
 	private _deleteAgentUseCase?: DeleteAgentUseCase
+	private _duplicateAgentUseCase?: DuplicateAgentUseCase
 
 	// MCP Server Repository
 	private _mcpServerRepository: IMcpServerRepository
@@ -143,6 +146,7 @@ export class Container {
 
 	// Traceability Repository & Use Cases
 	private _traceabilityRepository: ITraceabilityRepository
+	private _tracTriggerService?: TraceabilityAgentTriggerService
 	private _listTemplatesUseCase?: ListTemplatesUseCase
 	private _getTemplateUseCase?: GetTemplateUseCase
 	private _createTemplateUseCase?: CreateTemplateUseCase
@@ -278,6 +282,13 @@ export class Container {
 			this._deleteAgentUseCase = new DeleteAgentUseCase(this._agentRepository)
 		}
 		return this._deleteAgentUseCase
+	}
+
+	get duplicateAgentUseCase(): DuplicateAgentUseCase {
+		if (!this._duplicateAgentUseCase) {
+			this._duplicateAgentUseCase = new DuplicateAgentUseCase(this._agentRepository)
+		}
+		return this._duplicateAgentUseCase
 	}
 
 	// ==========================================
@@ -476,18 +487,25 @@ export class Container {
 		return this._deleteTraceabilityUseCase
 	}
 
+	get tracTriggerService(): TraceabilityAgentTriggerService {
+		if (!this._tracTriggerService) {
+			this._tracTriggerService = new TraceabilityAgentTriggerService(this._traceabilityRepository)
+		}
+		return this._tracTriggerService
+	}
+
 	get createTaskUseCase(): CreateTaskUseCase {
-		if (!this._createTaskUseCase) this._createTaskUseCase = new CreateTaskUseCase(this._traceabilityRepository)
+		if (!this._createTaskUseCase) this._createTaskUseCase = new CreateTaskUseCase(this._traceabilityRepository, this.tracTriggerService)
 		return this._createTaskUseCase
 	}
 
 	get updateTaskUseCase(): UpdateTaskUseCase {
-		if (!this._updateTaskUseCase) this._updateTaskUseCase = new UpdateTaskUseCase(this._traceabilityRepository)
+		if (!this._updateTaskUseCase) this._updateTaskUseCase = new UpdateTaskUseCase(this._traceabilityRepository, this.tracTriggerService)
 		return this._updateTaskUseCase
 	}
 
 	get deleteTaskUseCase(): DeleteTaskUseCase {
-		if (!this._deleteTaskUseCase) this._deleteTaskUseCase = new DeleteTaskUseCase(this._traceabilityRepository)
+		if (!this._deleteTaskUseCase) this._deleteTaskUseCase = new DeleteTaskUseCase(this._traceabilityRepository, this.tracTriggerService)
 		return this._deleteTaskUseCase
 	}
 

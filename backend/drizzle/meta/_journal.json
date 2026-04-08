@@ -120,6 +120,13 @@
       "when": 1775668982449,
       "tag": "0016_fearless_tyger_tiger",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1775686891713,
+      "tag": "0017_silky_puppet_master",
+      "breakpoints": true
     }
   ]
 }

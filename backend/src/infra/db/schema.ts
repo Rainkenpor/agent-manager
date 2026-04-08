@@ -263,6 +263,8 @@ export const templateStages = sqliteTable('template_stages', {
 	role: text('role'),
 	order: integer('order').notNull().default(0),
 	parallelGroup: text('parallel_group'), // stages sharing the same value run in parallel
+	type: text('type', { enum: ['manual', 'agent'] }).notNull().default('manual'),
+	agentId: text('agent_id').references(() => agents.id, { onDelete: 'set null' }),
 	createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
 })
 
@@ -288,6 +290,8 @@ export const traceabilityStages = sqliteTable('traceability_stages', {
 	role: text('role'),
 	order: integer('order').notNull().default(0),
 	parallelGroup: text('parallel_group'),
+	type: text('type', { enum: ['manual', 'agent'] }).notNull().default('manual'),
+	agentId: text('agent_id').references(() => agents.id, { onDelete: 'set null' }),
 	status: text('status', { enum: ['pending', 'active', 'completed', 'blocked', 'in-review'] }).notNull().default('pending'),
 	createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
 	updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString()),
@@ -313,6 +317,19 @@ export const traceabilityLinks = sqliteTable('traceability_links', {
 	url: text('url').notNull(),
 	platform: text('platform', { enum: ['jira', 'confluence', 'github', 'gitlab', 'generic'] }).notNull().default('generic'),
 	createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
+})
+
+// Predecessor junction tables for DAG-based stage ordering
+export const templateStagePredecessors = sqliteTable('template_stage_predecessors', {
+	id: text('id').primaryKey(),
+	stageId: text('stage_id').notNull().references(() => templateStages.id, { onDelete: 'cascade' }),
+	predecessorStageId: text('predecessor_stage_id').notNull().references(() => templateStages.id, { onDelete: 'cascade' }),
+})
+
+export const traceabilityStagePredecessors = sqliteTable('traceability_stage_predecessors', {
+	id: text('id').primaryKey(),
+	stageId: text('stage_id').notNull().references(() => traceabilityStages.id, { onDelete: 'cascade' }),
+	predecessorStageId: text('predecessor_stage_id').notNull().references(() => traceabilityStages.id, { onDelete: 'cascade' }),
 })
 
 // Tipos inferidos
@@ -362,3 +379,5 @@ export type TraceabilityTask = typeof traceabilityTasks.$inferSelect
 export type NewTraceabilityTask = typeof traceabilityTasks.$inferInsert
 export type TraceabilityLink = typeof traceabilityLinks.$inferSelect
 export type NewTraceabilityLink = typeof traceabilityLinks.$inferInsert
+export type TemplateStagePredecessor = typeof templateStagePredecessors.$inferSelect
+export type TraceabilityStagePredecessor = typeof traceabilityStagePredecessors.$inferSelect

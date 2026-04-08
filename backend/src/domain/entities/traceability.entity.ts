@@ -14,6 +14,9 @@ export interface TemplateStage {
   role?: string | null
   order: number
   parallelGroup?: string | null
+  type: 'manual' | 'agent'
+  agentId?: string | null
+  predecessors: string[]
   createdAt: string
 }
 
@@ -44,6 +47,9 @@ export interface CreateTemplateStageDTO {
   role?: string
   order: number
   parallelGroup?: string
+  type?: 'manual' | 'agent'
+  agentId?: string | null
+  predecessors?: string[]
 }
 
 export interface UpdateTemplateStageDTO {
@@ -53,6 +59,9 @@ export interface UpdateTemplateStageDTO {
   role?: string | null
   order?: number
   parallelGroup?: string | null
+  type?: 'manual' | 'agent'
+  agentId?: string | null
+  predecessors?: string[]
 }
 
 // ─── Traceability Instances ───────────────────────────────────────────────────
@@ -86,6 +95,9 @@ export interface TraceabilityStage {
   role?: string | null
   order: number
   parallelGroup?: string | null
+  type: 'manual' | 'agent'
+  agentId?: string | null
+  predecessors: string[]
   status: StageStatus
   tasks: TraceabilityTask[]
   links: TraceabilityLink[]

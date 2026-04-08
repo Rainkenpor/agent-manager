@@ -15,6 +15,7 @@ import type {
   CreateTaskDTO,
   UpdateTaskDTO,
   CreateLinkDTO,
+  StageStatus,
 } from '../entities/traceability.entity.js'
 
 export interface ITraceabilityRepository {
@@ -26,9 +27,11 @@ export interface ITraceabilityRepository {
   deleteTemplate(id: string): Promise<void>
 
   // ─── Template Stages ────────────────────────────────────────────────────────
+  findTemplateStageById(id: string): Promise<TemplateStage | null>
   createTemplateStage(data: CreateTemplateStageDTO): Promise<TemplateStage>
   updateTemplateStage(data: UpdateTemplateStageDTO): Promise<TemplateStage | null>
   deleteTemplateStage(id: string): Promise<void>
+  syncTraceabilitiesFromTemplate(templateId: string): Promise<void>
 
   // ─── Traceabilities ─────────────────────────────────────────────────────────
   findAll(): Promise<TraceabilitySummary[]>
@@ -39,6 +42,8 @@ export interface ITraceabilityRepository {
 
   // ─── Stage status ────────────────────────────────────────────────────────────
   recomputeStageStatus(stageId: string): Promise<TraceabilityStage>
+  findReadyAgentStages(completedStageId: string): Promise<Array<TraceabilityStage & { agentSlug: string; agentContent: string }>>
+  updateStageStatus(stageId: string, status: StageStatus): Promise<void>
 
   // ─── Tasks ───────────────────────────────────────────────────────────────────
   createTask(data: CreateTaskDTO): Promise<TraceabilityTask>

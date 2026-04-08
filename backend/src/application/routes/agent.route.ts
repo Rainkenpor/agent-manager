@@ -132,6 +132,19 @@ export function registerAgentRoutes(): void {
 		}
 	})
 
+	// Duplicate agent
+	registry.register({
+		useBy: ['server'],
+		method: 'POST',
+		path: '/api/agents/:id/duplicate',
+		inputSchema: z.object({ id: z.string() }).shape,
+		requiresAuth: true,
+		requiredPermission: { resource: 'agents', action: 'create' },
+		handler: async ({ input }) => {
+			return await container.duplicateAgentUseCase.execute(input.id)
+		}
+	})
+
 	// ==============================================
 	// AGENT-ROLE ASSIGNMENT ROUTES
 	// ==============================================

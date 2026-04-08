@@ -75,6 +75,7 @@ export const getAgentTools = () => request<{ success: boolean; data: any[] }>('/
 export const createAgent = (data: any) => request<any>('/agents', { method: 'POST', body: JSON.stringify(data) })
 export const updateAgent = (id: string, data: any) => request<any>(`/agents/${id}`, { method: 'PUT', body: JSON.stringify(data) })
 export const deleteAgent = (id: string) => request<any>(`/agents/${id}`, { method: 'DELETE' })
+export const duplicateAgent = (id: string) => request<any>(`/agents/${id}/duplicate`, { method: 'POST' })
 
 // MCP Server tools discovery
 export const getMcpServerTools = (mcpServerId: string) =>
@@ -165,7 +166,7 @@ export const deleteTraceabilityTemplate = (id: string) =>
   request<{ success: boolean }>(`/traceability/templates/${id}`, { method: 'DELETE' })
 
 // Template Stages
-export const createTemplateStage = (data: { templateId: string; name: string; description?: string; role?: string; order: number; parallelGroup?: string }) =>
+export const createTemplateStage = (data: { templateId: string; name: string; description?: string; role?: string; order: number; parallelGroup?: string; type?: string; agentId?: string | null; predecessors?: string[] }) =>
   request<{ success: boolean; data: any }>(`/traceability/templates/${data.templateId}/stages`, { method: 'POST', body: JSON.stringify(data) })
 export const updateTemplateStage = (id: string, data: any) =>
   request<{ success: boolean; data: any }>(`/traceability/template-stages/${id}`, { method: 'PUT', body: JSON.stringify({ id, ...data }) })
@@ -187,7 +188,7 @@ export const createTraceabilityTask = (data: { stageId: string; title: string; d
 export const updateTraceabilityTask = (id: string, data: { title?: string; description?: string | null; type?: string; status?: string }) =>
   request<{ success: boolean; data: any }>(`/traceability/tasks/${id}`, { method: 'PUT', body: JSON.stringify({ id, ...data }) })
 export const deleteTraceabilityTask = (id: string, stageId: string) =>
-  request<{ success: boolean }>(`/traceability/tasks/${id}`, { method: 'DELETE', body: JSON.stringify({ stageId }) })
+  request<{ success: boolean, data: any }>(`/traceability/tasks/${id}`, { method: 'DELETE', body: JSON.stringify({ stageId }) })
 
 // Links
 export const createTraceabilityLink = (data: { stageId: string; label: string; url: string; platform?: string }) =>
