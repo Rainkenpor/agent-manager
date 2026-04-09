@@ -39,6 +39,7 @@ interface RequestQuestion {
 }
 
 const agents = ref<Agent[]>([])
+const chatAgents = ref<Array<{ id: string; name: string; slug: string; description: string | null }>>([])
 const conversations = ref<Conversation[]>([])
 const activeConversation = ref<Conversation | null>(null)
 const messages = ref<DisplayMessage[]>([])
@@ -49,7 +50,8 @@ const newChatTitle = ref('')
 const messageInput = ref('')
 const sending = ref(false)
 const loadingConversation = ref(false)
-const showNewChatForm = ref(false)
+const showNewChatModal = ref(false)
+const loadingChatAgents = ref(false)
 const error = ref('')
 
 const messagesContainer = ref<HTMLElement | null>(null)
@@ -68,6 +70,21 @@ async function fetchInitialData() {
     conversations.value = convRes.data ?? []
   } catch (e: any) {
     error.value = e.message
+  }
+}
+
+async function openNewChatModal() {
+  showNewChatModal.value = true
+  selectedAgentId.value = ''
+  newChatTitle.value = ''
+  loadingChatAgents.value = true
+  try {
+    const res = await api.getAgentsForChat()
+    chatAgents.value = res.data ?? []
+  } catch (e: any) {
+    error.value = e.message
+  } finally {
+    loadingChatAgents.value = false
   }
 }
 
@@ -92,7 +109,7 @@ async function createConversation() {
   try {
     const res = await api.createConversation({ title: newChatTitle.value.trim(), agentId: selectedAgentId.value })
     conversations.value.unshift(res.data)
-    showNewChatForm.value = false
+    showNewChatModal.value = false
     newChatTitle.value = ''
     selectedAgentId.value = ''
     await openConversation(res.data)
@@ -455,32 +472,9 @@ onMounted(fetchInitialData)
           <h2 class="text-sm font-semibold text-white">Conversaciones</h2>
           <button
             class="text-xs px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium transition-colors"
-            @click="showNewChatForm = !showNewChatForm">
+            @click="openNewChatModal">
             + Nueva
           </button>
-        </div>
-
-        <!-- New conversation form -->
-        <div v-if="showNewChatForm" class="px-4 py-3 border-b border-slate-800 space-y-2">
-          <input v-model="newChatTitle" type="text" placeholder="Nombre del chat..."
-            class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500" />
-          <select v-model="selectedAgentId"
-            class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm text-white focus:outline-none focus:border-indigo-500">
-            <option value="">Seleccionar agente...</option>
-            <option v-for="agent in agents" :key="agent.id" :value="agent.id">{{ agent.name }}</option>
-          </select>
-          <div class="flex gap-2">
-            <button
-              class="flex-1 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium transition-colors disabled:opacity-50"
-              :disabled="!selectedAgentId || !newChatTitle.trim()" @click="createConversation">
-              Crear
-            </button>
-            <button
-              class="flex-1 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-medium transition-colors"
-              @click="showNewChatForm = false">
-              Cancelar
-            </button>
-          </div>
         </div>
 
         <!-- Conversation list -->
@@ -751,6 +745,64 @@ onMounted(fetchInitialData)
 
     </div>
 
+    <!-- New conversation modal -->
+    <div v-if="showNewChatModal"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      @click.self="showNewChatModal = false">
+      <div class="bg-slate-900 rounded-2xl border border-slate-700 w-full max-w-md p-6">
+        <h2 class="text-lg font-semibold text-white mb-5">Nueva conversación</h2>
+
+        <div class="space-y-4">
+          <!-- Title -->
+          <div>
+            <label class="block text-sm text-slate-400 mb-1.5">Nombre *</label>
+            <input v-model="newChatTitle" type="text" placeholder="Ej: Análisis de feature PROJ-123"
+              class="w-full px-3 py-2.5 rounded-lg bg-slate-800 border border-slate-700 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors" />
+          </div>
+
+          <!-- Agent selection -->
+          <div>
+            <label class="block text-sm text-slate-400 mb-1.5">Agente *</label>
+            <div v-if="loadingChatAgents" class="flex items-center gap-2 text-slate-500 text-sm py-2">
+              <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+              </svg>
+              Cargando agentes...
+            </div>
+            <div v-else-if="chatAgents.length === 0"
+              class="text-sm text-amber-400 bg-amber-500/10 rounded-lg px-3 py-2.5 border border-amber-500/20">
+              No hay agentes disponibles para tu rol. Contacta a un administrador.
+            </div>
+            <div v-else class="space-y-2 max-h-56 overflow-y-auto pr-1">
+              <label v-for="agent in chatAgents" :key="agent.id"
+                class="flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all"
+                :class="selectedAgentId === agent.id
+                  ? 'bg-indigo-600/10 border-indigo-500 ring-1 ring-indigo-500/40'
+                  : 'bg-slate-800/50 border-slate-700 hover:border-slate-600'">
+                <input type="radio" :value="agent.id" v-model="selectedAgentId" class="mt-0.5 accent-indigo-500" />
+                <div class="min-w-0">
+                  <p class="text-sm font-medium text-white">{{ agent.name }}</p>
+                  <p v-if="agent.description" class="text-xs text-slate-400 mt-0.5 truncate">{{ agent.description }}</p>
+                </div>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex gap-3 mt-6">
+          <button @click="showNewChatModal = false"
+            class="flex-1 py-2.5 text-sm rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition-colors">
+            Cancelar
+          </button>
+          <button @click="createConversation"
+            :disabled="!selectedAgentId || !newChatTitle.trim()"
+            class="flex-1 py-2.5 text-sm rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white font-medium transition-colors">
+            Crear
+          </button>
+        </div>
+      </div>
+    </div>
 
   </AppLayout>
 </template>

@@ -826,7 +826,7 @@ export class InternalAgentService implements IAgentService {
 
 			const msg = await this.fetchCompletion(config, {
 				model: config.model,
-				temperature: 0.2,
+				temperature: 0.7,
 				messages,
 				tools,
 				tool_choice: 'auto'

@@ -6,6 +6,12 @@ export type TraceabilityStatus = 'active' | 'completed' | 'archived'
 
 // ─── Templates ────────────────────────────────────────────────────────────────
 
+export interface DocumentSection {
+  name: string
+  description?: string
+  required: boolean
+}
+
 export interface TemplateStage {
   id: string
   templateId: string
@@ -16,12 +22,14 @@ export interface TemplateStage {
   parallelGroup?: string | null
   type: 'manual' | 'agent'
   agentId?: string | null
+  documentSchema?: DocumentSection[] | null
   predecessors: string[]
   createdAt: string
 }
 
 export interface TraceabilityTemplate {
   id: string
+  code: string | null
   name: string
   description?: string | null
   stages: TemplateStage[]
@@ -49,6 +57,7 @@ export interface CreateTemplateStageDTO {
   parallelGroup?: string
   type?: 'manual' | 'agent'
   agentId?: string | null
+  documentSchema?: DocumentSection[] | null
   predecessors?: string[]
 }
 
@@ -61,6 +70,7 @@ export interface UpdateTemplateStageDTO {
   parallelGroup?: string | null
   type?: 'manual' | 'agent'
   agentId?: string | null
+  documentSchema?: DocumentSection[] | null
   predecessors?: string[]
 }
 
@@ -73,6 +83,27 @@ export interface TraceabilityLink {
   url: string
   platform: LinkPlatform
   createdAt: string
+}
+
+export interface TraceabilityDocument {
+  id: string
+  stageId: string
+  name: string
+  content: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateDocumentDTO {
+  stageId: string
+  name: string
+  content?: string
+}
+
+export interface UpdateDocumentDTO {
+  id: string
+  name?: string
+  content?: string
 }
 
 export interface TraceabilityTask {
@@ -101,6 +132,7 @@ export interface TraceabilityStage {
   status: StageStatus
   tasks: TraceabilityTask[]
   links: TraceabilityLink[]
+  documents: TraceabilityDocument[]
   createdAt: string
   updatedAt: string
 }

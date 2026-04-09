@@ -72,7 +72,12 @@ import {
 	UpdateTaskUseCase,
 	DeleteTaskUseCase,
 	CreateLinkUseCase,
-	DeleteLinkUseCase
+	DeleteLinkUseCase,
+	CreateDocumentUseCase,
+	UpdateDocumentUseCase,
+	DeleteDocumentUseCase,
+	GetDocumentUseCase,
+	GetTemplateByCodeUseCase
 } from './use-cases/index.js'
 import { GetSkillsAllowedForUserUseCase } from './use-cases/skill/get-skills-allowed-user.js'
 import { TraceabilityAgentTriggerService } from '@infra/service/traceability-agent-trigger.service.js'
@@ -165,6 +170,11 @@ export class Container {
 	private _deleteTaskUseCase?: DeleteTaskUseCase
 	private _createLinkUseCase?: CreateLinkUseCase
 	private _deleteLinkUseCase?: DeleteLinkUseCase
+	private _createDocumentUseCase?: CreateDocumentUseCase
+	private _updateDocumentUseCase?: UpdateDocumentUseCase
+	private _deleteDocumentUseCase?: DeleteDocumentUseCase
+	private _getDocumentUseCase?: GetDocumentUseCase
+	private _getTemplateByCodeUseCase?: GetTemplateByCodeUseCase
 
 	constructor() {
 		// Initialize repositories with concrete implementations
@@ -489,7 +499,7 @@ export class Container {
 
 	get tracTriggerService(): TraceabilityAgentTriggerService {
 		if (!this._tracTriggerService) {
-			this._tracTriggerService = new TraceabilityAgentTriggerService(this._traceabilityRepository)
+			this._tracTriggerService = new TraceabilityAgentTriggerService(this._traceabilityRepository, this._agentRepository)
 		}
 		return this._tracTriggerService
 	}
@@ -517,6 +527,31 @@ export class Container {
 	get deleteLinkUseCase(): DeleteLinkUseCase {
 		if (!this._deleteLinkUseCase) this._deleteLinkUseCase = new DeleteLinkUseCase(this._traceabilityRepository)
 		return this._deleteLinkUseCase
+	}
+
+	get createDocumentUseCase(): CreateDocumentUseCase {
+		if (!this._createDocumentUseCase) this._createDocumentUseCase = new CreateDocumentUseCase(this._traceabilityRepository)
+		return this._createDocumentUseCase
+	}
+
+	get updateDocumentUseCase(): UpdateDocumentUseCase {
+		if (!this._updateDocumentUseCase) this._updateDocumentUseCase = new UpdateDocumentUseCase(this._traceabilityRepository)
+		return this._updateDocumentUseCase
+	}
+
+	get deleteDocumentUseCase(): DeleteDocumentUseCase {
+		if (!this._deleteDocumentUseCase) this._deleteDocumentUseCase = new DeleteDocumentUseCase(this._traceabilityRepository)
+		return this._deleteDocumentUseCase
+	}
+
+	get getDocumentUseCase(): GetDocumentUseCase {
+		if (!this._getDocumentUseCase) this._getDocumentUseCase = new GetDocumentUseCase(this._traceabilityRepository)
+		return this._getDocumentUseCase
+	}
+
+	get getTemplateByCodeUseCase(): GetTemplateByCodeUseCase {
+		if (!this._getTemplateByCodeUseCase) this._getTemplateByCodeUseCase = new GetTemplateByCodeUseCase(this._traceabilityRepository)
+		return this._getTemplateByCodeUseCase
 	}
 }
 

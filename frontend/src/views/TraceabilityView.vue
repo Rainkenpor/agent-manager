@@ -186,13 +186,22 @@ const showTaskForm = ref(false)
 const taskForm = ref({ title: '', description: '', type: 'task', status: 'todo' })
 const showLinkForm = ref(false)
 const linkForm = ref({ label: '', url: '', platform: 'generic' })
+const showDocForm = ref(false)
+const docForm = ref({ name: '', content: '' })
+// Document viewer modal
+const activeDocument = ref<any>(null)
+const docViewerLoading = ref(false)
+const editingDocument = ref(false)
+const editDocForm = ref({ name: '', content: '' })
 
 function openStagePanel(stage: any) {
   activeStage.value = activeStage.value?.id === stage.id ? null : stage
   showTaskForm.value = false
   showLinkForm.value = false
+  showDocForm.value = false
   taskForm.value = { title: '', description: '', type: 'task', status: 'todo' }
   linkForm.value = { label: '', url: '', platform: 'generic' }
+  docForm.value = { name: '', content: '' }
 }
 
 function syncStageInTrac(updatedStage: any) {
@@ -267,6 +276,73 @@ async function deleteLink(link: any) {
   }
 }
 
+async function createDoc() {
+  if (!docForm.value.name) return
+  try {
+    const res = await api.createTraceabilityDocument({ stageId: activeStage.value.id, ...docForm.value })
+    const idx = activeTrac.value.stages.findIndex((s: any) => s.id === activeStage.value.id)
+    if (idx >= 0) {
+      if (!activeTrac.value.stages[idx].documents) activeTrac.value.stages[idx].documents = []
+      activeTrac.value.stages[idx].documents.push(res.data)
+      activeStage.value = activeTrac.value.stages[idx]
+    }
+    docForm.value = { name: '', content: '' }
+    showDocForm.value = false
+    toast.success('Documento creado')
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
+
+async function openDocument(doc: any) {
+  docViewerLoading.value = true
+  editingDocument.value = false
+  activeDocument.value = doc
+  try {
+    const res = await api.getTraceabilityDocument(doc.id)
+    activeDocument.value = res.data
+    editDocForm.value = { name: res.data.name, content: res.data.content }
+  } catch (e: any) {
+    toast.error(e.message)
+  } finally {
+    docViewerLoading.value = false
+  }
+}
+
+async function saveDocument() {
+  if (!activeDocument.value) return
+  try {
+    const res = await api.updateTraceabilityDocument(activeDocument.value.id, editDocForm.value)
+    activeDocument.value = res.data
+    editingDocument.value = false
+    // Sync in stage
+    const idx = activeTrac.value?.stages?.findIndex((s: any) => s.id === activeStage.value?.id)
+    if (idx >= 0) {
+      const dIdx = activeTrac.value.stages[idx].documents?.findIndex((d: any) => d.id === activeDocument.value.id)
+      if (dIdx >= 0) activeTrac.value.stages[idx].documents[dIdx] = res.data
+      activeStage.value = activeTrac.value.stages[idx]
+    }
+    toast.success('Documento actualizado')
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
+
+async function deleteDoc(doc: any) {
+  try {
+    await api.deleteTraceabilityDocument(doc.id)
+    const idx = activeTrac.value.stages.findIndex((s: any) => s.id === activeStage.value.id)
+    if (idx >= 0) {
+      activeTrac.value.stages[idx].documents = activeTrac.value.stages[idx].documents?.filter((d: any) => d.id !== doc.id) ?? []
+      activeStage.value = activeTrac.value.stages[idx]
+    }
+    if (activeDocument.value?.id === doc.id) activeDocument.value = null
+    toast.success('Documento eliminado')
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 // TAB: TEMPLATES
 // ══════════════════════════════════════════════════════════════════════════════
@@ -278,11 +354,26 @@ const editingTemplate = ref(false)
 const templateForm = ref({ name: '', description: '' })
 const editTplForm = ref({ name: '', description: '' })
 
+function copyTemplateCode(code: string) {
+  navigator.clipboard?.writeText(code).then(() => toast.success('Código copiado'))
+}
+
+function parseDocSchema(raw: string): Array<{ name: string; required: boolean }> | null {
+  if (!raw.trim()) return null
+  try { return JSON.parse(raw) } catch { return null }
+}
+
+function serializeDocSchema(schema: Array<{ name: string; required: boolean }> | null): string {
+  if (!schema) return ''
+  return JSON.stringify(schema, null, 2)
+}
+
 const showStageForm = ref(false)
 const editingStage = ref<any>(null)
 const stageForm = ref({
   name: '', description: '', role: '', order: 0, parallelGroup: '',
-  type: 'manual' as 'manual' | 'agent', agentId: '' as string | null, predecessors: [] as string[],
+  type: 'manual' as 'manual' | 'agent', agentId: '' as string | null,
+  predecessors: [] as string[], documentSchemaRaw: '',
 })
 
 function openTemplate(t: any) {
@@ -342,13 +433,14 @@ function openStageForm(stage?: any) {
       role: stage.role ?? '', order: stage.order, parallelGroup: stage.parallelGroup ?? '',
       type: stage.type ?? 'manual', agentId: stage.agentId ?? null,
       predecessors: Array.isArray(stage.predecessors) ? [...stage.predecessors] : [],
+      documentSchemaRaw: serializeDocSchema(stage.documentSchema ?? null),
     }
   } else {
     editingStage.value = null
     stageForm.value = {
       name: '', description: '', role: '',
       order: activeTemplate.value?.stages?.length ?? 0, parallelGroup: '',
-      type: 'manual', agentId: null, predecessors: [],
+      type: 'manual', agentId: null, predecessors: [], documentSchemaRaw: '',
     }
   }
   showStageForm.value = true
@@ -356,13 +448,21 @@ function openStageForm(stage?: any) {
 
 async function saveStage() {
   if (!stageForm.value.name) return
+  const documentSchema = parseDocSchema(stageForm.value.documentSchemaRaw)
+  if (stageForm.value.documentSchemaRaw.trim() && documentSchema === null) {
+    toast.error('El esquema de documento no es JSON válido')
+    return
+  }
   const payload = {
-    ...stageForm.value,
-    role: stageForm.value.role || undefined,
-    parallelGroup: stageForm.value.parallelGroup || undefined,
+    name: stageForm.value.name,
     description: stageForm.value.description || undefined,
+    role: stageForm.value.role || undefined,
+    order: stageForm.value.order,
+    parallelGroup: stageForm.value.parallelGroup || undefined,
+    type: stageForm.value.type,
     agentId: stageForm.value.type === 'agent' ? (stageForm.value.agentId || null) : null,
     predecessors: stageForm.value.predecessors,
+    documentSchema,
   }
   try {
     if (editingStage.value) {
@@ -752,6 +852,47 @@ onMounted(fetchAll)
             </div>
             <p v-else-if="!showLinkForm" class="text-xs text-slate-600 italic">Sin links</p>
           </div>
+
+          <!-- ── Documents ── -->
+          <div class="mt-5 pt-4 border-t border-slate-800">
+            <div class="flex items-center justify-between mb-2">
+              <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Documentos</h4>
+              <button v-if="canUpdate" @click="showDocForm = !showDocForm"
+                class="text-xs text-indigo-400 hover:text-indigo-300 transition-colors">+ Nuevo</button>
+            </div>
+
+            <div v-if="showDocForm" class="bg-slate-800 rounded-lg p-3 mb-3 space-y-2">
+              <input v-model="docForm.name" placeholder="Título del documento..." type="text"
+                class="w-full bg-slate-700 border border-slate-600 rounded px-2.5 py-1.5 text-white text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+              <textarea v-model="docForm.content" placeholder="Contenido en markdown (opcional)..." rows="3"
+                class="w-full bg-slate-700 border border-slate-600 rounded px-2.5 py-1.5 text-white text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none font-mono" />
+              <div class="flex gap-2">
+                <button @click="showDocForm = false"
+                  class="flex-1 py-1 text-xs rounded bg-slate-600 hover:bg-slate-500 text-slate-300 transition-colors">Cancelar</button>
+                <button @click="createDoc" :disabled="!docForm.name"
+                  class="flex-1 py-1 text-xs rounded bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white transition-colors">Crear</button>
+              </div>
+            </div>
+
+            <div v-if="activeStage.documents?.length" class="space-y-1.5">
+              <div v-for="doc in activeStage.documents" :key="doc.id"
+                class="flex items-center gap-2 p-2 rounded-lg bg-slate-800/50 hover:bg-slate-800 transition-colors group cursor-pointer"
+                @click="openDocument(doc)">
+                <svg class="w-3.5 h-3.5 text-teal-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span class="flex-1 text-xs text-slate-300 truncate">{{ doc.name }}</span>
+                <button v-if="canUpdate" @click.stop="deleteDoc(doc)"
+                  class="opacity-0 group-hover:opacity-100 text-slate-600 hover:text-red-400 transition-all shrink-0">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <p v-else-if="!showDocForm" class="text-xs text-slate-600 italic">Sin documentos</p>
+          </div>
         </div>
       </div>
 
@@ -773,7 +914,10 @@ onMounted(fetchAll)
             @click="openTemplate(t)">
             <div class="flex items-start justify-between gap-2">
               <div class="flex-1 min-w-0">
-                <p class="font-medium text-white text-sm truncate">{{ t.name }}</p>
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <p class="font-medium text-white text-sm truncate">{{ t.name }}</p>
+                  <span v-if="t.code" class="font-mono text-xs px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/30">{{ t.code }}</span>
+                </div>
                 <p class="text-xs text-slate-500 mt-0.5">
                   {{ t.stages?.length ?? 0 }} etapa{{ (t.stages?.length ?? 0) !== 1 ? 's' : '' }}
                 </p>
@@ -801,12 +945,20 @@ onMounted(fetchAll)
           <div v-else>
             <!-- Template header -->
             <div v-if="!editingTemplate" class="flex items-start justify-between mb-5">
-              <div>
-                <h2 class="text-xl font-bold text-white">{{ activeTemplate.name }}</h2>
+              <div class="min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h2 class="text-xl font-bold text-white">{{ activeTemplate.name }}</h2>
+                  <span v-if="activeTemplate.code"
+                    class="font-mono text-xs px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/30 cursor-pointer select-all"
+                    :title="'Código del template: ' + activeTemplate.code"
+                    @click="copyTemplateCode(activeTemplate.code)">
+                    {{ activeTemplate.code }}
+                  </span>
+                </div>
                 <p v-if="activeTemplate.description" class="text-slate-400 text-sm mt-1">{{ activeTemplate.description }}</p>
               </div>
               <button v-if="canUpdate" @click="editingTemplate = true"
-                class="px-3 py-1.5 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors shrink-0">
+                class="px-3 py-1.5 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors shrink-0 ml-2">
                 Editar
               </button>
             </div>
@@ -893,6 +1045,13 @@ onMounted(fetchAll)
                 <textarea v-model="stageForm.description" rows="2" placeholder="Descripción de la etapa..."
                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none" />
               </div>
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">Esquema de documento (JSON opcional)</label>
+                <textarea v-model="stageForm.documentSchemaRaw" rows="3"
+                  placeholder='[{"name":"Resumen","required":true},{"name":"Notas","required":false}]'
+                  class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-xs font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-y" />
+                <p class="text-xs text-slate-500 mt-1">Secciones requeridas en los documentos de esta etapa</p>
+              </div>
               <div class="flex gap-2">
                 <button @click="showStageForm = false; editingStage = null"
                   class="px-3 py-1.5 text-xs rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors">Cancelar</button>
@@ -930,6 +1089,13 @@ onMounted(fetchAll)
                           </span>
                         </div>
                         <p v-if="stage.description" class="text-xs text-slate-500 mt-1">{{ stage.description }}</p>
+                        <div v-if="stage.documentSchema?.length" class="flex flex-wrap gap-1 mt-1.5">
+                          <span v-for="sec in stage.documentSchema" :key="sec.name"
+                            class="text-xs px-1.5 py-0.5 rounded-full"
+                            :class="sec.required ? 'bg-rose-500/10 text-rose-400 ring-1 ring-rose-500/30' : 'bg-slate-800 text-slate-500'">
+                            {{ sec.name }}{{ sec.required ? ' *' : '' }}
+                          </span>
+                        </div>
                         <div v-if="stage.predecessors?.length" class="flex flex-wrap gap-1 mt-1.5">
                           <span v-for="pid in stage.predecessors" :key="pid"
                             class="text-xs px-1.5 py-0.5 rounded bg-slate-800 text-slate-500">
@@ -1071,5 +1237,76 @@ onMounted(fetchAll)
       </div>
 
     </div>
+
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!-- DOCUMENT VIEWER MODAL -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <div v-if="activeDocument" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+      @click.self="activeDocument = null; editingDocument = false">
+      <div class="bg-slate-900 rounded-2xl border border-slate-700 w-full max-w-3xl max-h-[85vh] flex flex-col">
+
+        <!-- Modal header -->
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-700 shrink-0">
+          <div class="flex items-center gap-3 flex-1 min-w-0">
+            <svg class="w-5 h-5 text-teal-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <div v-if="!editingDocument" class="flex-1 min-w-0">
+              <h3 class="font-semibold text-white truncate">{{ activeDocument.name }}</h3>
+              <p class="text-xs text-slate-500 mt-0.5">{{ activeStage?.name }}</p>
+            </div>
+            <input v-else v-model="editDocForm.name"
+              class="flex-1 bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          </div>
+          <div class="flex items-center gap-2 shrink-0 ml-4">
+            <template v-if="!editingDocument">
+              <button v-if="canUpdate" @click="editingDocument = true; editDocForm = { name: activeDocument.name, content: activeDocument.content }"
+                class="px-3 py-1.5 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors">
+                Editar
+              </button>
+            </template>
+            <template v-else>
+              <button @click="editingDocument = false"
+                class="px-3 py-1.5 text-xs rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors">Cancelar</button>
+              <button @click="saveDocument"
+                class="px-3 py-1.5 text-xs rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-colors">Guardar</button>
+            </template>
+            <button @click="activeDocument = null; editingDocument = false"
+              class="p-1.5 text-slate-500 hover:text-slate-300 transition-colors rounded-lg hover:bg-slate-800">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Modal body -->
+        <div class="flex-1 overflow-y-auto p-6 min-h-0">
+          <div v-if="docViewerLoading" class="flex justify-center py-10">
+            <div class="animate-spin w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full" />
+          </div>
+          <div v-else-if="!editingDocument">
+            <pre v-if="activeDocument.content"
+              class="whitespace-pre-wrap text-sm text-slate-300 font-mono leading-relaxed">{{ activeDocument.content }}</pre>
+            <p v-else class="text-slate-500 text-sm italic">Sin contenido. Haz clic en Editar para añadir.</p>
+          </div>
+          <div v-else>
+            <label class="block text-xs text-slate-400 mb-1.5">Contenido (markdown)</label>
+            <textarea v-model="editDocForm.content" rows="20"
+              class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none leading-relaxed"
+              placeholder="Escribe el contenido en markdown..." />
+          </div>
+        </div>
+
+        <!-- Modal footer metadata -->
+        <div v-if="!editingDocument && activeDocument.updatedAt"
+          class="px-6 py-3 border-t border-slate-800 shrink-0 flex gap-4 text-xs text-slate-600">
+          <span>Creado: {{ new Date(activeDocument.createdAt).toLocaleString() }}</span>
+          <span>Actualizado: {{ new Date(activeDocument.updatedAt).toLocaleString() }}</span>
+        </div>
+      </div>
+    </div>
+
   </AppLayout>
 </template>

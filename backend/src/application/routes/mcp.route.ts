@@ -76,7 +76,6 @@ function jsonSchemaToZodShape(jsonSchema: Record<string, unknown>): ZodRawShape 
  * Called once per MCP session after the McpServer instance is created.
  */
 async function applyRoleBasedTools(server: McpServer, user: Record<string, unknown>): Promise<void> {
-
 	const userId = user.userId as string | undefined
 	if (!userId) return
 
@@ -197,7 +196,6 @@ export async function callMCPAgent(
 ): Promise<{ content: Array<{ type: 'text'; text: string }> } | AsyncGenerator<any>> {
 	// Forward to internal agent service (basic invocation — extend for streaming)
 	try {
-
 		const agentEntity = await container.getAgentUseCase.execute(agent.id)
 		const agentService = new AgentService()
 

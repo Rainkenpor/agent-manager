@@ -248,6 +248,7 @@ export const roleSkills = sqliteTable('role_skills', {
 // Templates — define the stages and their order
 export const traceabilityTemplates = sqliteTable('traceability_templates', {
 	id: text('id').primaryKey(),
+	code: text('code').unique(),                 // 4-char alphanumeric lookup code
 	name: text('name').notNull(),
 	description: text('description'),
 	createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
@@ -265,6 +266,7 @@ export const templateStages = sqliteTable('template_stages', {
 	parallelGroup: text('parallel_group'), // stages sharing the same value run in parallel
 	type: text('type', { enum: ['manual', 'agent'] }).notNull().default('manual'),
 	agentId: text('agent_id').references(() => agents.id, { onDelete: 'set null' }),
+	documentSchema: text('document_schema'),     // JSON: [{name, required}]
 	createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
 })
 
@@ -332,6 +334,16 @@ export const traceabilityStagePredecessors = sqliteTable('traceability_stage_pre
 	predecessorStageId: text('predecessor_stage_id').notNull().references(() => traceabilityStages.id, { onDelete: 'cascade' }),
 })
 
+// Documents per stage — markdown documents attached to a traceability stage
+export const traceabilityDocuments = sqliteTable('traceability_documents', {
+	id: text('id').primaryKey(),
+	stageId: text('stage_id').notNull().references(() => traceabilityStages.id, { onDelete: 'cascade' }),
+	name: text('name').notNull(),
+	content: text('content').notNull().default(''),
+	createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
+	updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString()),
+})
+
 // Tipos inferidos
 export type Skill = typeof skills.$inferSelect
 export type NewSkill = typeof skills.$inferInsert
@@ -381,3 +393,5 @@ export type TraceabilityLink = typeof traceabilityLinks.$inferSelect
 export type NewTraceabilityLink = typeof traceabilityLinks.$inferInsert
 export type TemplateStagePredecessor = typeof templateStagePredecessors.$inferSelect
 export type TraceabilityStagePredecessor = typeof traceabilityStagePredecessors.$inferSelect
+export type TraceabilityDocument = typeof traceabilityDocuments.$inferSelect
+export type NewTraceabilityDocument = typeof traceabilityDocuments.$inferInsert
