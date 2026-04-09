@@ -253,7 +253,8 @@ export function registerTraceabilityRoutes(): void {
 		inputSchema: createTraceabilitySchema.shape,
 		requiresAuth: true,
 		requiredPermission: { resource: 'traceability', action: 'create' },
-		handler: async ({ input }) => container.createTraceabilityUseCase.execute(input)
+		handler: async ({ input, context: { req } }) =>
+			container.createTraceabilityUseCase.execute({ ...input, createdBy: (req as any).user?.id ?? null })
 	})
 
 	registry.register({

@@ -348,6 +348,7 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 				status: t.status as TraceabilitySummary['status'],
 				templateId: t.templateId,
 				templateName: t.templateName,
+				createdBy: t.createdBy,
 				stageCount: stages.length,
 				completedStages: stages.filter((s) => s.status === 'completed').length,
 				createdAt: t.createdAt,
@@ -404,6 +405,7 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 			status: t.status as Traceability['status'],
 			templateId: t.templateId,
 			templateName: t.templateName,
+			createdBy: t.createdBy,
 			stages: stageList,
 			createdAt: t.createdAt,
 			updatedAt: t.updatedAt
@@ -423,6 +425,7 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 			status: 'active',
 			templateId: data.templateId,
 			templateName: template.name,
+			createdBy: data.createdBy ?? null,
 			createdAt: now,
 			updatedAt: now
 		})
@@ -497,6 +500,7 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 			status: 'active',
 			templateId: data.templateId,
 			templateName: template.name,
+			createdBy: data.createdBy ?? null,
 			stages: stageList,
 			createdAt: now,
 			updatedAt: now

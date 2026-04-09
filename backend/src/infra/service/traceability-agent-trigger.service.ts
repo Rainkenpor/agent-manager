@@ -60,7 +60,8 @@ export class TraceabilityAgentTriggerService {
 					Object.entries(agent.tools)
 						.filter(([_, enabled]) => enabled)
 						.map(([toolName]) => toolName)
-				)
+				),
+				userId: trac?.createdBy ?? undefined
 			})
 			// After agent completes, recompute the stage status from actual tasks
 			await this.repo.recomputeStageStatus(stage.id)

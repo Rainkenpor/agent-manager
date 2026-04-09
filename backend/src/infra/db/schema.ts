@@ -278,6 +278,7 @@ export const traceabilities = sqliteTable('traceabilities', {
 	status: text('status', { enum: ['active', 'completed', 'archived'] }).notNull().default('active'),
 	templateId: text('template_id').references(() => traceabilityTemplates.id, { onDelete: 'set null' }),
 	templateName: text('template_name'), // snapshot of template name at creation time
+	createdBy: text('created_by'), // user id who created the traceability (null if created by agent/tool)
 	createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
 	updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString()),
 })

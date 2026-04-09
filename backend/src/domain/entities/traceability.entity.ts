@@ -144,6 +144,7 @@ export interface Traceability {
   status: TraceabilityStatus
   templateId?: string | null
   templateName?: string | null
+  createdBy?: string | null
   stages: TraceabilityStage[]
   createdAt: string
   updatedAt: string
@@ -156,6 +157,7 @@ export interface TraceabilitySummary {
   status: TraceabilityStatus
   templateId?: string | null
   templateName?: string | null
+  createdBy?: string | null
   stageCount: number
   completedStages: number
   createdAt: string
@@ -166,6 +168,7 @@ export interface CreateTraceabilityDTO {
   title: string
   description?: string
   templateId: string
+  createdBy?: string | null
 }
 
 export interface UpdateTraceabilityDTO {
