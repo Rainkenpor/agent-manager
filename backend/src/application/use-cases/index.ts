@@ -5,3 +5,4 @@ export * from "./auth/index.js";
 export * from "./chat/index.js";
 export * from "./mcp-credential/index.js";
 export * from "./skill/index.js";
+export * from "./traceability/index.js";

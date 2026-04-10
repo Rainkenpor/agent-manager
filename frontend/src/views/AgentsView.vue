@@ -168,6 +168,16 @@ function confirmDelete(agent: Agent) {
   deleteTarget.value = agent
 }
 
+async function duplicateAgent(agent: Agent) {
+  try {
+    await api.duplicateAgent(agent.id)
+    toast.success(`Agente duplicado`)
+    await fetchData()
+  } catch (e: any) {
+    toast.error(e.message ?? 'Failed to duplicate agent')
+  }
+}
+
 async function doDelete() {
   if (!deleteTarget.value) return
   deleting.value = true
@@ -314,6 +324,15 @@ const selectedToolSource = ref<string>('')
                       d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
                   Edit
+                </button>
+                <button
+                  class="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium text-slate-100 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
+                  @click="duplicateAgent(agent)">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  Duplicate
                 </button>
                 <button
                   class="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium text-slate-100 hover:text-red-600 hover:bg-red-50 transition-colors"

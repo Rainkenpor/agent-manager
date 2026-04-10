@@ -7,7 +7,8 @@ import type {
 	IChatRepository,
 	IMcpUserCredentialRepository,
 	IMcpCredentialProvider,
-	ISkillRepository
+	ISkillRepository,
+	ITraceabilityRepository
 } from '@domain/repositories/index.js'
 import { mcpExternalManager } from '@infra/service/mcp-external.js'
 
@@ -19,7 +20,8 @@ import {
 	McpServerRepository,
 	ChatRepository,
 	McpUserCredentialRepository,
-	SkillRepository
+	SkillRepository,
+	TraceabilityRepository
 } from '@infra/repository/index.js'
 
 import {
@@ -35,6 +37,7 @@ import {
 	GetAgentUseCase,
 	UpdateAgentUseCase,
 	DeleteAgentUseCase,
+	DuplicateAgentUseCase,
 	// Chat Use Cases
 	CreateConversationUseCase,
 	ListConversationsUseCase,
@@ -50,9 +53,34 @@ import {
 	ListSkillsUseCase,
 	GetSkillUseCase,
 	UpdateSkillUseCase,
-	DeleteSkillUseCase
+	DeleteSkillUseCase,
+	// Traceability Use Cases
+	ListTemplatesUseCase,
+	GetTemplateUseCase,
+	CreateTemplateUseCase,
+	UpdateTemplateUseCase,
+	DeleteTemplateUseCase,
+	CreateTemplateStageUseCase,
+	UpdateTemplateStageUseCase,
+	DeleteTemplateStageUseCase,
+	ListTraceabilitiesUseCase,
+	GetTraceabilityUseCase,
+	CreateTraceabilityUseCase,
+	UpdateTraceabilityUseCase,
+	DeleteTraceabilityUseCase,
+	CreateTaskUseCase,
+	UpdateTaskUseCase,
+	DeleteTaskUseCase,
+	CreateLinkUseCase,
+	DeleteLinkUseCase,
+	CreateDocumentUseCase,
+	UpdateDocumentUseCase,
+	DeleteDocumentUseCase,
+	GetDocumentUseCase,
+	GetTemplateByCodeUseCase
 } from './use-cases/index.js'
 import { GetSkillsAllowedForUserUseCase } from './use-cases/skill/get-skills-allowed-user.js'
+import { TraceabilityAgentTriggerService } from '@infra/service/traceability-agent-trigger.service.js'
 
 /**
  * Adaptador que implementa IMcpCredentialProvider usando IMcpUserCredentialRepository.
@@ -91,6 +119,7 @@ export class Container {
 	private _getAgentUseCase?: GetAgentUseCase
 	private _updateAgentUseCase?: UpdateAgentUseCase
 	private _deleteAgentUseCase?: DeleteAgentUseCase
+	private _duplicateAgentUseCase?: DuplicateAgentUseCase
 
 	// MCP Server Repository
 	private _mcpServerRepository: IMcpServerRepository
@@ -120,6 +149,33 @@ export class Container {
 	private _updateSkillUseCase?: UpdateSkillUseCase
 	private _deleteSkillUseCase?: DeleteSkillUseCase
 
+	// Traceability Repository & Use Cases
+	private _traceabilityRepository: ITraceabilityRepository
+	private _tracTriggerService?: TraceabilityAgentTriggerService
+	private _listTemplatesUseCase?: ListTemplatesUseCase
+	private _getTemplateUseCase?: GetTemplateUseCase
+	private _createTemplateUseCase?: CreateTemplateUseCase
+	private _updateTemplateUseCase?: UpdateTemplateUseCase
+	private _deleteTemplateUseCase?: DeleteTemplateUseCase
+	private _createTemplateStageUseCase?: CreateTemplateStageUseCase
+	private _updateTemplateStageUseCase?: UpdateTemplateStageUseCase
+	private _deleteTemplateStageUseCase?: DeleteTemplateStageUseCase
+	private _listTraceabilitiesUseCase?: ListTraceabilitiesUseCase
+	private _getTraceabilityUseCase?: GetTraceabilityUseCase
+	private _createTraceabilityUseCase?: CreateTraceabilityUseCase
+	private _updateTraceabilityUseCase?: UpdateTraceabilityUseCase
+	private _deleteTraceabilityUseCase?: DeleteTraceabilityUseCase
+	private _createTaskUseCase?: CreateTaskUseCase
+	private _updateTaskUseCase?: UpdateTaskUseCase
+	private _deleteTaskUseCase?: DeleteTaskUseCase
+	private _createLinkUseCase?: CreateLinkUseCase
+	private _deleteLinkUseCase?: DeleteLinkUseCase
+	private _createDocumentUseCase?: CreateDocumentUseCase
+	private _updateDocumentUseCase?: UpdateDocumentUseCase
+	private _deleteDocumentUseCase?: DeleteDocumentUseCase
+	private _getDocumentUseCase?: GetDocumentUseCase
+	private _getTemplateByCodeUseCase?: GetTemplateByCodeUseCase
+
 	constructor() {
 		// Initialize repositories with concrete implementations
 		this._userRepository = new UserRepository()
@@ -130,6 +186,7 @@ export class Container {
 		this._chatRepository = new ChatRepository()
 		this._mcpUserCredentialRepository = new McpUserCredentialRepository()
 		this._skillRepository = new SkillRepository()
+		this._traceabilityRepository = new TraceabilityRepository()
 
 		// Inyectar el adaptador de credenciales en McpExternalManager (dependency inversion)
 		mcpExternalManager.setCredentialProvider(new McpCredentialProviderAdapter(this._mcpUserCredentialRepository))
@@ -235,6 +292,13 @@ export class Container {
 			this._deleteAgentUseCase = new DeleteAgentUseCase(this._agentRepository)
 		}
 		return this._deleteAgentUseCase
+	}
+
+	get duplicateAgentUseCase(): DuplicateAgentUseCase {
+		if (!this._duplicateAgentUseCase) {
+			this._duplicateAgentUseCase = new DuplicateAgentUseCase(this._agentRepository)
+		}
+		return this._duplicateAgentUseCase
 	}
 
 	// ==========================================
@@ -362,6 +426,132 @@ export class Container {
 			this._deleteSkillUseCase = new DeleteSkillUseCase(this._skillRepository)
 		}
 		return this._deleteSkillUseCase
+	}
+
+	// ==========================================
+	// TRACEABILITY USE CASES
+	// ==========================================
+
+	get listTemplatesUseCase(): ListTemplatesUseCase {
+		if (!this._listTemplatesUseCase) this._listTemplatesUseCase = new ListTemplatesUseCase(this._traceabilityRepository)
+		return this._listTemplatesUseCase
+	}
+
+	get getTemplateUseCase(): GetTemplateUseCase {
+		if (!this._getTemplateUseCase) this._getTemplateUseCase = new GetTemplateUseCase(this._traceabilityRepository)
+		return this._getTemplateUseCase
+	}
+
+	get createTemplateUseCase(): CreateTemplateUseCase {
+		if (!this._createTemplateUseCase) this._createTemplateUseCase = new CreateTemplateUseCase(this._traceabilityRepository)
+		return this._createTemplateUseCase
+	}
+
+	get updateTemplateUseCase(): UpdateTemplateUseCase {
+		if (!this._updateTemplateUseCase) this._updateTemplateUseCase = new UpdateTemplateUseCase(this._traceabilityRepository)
+		return this._updateTemplateUseCase
+	}
+
+	get deleteTemplateUseCase(): DeleteTemplateUseCase {
+		if (!this._deleteTemplateUseCase) this._deleteTemplateUseCase = new DeleteTemplateUseCase(this._traceabilityRepository)
+		return this._deleteTemplateUseCase
+	}
+
+	get createTemplateStageUseCase(): CreateTemplateStageUseCase {
+		if (!this._createTemplateStageUseCase) this._createTemplateStageUseCase = new CreateTemplateStageUseCase(this._traceabilityRepository)
+		return this._createTemplateStageUseCase
+	}
+
+	get updateTemplateStageUseCase(): UpdateTemplateStageUseCase {
+		if (!this._updateTemplateStageUseCase) this._updateTemplateStageUseCase = new UpdateTemplateStageUseCase(this._traceabilityRepository)
+		return this._updateTemplateStageUseCase
+	}
+
+	get deleteTemplateStageUseCase(): DeleteTemplateStageUseCase {
+		if (!this._deleteTemplateStageUseCase) this._deleteTemplateStageUseCase = new DeleteTemplateStageUseCase(this._traceabilityRepository)
+		return this._deleteTemplateStageUseCase
+	}
+
+	get listTraceabilitiesUseCase(): ListTraceabilitiesUseCase {
+		if (!this._listTraceabilitiesUseCase) this._listTraceabilitiesUseCase = new ListTraceabilitiesUseCase(this._traceabilityRepository)
+		return this._listTraceabilitiesUseCase
+	}
+
+	get getTraceabilityUseCase(): GetTraceabilityUseCase {
+		if (!this._getTraceabilityUseCase) this._getTraceabilityUseCase = new GetTraceabilityUseCase(this._traceabilityRepository)
+		return this._getTraceabilityUseCase
+	}
+
+	get createTraceabilityUseCase(): CreateTraceabilityUseCase {
+		if (!this._createTraceabilityUseCase) this._createTraceabilityUseCase = new CreateTraceabilityUseCase(this._traceabilityRepository)
+		return this._createTraceabilityUseCase
+	}
+
+	get updateTraceabilityUseCase(): UpdateTraceabilityUseCase {
+		if (!this._updateTraceabilityUseCase) this._updateTraceabilityUseCase = new UpdateTraceabilityUseCase(this._traceabilityRepository)
+		return this._updateTraceabilityUseCase
+	}
+
+	get deleteTraceabilityUseCase(): DeleteTraceabilityUseCase {
+		if (!this._deleteTraceabilityUseCase) this._deleteTraceabilityUseCase = new DeleteTraceabilityUseCase(this._traceabilityRepository)
+		return this._deleteTraceabilityUseCase
+	}
+
+	get tracTriggerService(): TraceabilityAgentTriggerService {
+		if (!this._tracTriggerService) {
+			this._tracTriggerService = new TraceabilityAgentTriggerService(this._traceabilityRepository, this._agentRepository)
+		}
+		return this._tracTriggerService
+	}
+
+	get createTaskUseCase(): CreateTaskUseCase {
+		if (!this._createTaskUseCase) this._createTaskUseCase = new CreateTaskUseCase(this._traceabilityRepository, this.tracTriggerService)
+		return this._createTaskUseCase
+	}
+
+	get updateTaskUseCase(): UpdateTaskUseCase {
+		if (!this._updateTaskUseCase) this._updateTaskUseCase = new UpdateTaskUseCase(this._traceabilityRepository, this.tracTriggerService)
+		return this._updateTaskUseCase
+	}
+
+	get deleteTaskUseCase(): DeleteTaskUseCase {
+		if (!this._deleteTaskUseCase) this._deleteTaskUseCase = new DeleteTaskUseCase(this._traceabilityRepository, this.tracTriggerService)
+		return this._deleteTaskUseCase
+	}
+
+	get createLinkUseCase(): CreateLinkUseCase {
+		if (!this._createLinkUseCase) this._createLinkUseCase = new CreateLinkUseCase(this._traceabilityRepository)
+		return this._createLinkUseCase
+	}
+
+	get deleteLinkUseCase(): DeleteLinkUseCase {
+		if (!this._deleteLinkUseCase) this._deleteLinkUseCase = new DeleteLinkUseCase(this._traceabilityRepository)
+		return this._deleteLinkUseCase
+	}
+
+	get createDocumentUseCase(): CreateDocumentUseCase {
+		if (!this._createDocumentUseCase) this._createDocumentUseCase = new CreateDocumentUseCase(this._traceabilityRepository)
+		return this._createDocumentUseCase
+	}
+
+	get updateDocumentUseCase(): UpdateDocumentUseCase {
+		if (!this._updateDocumentUseCase) this._updateDocumentUseCase = new UpdateDocumentUseCase(this._traceabilityRepository)
+		return this._updateDocumentUseCase
+	}
+
+	get deleteDocumentUseCase(): DeleteDocumentUseCase {
+		if (!this._deleteDocumentUseCase) this._deleteDocumentUseCase = new DeleteDocumentUseCase(this._traceabilityRepository)
+		return this._deleteDocumentUseCase
+	}
+
+	get getDocumentUseCase(): GetDocumentUseCase {
+		if (!this._getDocumentUseCase) this._getDocumentUseCase = new GetDocumentUseCase(this._traceabilityRepository)
+		return this._getDocumentUseCase
+	}
+
+	get getTemplateByCodeUseCase(): GetTemplateByCodeUseCase {
+		if (!this._getTemplateByCodeUseCase) this._getTemplateByCodeUseCase = new GetTemplateByCodeUseCase(this._traceabilityRepository)
+		return this._getTemplateByCodeUseCase
 	}
 }
 

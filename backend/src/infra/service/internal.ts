@@ -359,15 +359,6 @@ export class InternalAgentService implements IAgentService {
 	private async fetchCompletionCodex(config: RequestConfig, messages: MessageParam[], tools?: Tool[]): Promise<CompletionMessage> {
 		const body = this.buildCodexBody(config, messages, tools)
 
-		agentLogger.info(
-			JSON.stringify({
-				url: config.baseURL,
-				method: 'POST',
-				headers: config.headers,
-				body: JSON.stringify(body).slice(0, 200)
-			})
-		)
-
 		const res = await fetch(config.baseURL, {
 			method: 'POST',
 			headers: config.headers,
@@ -480,15 +471,6 @@ export class InternalAgentService implements IAgentService {
 			headers: config.headers,
 			body: JSON.stringify({ ...body, tool_choice: 'auto', stream: true })
 		})
-
-		agentLogger.info(
-			JSON.stringify({
-				url: `${config.baseURL}/chat/completions`,
-				method: 'POST',
-				headers: config.headers,
-				body: JSON.stringify({ ...body, tool_choice: 'auto', stream: true })
-			})
-		)
 
 		if (!res.ok) {
 			throw new Error(`API error ${res.status} ${res.statusText}: ${await res.text()}`)
@@ -826,7 +808,7 @@ export class InternalAgentService implements IAgentService {
 
 			const msg = await this.fetchCompletion(config, {
 				model: config.model,
-				temperature: 0.2,
+				temperature: 0.7,
 				messages,
 				tools,
 				tool_choice: 'auto'

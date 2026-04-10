@@ -16,7 +16,13 @@
       "Bash(grep -l \"agent_skills\\\\|agent.*skill\" \"/c/Users/WO199/OneDrive/Documents/Proyectos/agent-manager/backend/drizzle\"/*.sql)",
       "Bash(find:*)",
       "mcp__agent-manager__list_skills",
-      "Bash(wc -l frontend/src/views/*.vue)"
+      "Bash(wc -l frontend/src/views/*.vue)",
+      "Bash(npx tsc:*)",
+      "Bash(node -e ':*)",
+      "Bash(node:*)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('Last idx:', d['entries'][-1]['idx'], d['entries'][-1]['tag']\\)\")",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('Last idx:', d['entries'][-1]['idx']\\)\")",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); e=d['entries'][-1]; print\\(e['idx'], e['tag']\\)\")"
     ]
   }
 }

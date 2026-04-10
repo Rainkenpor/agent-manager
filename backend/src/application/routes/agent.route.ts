@@ -60,6 +60,49 @@ export function registerAgentRoutes(): void {
 		}
 	})
 
+	// List agents available for chat based on the current user's roles
+	registry.register({
+		useBy: ['server'],
+		method: 'GET',
+		path: '/api/agents/for-chat',
+		inputSchema: {},
+		requiresAuth: true,
+		requiredPermission: { resource: 'agents', action: 'read' },
+		handler: async ({ context: { req } }) => {
+			const userId = (req.user as any)?.id as string
+			const userRoles = await container.userRepository.getRoles(userId)
+			// Collect all agents assigned to the user's roles that are useByChat
+			const seen = new Set<string>()
+			const result: Array<{ id: string; name: string; slug: string; description: string | null }> = []
+			if (userRoles.length === 0) {
+				// No roles — return all active useByChat agents
+				const all = await container.listAgentsUseCase.execute()
+				if (!all.success) return { success: true as const, data: [] }
+				const agentList = (all.data ?? []).filter((a: any) => a.isActive && a.useByChat)
+				return { success: true as const, data: agentList.map((a: any) => ({ id: a.id, name: a.name, slug: a.slug, description: a.description ?? null })) }
+			}
+			for (const role of userRoles) {
+				const roleAgents = await container.mcpServerRepository.getAgentsByRole(role.id)
+				for (const agent of roleAgents) {
+					if (!seen.has(agent.id)) {
+						seen.add(agent.id)
+						result.push({ id: agent.id, name: agent.name, slug: agent.slug, description: null })
+					}
+				}
+			}
+			// Filter to only active useByChat agents — fetch full agent to check flags
+			const filtered: typeof result = []
+			for (const a of result) {
+				const full = await container.getAgentUseCase.execute(a.id)
+				if (!full.success) continue
+				if (full.data.isActive) {
+					filtered.push({ id: a.id, name: a.name, slug: a.slug, description: full.data.description ?? null })
+				}
+			}
+			return { success: true as const, data: filtered }
+		},
+	})
+
 	// List all agents
 	registry.register({
 		useBy: ['server'],
@@ -129,6 +172,19 @@ export function registerAgentRoutes(): void {
 		requiredPermission: { resource: 'agents', action: 'delete' },
 		handler: async ({ input }) => {
 			return await container.deleteAgentUseCase.execute(input.id)
+		}
+	})
+
+	// Duplicate agent
+	registry.register({
+		useBy: ['server'],
+		method: 'POST',
+		path: '/api/agents/:id/duplicate',
+		inputSchema: z.object({ id: z.string() }).shape,
+		requiresAuth: true,
+		requiredPermission: { resource: 'agents', action: 'create' },
+		handler: async ({ input }) => {
+			return await container.duplicateAgentUseCase.execute(input.id)
 		}
 	})
 

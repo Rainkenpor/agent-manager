@@ -16,6 +16,7 @@ const allNavLinks = [
   { to: '/mcps', label: 'MCP Servers', icon: 'mdi-server', resource: 'mcp_servers' },
   { to: '/skills', label: 'Skills', icon: 'mdi-lightning-bolt', resource: 'skills' },
   { to: '/mcp-credentials', label: 'My Credentials', icon: 'mdi-key', resource: 'mcp_credentials' },
+  { to: '/traceability', label: 'Trazabilidad', icon: 'mdi-sitemap', resource: 'traceability' },
 ]
 
 const navLinks = computed(() =>

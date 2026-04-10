@@ -227,6 +227,36 @@ async function seedDefaultPermissions() {
 			action: 'delete',
 			description: 'Eliminar skills',
 			createdAt: new Date().toISOString()
+		},
+
+		// Traceability
+		{
+			id: randomUUID(),
+			resource: 'traceability',
+			action: 'create',
+			description: 'Crear trazabilidades y templates',
+			createdAt: new Date().toISOString()
+		},
+		{
+			id: randomUUID(),
+			resource: 'traceability',
+			action: 'read',
+			description: 'Ver trazabilidades y templates',
+			createdAt: new Date().toISOString()
+		},
+		{
+			id: randomUUID(),
+			resource: 'traceability',
+			action: 'update',
+			description: 'Actualizar trazabilidades, etapas, tareas y links',
+			createdAt: new Date().toISOString()
+		},
+		{
+			id: randomUUID(),
+			resource: 'traceability',
+			action: 'delete',
+			description: 'Eliminar trazabilidades y templates',
+			createdAt: new Date().toISOString()
 		}
 	]
 

@@ -40,10 +40,9 @@ export interface Agent {
 	temperature: string
 	tools: Record<string, boolean>
 	content: string
-	isActive: boolean
 	createdAt: string
 	updatedAt: string
-	isActive?: boolean
+	isActive: boolean
 	subagents?: Agent[]
 }
 
