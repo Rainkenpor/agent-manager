@@ -48,7 +48,8 @@ const updateTemplateStageSchema = z.object({
 const createTraceabilitySchema = z.object({
 	title: z.string().min(1),
 	description: z.string().optional(),
-	templateId: z.string()
+	templateId: z.string(),
+	userId: z.string().nullable().optional() // Para permitir que el userId venga del input (en caso de llamada desde MCP) o del req.user (en caso de llamada HTTP)
 })
 
 const updateTraceabilitySchema = z.object({
@@ -249,12 +250,12 @@ export function registerTraceabilityRoutes(): void {
 		path: '/api/traceability',
 		toolName: 'create_traceability',
 		toolDescription:
-			'Crea una nueva trazabilidad a partir de un template. Las etapas del template se copian como instancias independientes. Usa list_traceability_templates para obtener los IDs de templates disponibles.',
+			'Crea una nueva trazabilidad a partir de un template. Las etapas del template se copian como instancias independientes. Usa list_traceability_templates para obtener los IDs de templates disponibles. userId es obligatorio para tool calls',
 		inputSchema: createTraceabilitySchema.shape,
 		requiresAuth: true,
 		requiredPermission: { resource: 'traceability', action: 'create' },
 		handler: async ({ input, context: { req } }) =>
-			container.createTraceabilityUseCase.execute({ ...input, createdBy: (req as any).user?.id ?? null })
+			container.createTraceabilityUseCase.execute({ ...input, createdBy: (input.userId || (req as any).user?.id) ?? null })
 	})
 
 	registry.register({

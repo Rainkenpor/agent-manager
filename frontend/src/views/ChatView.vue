@@ -1,46 +1,53 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import * as api from '@/api/api'
 import AppLayout from '@/components/AppLayout.vue'
 
 interface Agent {
-  id: string
-  name: string
-  slug: string
-  mode: string
-  isActive: boolean
+	id: string
+	name: string
+	slug: string
+	mode: string
+	isActive: boolean
 }
 
 interface DisplayMessage {
-  id: string
-  role: 'user' | 'assistant'
-  content: string
-  createdAt: string
-  responseTime?: number   // ms — only set on assistant messages once streaming completes
-  streaming?: boolean     // true while the stream is still open
-  toolCalls?: string[]    // tool names invoked during this response
+	id: string
+	role: 'user' | 'assistant'
+	content: string
+	createdAt: string
+	responseTime?: number // ms — only set on assistant messages once streaming completes
+	streaming?: boolean // true while the stream is still open
+	toolCalls?: string[] // tool names invoked during this response
 }
 
 interface Conversation {
-  id: string
-  title: string
-  agentId: string
-  createdAt: string
-  updatedAt: string
-  messages?: DisplayMessage[]
+	id: string
+	title: string
+	agentId: string
+	createdAt: string
+	updatedAt: string
+	messages?: DisplayMessage[]
 }
 
 interface RequestQuestion {
-  id: string
-  type: 'text' | 'multi' | 'single' | 'confirm'
-  label: string
-  description: string
-  options: Array<{ label: string; description: string }>
+	id: string
+	type: 'text' | 'multi' | 'single' | 'confirm'
+	label: string
+	description: string
+	options: Array<{ label: string; description: string }>
 }
 
 const agents = ref<Agent[]>([])
 const chatAgents = ref<Array<{ id: string; name: string; slug: string; description: string | null }>>([])
 const conversations = ref<Conversation[]>([])
+const agentsMap = computed(() => {
+	const map = new Map<string, string>()
+	for (const agent of agents.value) {
+		map.set(agent.id, agent.name)
+	}
+	return map
+})
 const activeConversation = ref<Conversation | null>(null)
 const messages = ref<DisplayMessage[]>([])
 const draft = ref<string | null>(null)
@@ -64,397 +71,404 @@ const submittedForms = ref<string[]>([])
 const activeAgent = computed(() => agents.value.find((a) => a.id === activeConversation.value?.agentId))
 
 async function fetchInitialData() {
-  try {
-    const [agentsRes, convRes] = await Promise.all([api.getAgents(), api.getConversations()])
-    agents.value = (agentsRes.data ?? []).filter((a: Agent) => a.isActive)
-    conversations.value = convRes.data ?? []
-  } catch (e: any) {
-    error.value = e.message
-  }
+	try {
+		const [agentsRes, convRes] = await Promise.all([api.getAgents(), api.getConversations()])
+		agents.value = (agentsRes.data ?? []).filter((a: Agent) => a.isActive)
+		conversations.value = convRes.data ?? []
+	} catch (e: any) {
+		error.value = e.message
+	}
 }
 
 async function openNewChatModal() {
-  showNewChatModal.value = true
-  selectedAgentId.value = ''
-  newChatTitle.value = ''
-  loadingChatAgents.value = true
-  try {
-    const res = await api.getAgentsForChat()
-    chatAgents.value = res.data ?? []
-  } catch (e: any) {
-    error.value = e.message
-  } finally {
-    loadingChatAgents.value = false
-  }
+	showNewChatModal.value = true
+	selectedAgentId.value = ''
+	newChatTitle.value = ''
+	loadingChatAgents.value = true
+	try {
+		const res = await api.getAgentsForChat()
+		chatAgents.value = res.data ?? []
+	} catch (e: any) {
+		error.value = e.message
+	} finally {
+		loadingChatAgents.value = false
+	}
 }
 
 async function openConversation(conv: Conversation) {
-  loadingConversation.value = true
-  try {
-    const res = await api.getConversation(conv.id)
-    activeConversation.value = res.data
-    messages.value = (res.data.messages ?? []) as DisplayMessage[]
-    draft.value = res.data.draft ?? null
-    initFormAnswersFromMessages()
-    await scrollToBottom()
-  } catch (e: any) {
-    error.value = e.message
-  } finally {
-    loadingConversation.value = false
-  }
+	loadingConversation.value = true
+	try {
+		const res = await api.getConversation(conv.id)
+		activeConversation.value = res.data
+		messages.value = (res.data.messages ?? []) as DisplayMessage[]
+		draft.value = res.data.draft ?? null
+		initFormAnswersFromMessages()
+		await scrollToBottom()
+	} catch (e: any) {
+		error.value = e.message
+	} finally {
+		loadingConversation.value = false
+	}
 }
 
 async function createConversation() {
-  if (!selectedAgentId.value || !newChatTitle.value.trim()) return
-  try {
-    const res = await api.createConversation({ title: newChatTitle.value.trim(), agentId: selectedAgentId.value })
-    conversations.value.unshift(res.data)
-    showNewChatModal.value = false
-    newChatTitle.value = ''
-    selectedAgentId.value = ''
-    await openConversation(res.data)
-  } catch (e: any) {
-    error.value = e.message
-  }
+	if (!selectedAgentId.value || !newChatTitle.value.trim()) return
+	try {
+		const res = await api.createConversation({ title: newChatTitle.value.trim(), agentId: selectedAgentId.value })
+		conversations.value.unshift(res.data)
+		showNewChatModal.value = false
+		newChatTitle.value = ''
+		selectedAgentId.value = ''
+		await openConversation(res.data)
+	} catch (e: any) {
+		error.value = e.message
+	}
 }
 
 async function sendMessage() {
-  if (!messageInput.value.trim() || !activeConversation.value || sending.value) return
-  const content = messageInput.value.trim()
-  messageInput.value = ''
-  sending.value = true
-  error.value = ''
+	if (!messageInput.value.trim() || !activeConversation.value || sending.value) return
+	const content = messageInput.value.trim()
+	messageInput.value = ''
+	sending.value = true
+	error.value = ''
 
-  // Add user message immediately
-  const userMsg: DisplayMessage = {
-    id: `user-${Date.now()}`,
-    role: 'user',
-    content,
-    createdAt: new Date().toISOString(),
-  }
-  messages.value.push(userMsg)
+	// Add user message immediately
+	const userMsg: DisplayMessage = {
+		id: `user-${Date.now()}`,
+		role: 'user',
+		content,
+		createdAt: new Date().toISOString()
+	}
+	messages.value.push(userMsg)
 
-  // Add empty streaming assistant message
-  const streamingId = `stream-${Date.now()}`
-  const assistantMsg: DisplayMessage = {
-    id: streamingId,
-    role: 'assistant',
-    content: '',
-    createdAt: new Date().toISOString(),
-    streaming: true,
-  }
-  messages.value.push(assistantMsg)
-  await scrollToBottom()
+	// Add empty streaming assistant message
+	const streamingId = `stream-${Date.now()}`
+	const assistantMsg: DisplayMessage = {
+		id: streamingId,
+		role: 'assistant',
+		content: '',
+		createdAt: new Date().toISOString(),
+		streaming: true
+	}
+	messages.value.push(assistantMsg)
+	await scrollToBottom()
 
-  abortController = new AbortController()
+	abortController = new AbortController()
 
-  try {
-    const response = await api.streamMessage(activeConversation.value.id, content, abortController.signal)
+	try {
+		const response = await api.streamMessage(activeConversation.value.id, content, abortController.signal)
 
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({ error: response.statusText }))
-      throw new Error(err.error || response.statusText)
-    }
+		if (!response.ok) {
+			const err = await response.json().catch(() => ({ error: response.statusText }))
+			throw new Error(err.error || response.statusText)
+		}
 
-    const reader = response.body!.getReader()
-    const decoder = new TextDecoder()
-    let buffer = ''
+		const reader = response.body!.getReader()
+		const decoder = new TextDecoder()
+		let buffer = ''
 
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
+		while (true) {
+			const { done, value } = await reader.read()
+			if (done) break
 
-      buffer += decoder.decode(value, { stream: true })
-      const parts = buffer.split('\n\n')
-      buffer = parts.pop() ?? ''
+			buffer += decoder.decode(value, { stream: true })
+			const parts = buffer.split('\n\n')
+			buffer = parts.pop() ?? ''
 
-      for (const part of parts) {
-        const line = part.trim()
-        if (!line.startsWith('data: ')) continue
-        let event: any
-        try { event = JSON.parse(line.slice(6)) } catch { continue }
+			for (const part of parts) {
+				const line = part.trim()
+				if (!line.startsWith('data: ')) continue
+				let event: any
+				try {
+					event = JSON.parse(line.slice(6))
+				} catch {
+					continue
+				}
 
-        if (event.type === 'chunk') {
-          const idx = messages.value.findIndex((m) => m.id === streamingId)
-          if (idx !== -1) {
-            messages.value[idx] = { ...messages.value[idx], content: messages.value[idx].content + event.content }
-            await scrollToBottom()
-          }
-        } else if (event.type === 'tool') {
-          const idx = messages.value.findIndex((m) => m.id === streamingId)
-          if (idx !== -1) {
-            const existing = messages.value[idx].toolCalls ?? []
-            if (!existing.includes(event.name)) {
-              messages.value[idx] = { ...messages.value[idx], toolCalls: [...existing, event.name] }
-            }
-          }
-        } else if (event.type === 'done') {
-          const idx = messages.value.findIndex((m) => m.id === streamingId)
-          if (idx !== -1) {
-            messages.value[idx] = {
-              ...event.message,
-              streaming: false,
-              responseTime: event.responseTime,
-              toolCalls: messages.value[idx].toolCalls,
-            }
-          }
-        } else if (event.type === 'draft_updated') {
-          draft.value = event.draft
-        } else if (event.type === 'error') {
-          throw new Error(event.error)
-        }
-      }
-    }
-  } catch (e: any) {
-    // Remove streaming placeholder on abort or error
-    messages.value = messages.value.filter((m) => m.id !== streamingId)
-    if (e.name !== 'AbortError') error.value = e.message
-  } finally {
-    abortController = null
-    sending.value = false
-    await scrollToBottom()
-  }
+				if (event.type === 'chunk') {
+					const idx = messages.value.findIndex((m) => m.id === streamingId)
+					if (idx !== -1) {
+						messages.value[idx] = { ...messages.value[idx], content: messages.value[idx].content + event.content }
+						await scrollToBottom()
+					}
+				} else if (event.type === 'tool') {
+					const idx = messages.value.findIndex((m) => m.id === streamingId)
+					if (idx !== -1) {
+						const existing = messages.value[idx].toolCalls ?? []
+						if (!existing.includes(event.name)) {
+							messages.value[idx] = { ...messages.value[idx], toolCalls: [...existing, event.name] }
+						}
+					}
+				} else if (event.type === 'done') {
+					const idx = messages.value.findIndex((m) => m.id === streamingId)
+					if (idx !== -1) {
+						messages.value[idx] = {
+							...event.message,
+							streaming: false,
+							responseTime: event.responseTime,
+							toolCalls: messages.value[idx].toolCalls
+						}
+					}
+				} else if (event.type === 'draft_updated') {
+					draft.value = event.draft
+				} else if (event.type === 'error') {
+					throw new Error(event.error)
+				}
+			}
+		}
+	} catch (e: any) {
+		// Remove streaming placeholder on abort or error
+		messages.value = messages.value.filter((m) => m.id !== streamingId)
+		if (e.name !== 'AbortError') error.value = e.message
+	} finally {
+		abortController = null
+		sending.value = false
+		await scrollToBottom()
+	}
 }
 
 function cancelRequest() {
-  abortController?.abort()
+	abortController?.abort()
 }
 
 async function deleteConversation(conv: Conversation) {
-  try {
-    await api.deleteConversation(conv.id)
-    conversations.value = conversations.value.filter((c) => c.id !== conv.id)
-    if (activeConversation.value?.id === conv.id) {
-      activeConversation.value = null
-      messages.value = []
-    }
-  } catch (e: any) {
-    error.value = e.message
-  }
+	try {
+		await api.deleteConversation(conv.id)
+		conversations.value = conversations.value.filter((c) => c.id !== conv.id)
+		if (activeConversation.value?.id === conv.id) {
+			activeConversation.value = null
+			messages.value = []
+		}
+	} catch (e: any) {
+		error.value = e.message
+	}
 }
 
 function handleKeydown(e: KeyboardEvent) {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault()
-    sendMessage()
-  }
+	if (e.key === 'Enter' && !e.shiftKey) {
+		e.preventDefault()
+		sendMessage()
+	}
 }
 
 async function scrollToBottom() {
-  await nextTick()
-  if (messagesContainer.value) {
-    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
-  }
+	await nextTick()
+	if (messagesContainer.value) {
+		messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+	}
 }
 
 function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+	return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
 function formatResponseTime(ms: number): string {
-  return ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`
+	return ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`
 }
 
 // ── Request form helpers ──────────────────────────────────────────────────────
 
 function parseRequestBlock(content: string): RequestQuestion[] | null {
-  const match = content.match(/```request\n([\s\S]*?)```/)
-  if (!match) return null
+	const match = content.match(/```request\n([\s\S]*?)```/)
+	if (!match) return null
 
+	const questions: RequestQuestion[] = []
+	const parts = match[1].split(/(?=\[Q\d+\|)/)
 
-  const questions: RequestQuestion[] = []
-  const parts = match[1].split(/(?=\[Q\d+\|)/)
+	for (const part of parts) {
+		const header = part.match(/^\[Q(\d+)\|(text|multi|single|confirm)\]\s*(.+?)(?:\n|$)/)
+		if (!header) continue
 
-  for (const part of parts) {
-    const header = part.match(/^\[Q(\d+)\|(text|multi|single|confirm)\]\s*(.+?)(?:\n|$)/)
-    if (!header) continue
+		const rest = part.slice(header[0].length).trim()
+		const lines = rest.split('\n')
+		const options: Array<{ label: string; description: string }> = []
+		const descLines: string[] = []
 
-    const rest = part.slice(header[0].length).trim()
-    const lines = rest.split('\n')
-    const options: Array<{ label: string; description: string }> = []
-    const descLines: string[] = []
+		for (const line of lines) {
+			// La linea puede estar separada por titulo | descripcion o solo tener texto (descripcion)
+			const opt = line.match(/^-\s*(.+?)\s*\|\s*(.+)$/)
+			if (opt) {
+				options.push({ label: opt[1].trim(), description: opt[2].trim() })
+			} else if (line.startsWith('-') && line.trim() !== '-') {
+				const label = line.replace(/^-\s*/, '').trim()
+				options.push({ label, description: '' })
+			} else if (line.trim()) descLines.push(line.trim())
+		}
 
-    for (const line of lines) {
-      // La linea puede estar separada por titulo | descripcion o solo tener texto (descripcion)
-      const opt = line.match(/^-\s*(.+?)\s*\|\s*(.+)$/)
-      if (opt) {
-        options.push({ label: opt[1].trim(), description: opt[2].trim() })
-      } else if (line.startsWith('-') && line.trim() !== '-') {
-        const label = line.replace(/^-\s*/, '').trim()
-        options.push({ label, description: '' })
-      }
-      else if (line.trim()) descLines.push(line.trim())
-    }
+		questions.push({
+			id: `Q${header[1]}`,
+			type: header[2] as 'text' | 'multi' | 'single' | 'confirm',
+			label: header[3].trim(),
+			description: descLines.join('\n'),
+			options
+		})
+	}
 
-    questions.push({
-      id: `Q${header[1]}`,
-      type: header[2] as 'text' | 'multi' | 'single' | 'confirm',
-      label: header[3].trim(),
-      description: descLines.join('\n'),
-      options,
-    })
-  }
-
-  return questions.length > 0 ? questions : null
+	return questions.length > 0 ? questions : null
 }
 
 function getContentBeforeRequest(content: string): string {
-  const idx = content.indexOf('```request')
-  return idx > 0 ? content.slice(0, idx).trim() : ''
+	const idx = content.indexOf('```request')
+	return idx > 0 ? content.slice(0, idx).trim() : ''
 }
 
 function getContentAfterRequest(content: string): string {
-  const match = content.match(/```request[\s\S]*?```/)
-  if (!match || match.index === undefined) return ''
-  const endIdx = match.index + match[0].length
-  return content.slice(endIdx).trim()
+	const match = content.match(/```request[\s\S]*?```/)
+	if (!match || match.index === undefined) return ''
+	const endIdx = match.index + match[0].length
+	return content.slice(endIdx).trim()
 }
 
 function getRequestQuestions(msg: DisplayMessage): RequestQuestion[] | null {
-  if (msg.role !== 'assistant' || msg.streaming) return null
-  return parseRequestBlock(msg.content)
+	if (msg.role !== 'assistant' || msg.streaming) return null
+	return parseRequestBlock(msg.content)
 }
 
 function maskTokens(text: string): string {
-  // JWT: eyJ...header.payload.signature
-  text = text.replace(
-    /eyJ[a-zA-Z0-9+/_-]+=*\.[a-zA-Z0-9+/_-]+=*\.[a-zA-Z0-9+/_-]+=*/g,
-    (m) => m.slice(0, 5) + '*****',
-  )
-  // Known prefixes: sk-, ghp_, Bearer, etc.
-  text = text.replace(
-    /\b(sk-|ghp_|ghs_|github_pat_|xoxb-|xoxp-|Bearer\s+)[a-zA-Z0-9+/_.-]{8,}/gi,
-    (m) => m.slice(0, 5) + '*****',
-  )
-  // Generic: 25+ char alphanum string with upper+lower+digit mix (high entropy)
-  text = text.replace(/[a-zA-Z0-9+/_-]{25,}/g, (m) => {
-    if (/[A-Z]/.test(m) && /[a-z]/.test(m) && /[0-9]/.test(m))
-      return m.slice(0, 5) + '*****'
-    return m
-  })
-  return text
+	// JWT: eyJ...header.payload.signature
+	text = text.replace(/eyJ[a-zA-Z0-9+/_-]+=*\.[a-zA-Z0-9+/_-]+=*\.[a-zA-Z0-9+/_-]+=*/g, (m) => m.slice(0, 5) + '*****')
+	// Known prefixes: sk-, ghp_, Bearer, etc.
+	text = text.replace(/\b(sk-|ghp_|ghs_|github_pat_|xoxb-|xoxp-|Bearer\s+)[a-zA-Z0-9+/_.-]{8,}/gi, (m) => m.slice(0, 5) + '*****')
+	// Generic: 25+ char alphanum string with upper+lower+digit mix (high entropy)
+	text = text.replace(/[a-zA-Z0-9+/_-]{25,}/g, (m) => {
+		if (/[A-Z]/.test(m) && /[a-z]/.test(m) && /[0-9]/.test(m)) return m.slice(0, 5) + '*****'
+		return m
+	})
+	return text
 }
 
 function renderInlineMarkdown(text: string): string {
-  return text
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/`(.+?)`/g, '<code class="bg-slate-700/80 px-1 rounded text-xs font-mono">$1</code>')
+	return text
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
+		.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+		.replace(/`(.+?)`/g, '<code class="bg-slate-700/80 px-1 rounded text-xs font-mono">$1</code>')
 }
 
 function renderMarkdown(text: string): string {
-  text = maskTokens(text)
-  const isTableRow = (line: string) => /^\|.+\|$/.test(line.trim())
-  const isSeparator = (line: string) => /^\|[\s\-:|]+\|$/.test(line.trim())
+	text = maskTokens(text)
+	const isTableRow = (line: string) => /^\|.+\|$/.test(line.trim())
+	const isSeparator = (line: string) => /^\|[\s\-:|]+\|$/.test(line.trim())
 
-  function parseRow(line: string): string[] {
-    return line.trim().slice(1, -1).split('|').map((c) => c.trim())
-  }
+	function parseRow(line: string): string[] {
+		return line
+			.trim()
+			.slice(1, -1)
+			.split('|')
+			.map((c) => c.trim())
+	}
 
-  function renderTable(lines: string[]): string {
-    const headers = parseRow(lines[0])
-    const body = lines.slice(2)
-    const th = headers
-      .map((h) => `<th style="text-align:left;padding:6px 12px;border-bottom:1px solid #475569;color:#cbd5e1;font-weight:600;white-space:nowrap">${renderInlineMarkdown(h)}</th>`)
-      .join('')
-    const trs = body
-      .map((row) =>
-        '<tr style="border-bottom:1px solid #1e293b">' +
-        parseRow(row)
-          .map((cell) => `<td style="padding:5px 12px;color:#e2e8f0">${renderInlineMarkdown(cell)}</td>`)
-          .join('') +
-        '</tr>'
-      )
-      .join('')
-    return `<table style="border-collapse:collapse;width:100%;font-size:0.8rem;margin:8px 0;background:#0f172a;border-radius:8px;overflow:hidden"><thead><tr>${th}</tr></thead><tbody>${trs}</tbody></table>`
-  }
+	function renderTable(lines: string[]): string {
+		const headers = parseRow(lines[0])
+		const body = lines.slice(2)
+		const th = headers
+			.map(
+				(h) =>
+					`<th style="text-align:left;padding:6px 12px;border-bottom:1px solid #475569;color:#cbd5e1;font-weight:600;white-space:nowrap">${renderInlineMarkdown(h)}</th>`
+			)
+			.join('')
+		const trs = body
+			.map(
+				(row) =>
+					'<tr style="border-bottom:1px solid #1e293b">' +
+					parseRow(row)
+						.map((cell) => `<td style="padding:5px 12px;color:#e2e8f0">${renderInlineMarkdown(cell)}</td>`)
+						.join('') +
+					'</tr>'
+			)
+			.join('')
+		return `<table style="border-collapse:collapse;width:100%;font-size:0.8rem;margin:8px 0;background:#0f172a;border-radius:8px;overflow:hidden"><thead><tr>${th}</tr></thead><tbody>${trs}</tbody></table>`
+	}
 
-  const lines = text.split('\n')
-  const out: string[] = []
-  let i = 0
-  while (i < lines.length) {
-    if (isTableRow(lines[i]) && i + 1 < lines.length && isSeparator(lines[i + 1])) {
-      const tableLines = [lines[i], lines[i + 1]]
-      i += 2
-      while (i < lines.length && isTableRow(lines[i])) { tableLines.push(lines[i++]) }
-      out.push(renderTable(tableLines))
-    } else {
-      out.push(renderInlineMarkdown(lines[i]))
-      i++
-    }
-  }
-  return out.join('\n')
+	const lines = text.split('\n')
+	const out: string[] = []
+	let i = 0
+	while (i < lines.length) {
+		if (isTableRow(lines[i]) && i + 1 < lines.length && isSeparator(lines[i + 1])) {
+			const tableLines = [lines[i], lines[i + 1]]
+			i += 2
+			while (i < lines.length && isTableRow(lines[i])) {
+				tableLines.push(lines[i++])
+			}
+			out.push(renderTable(tableLines))
+		} else {
+			out.push(renderInlineMarkdown(lines[i]))
+			i++
+		}
+	}
+	return out.join('\n')
 }
 
 function stripMarkdown(text: string): string {
-  return text.replace(/\*\*(.+?)\*\*/g, '$1').replace(/`(.+?)`/g, '$1')
+	return text.replace(/\*\*(.+?)\*\*/g, '$1').replace(/`(.+?)`/g, '$1')
 }
 
 function toggleOption(msgId: string, questionId: string, option: string) {
-  const q = formAnswers.value[msgId]?.[questionId]
-  if (!q) return
-  const idx = q.selectedOptions.indexOf(option)
-  if (idx === -1) q.selectedOptions.push(option)
-  else q.selectedOptions.splice(idx, 1)
+	const q = formAnswers.value[msgId]?.[questionId]
+	if (!q) return
+	const idx = q.selectedOptions.indexOf(option)
+	if (idx === -1) q.selectedOptions.push(option)
+	else q.selectedOptions.splice(idx, 1)
 }
 
 function selectOption(msgId: string, questionId: string, option: string) {
-  const q = formAnswers.value[msgId]?.[questionId]
-  if (!q) return
-  q.selectedOptions = [option]
+	const q = formAnswers.value[msgId]?.[questionId]
+	if (!q) return
+	q.selectedOptions = [option]
 }
 
 function initFormAnswersFromMessages() {
-  for (let i = 0; i < messages.value.length; i++) {
-    const msg = messages.value[i]
-    if (msg.role !== 'assistant' || msg.streaming) continue
-    const questions = parseRequestBlock(msg.content)
-    if (!questions) continue
+	for (let i = 0; i < messages.value.length; i++) {
+		const msg = messages.value[i]
+		if (msg.role !== 'assistant' || msg.streaming) continue
+		const questions = parseRequestBlock(msg.content)
+		if (!questions) continue
 
-    if (!formAnswers.value[msg.id]) {
-      const answers: Record<string, { textValue: string; selectedOptions: string[] }> = {}
-      for (const q of questions) answers[q.id] = { textValue: '', selectedOptions: [] }
-      formAnswers.value[msg.id] = answers
-    }
+		if (!formAnswers.value[msg.id]) {
+			const answers: Record<string, { textValue: string; selectedOptions: string[] }> = {}
+			for (const q of questions) answers[q.id] = { textValue: '', selectedOptions: [] }
+			formAnswers.value[msg.id] = answers
+		}
 
-    // Auto-mark as submitted if any subsequent message exists (user already replied)
-    const hasSubsequentMessage = messages.value.slice(i + 1).some((m) => !m.streaming)
-    if (hasSubsequentMessage && !submittedForms.value.includes(msg.id)) {
-      submittedForms.value.push(msg.id)
-    }
-  }
+		// Auto-mark as submitted if any subsequent message exists (user already replied)
+		const hasSubsequentMessage = messages.value.slice(i + 1).some((m) => !m.streaming)
+		if (hasSubsequentMessage && !submittedForms.value.includes(msg.id)) {
+			submittedForms.value.push(msg.id)
+		}
+	}
 }
 
 async function submitRequestForm(msgId: string, questions: RequestQuestion[]) {
-  const answers = formAnswers.value[msgId]
-  if (!answers) return
+	const answers = formAnswers.value[msgId]
+	if (!answers) return
 
-  const lines: string[] = []
-  for (const q of questions) {
-    const a = answers[q.id]
-    let answerText: string
+	const lines: string[] = []
+	for (const q of questions) {
+		const a = answers[q.id]
+		let answerText: string
 
-    if (q.type === 'text') {
-      answerText = a.textValue.trim() || '(sin respuesta)'
-    } else if (q.type === 'multi') {
-      const parts = [...a.selectedOptions]
-      if (a.textValue.trim()) parts.push(a.textValue.trim())
-      answerText = parts.length > 0 ? parts.join(', ') : '(sin selección)'
-    } else if (q.type === 'confirm') {
-      answerText = a.selectedOptions[0] ?? (a.textValue.trim() || '(sin selección)')
-      if (a.textValue.trim() && a.textValue.trim() !== answerText) answerText += ` (${a.textValue.trim()})`
-    } else {
-      // select
-      answerText = a.selectedOptions[0] ?? (a.textValue.trim() || '(sin selección)')
-      if (a.textValue.trim() && a.textValue.trim() !== answerText) answerText += ` (${a.textValue.trim()})`
-    }
+		if (q.type === 'text') {
+			answerText = a.textValue.trim() || '(sin respuesta)'
+		} else if (q.type === 'multi') {
+			const parts = [...a.selectedOptions]
+			if (a.textValue.trim()) parts.push(a.textValue.trim())
+			answerText = parts.length > 0 ? parts.join(', ') : '(sin selección)'
+		} else if (q.type === 'confirm') {
+			answerText = a.selectedOptions[0] ?? (a.textValue.trim() || '(sin selección)')
+			if (a.textValue.trim() && a.textValue.trim() !== answerText) answerText += ` (${a.textValue.trim()})`
+		} else {
+			// select
+			answerText = a.selectedOptions[0] ?? (a.textValue.trim() || '(sin selección)')
+			if (a.textValue.trim() && a.textValue.trim() !== answerText) answerText += ` (${a.textValue.trim()})`
+		}
 
-    lines.push(`${stripMarkdown(q.label)}: ${answerText}`)
-  }
+		lines.push(`${stripMarkdown(q.label)}: ${answerText}`)
+	}
 
-  submittedForms.value.push(msgId)
-  messageInput.value = lines.join('\n')
-  await sendMessage()
+	submittedForms.value.push(msgId)
+	messageInput.value = lines.join('\n')
+	await sendMessage()
 }
 
 watch(messages, initFormAnswersFromMessages, { deep: true })
@@ -486,9 +500,15 @@ onMounted(fetchInitialData)
             class="w-full text-left px-4 py-3 border-b border-slate-800/60 hover:bg-slate-800/50 transition-colors group"
             :class="activeConversation?.id === conv.id ? 'bg-slate-800' : ''" @click="openConversation(conv)">
             <div class="flex items-start justify-between gap-2">
-              <div class="min-w-0">
+              <div class="min-w-0 flex-1 pr-2">
                 <p class="text-sm font-medium text-white truncate">{{ conv.title }}</p>
-                <p class="text-xs text-slate-500 mt-0.5">{{ new Date(conv.updatedAt).toLocaleDateString() }}</p>
+                <div class="flex items-center gap-2 mt-0.5">
+                  <p class="text-xs text-slate-500 truncate">{{ new Date(conv.updatedAt).toLocaleDateString() }}</p>
+                  <span class="text-slate-700">•</span>
+                  <p class="text-xs text-indigo-400 truncate" :title="agentsMap.get(conv.agentId) || conv.agentId">
+                    {{ agentsMap.get(conv.agentId) || 'Agente' }}
+                  </p>
+                </div>
               </div>
               <button
                 class="shrink-0 opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-400 transition-all"
