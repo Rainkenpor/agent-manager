@@ -28,15 +28,34 @@ export class UpdateTaskUseCase {
 		private readonly triggerService: TraceabilityAgentTriggerService
 	) {}
 
-	async execute(data: UpdateTaskDTO) {
+	async execute(data: UpdateTaskDTO, triggerAgents = true) {
 		try {
 			const task = await this.repo.updateTask(data)
 			if (!task) return { success: false as const, error: 'Task not found' }
 			const stage = await this.repo.recomputeStageStatus(task.stageId)
-			if (stage.status === 'completed') {
+			if (stage.status === 'completed' && triggerAgents) {
 				this.triggerService.checkAndTrigger(task.stageId).catch(console.error)
 			}
 			return { success: true as const, data: { task, stage } }
+		} catch (error) {
+			return { success: false as const, error: error instanceof Error ? error.message : 'Unknown error' }
+		}
+	}
+}
+
+export class CompleteTaskUseCase {
+	constructor(
+		private readonly repo: ITraceabilityRepository,
+		private readonly triggerService: TraceabilityAgentTriggerService
+	) {}
+
+	async execute(stageId: string) {
+		try {
+			const stage = await this.repo.recomputeStageStatus(stageId)
+			if (stage.status === 'completed') {
+				this.triggerService.checkAndTrigger(stageId).catch(console.error)
+			}
+			return { success: true as const, data: { stageId } }
 		} catch (error) {
 			return { success: false as const, error: error instanceof Error ? error.message : 'Unknown error' }
 		}

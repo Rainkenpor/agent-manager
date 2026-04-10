@@ -70,6 +70,7 @@ import {
 	DeleteTraceabilityUseCase,
 	CreateTaskUseCase,
 	UpdateTaskUseCase,
+	CompleteTaskUseCase,
 	DeleteTaskUseCase,
 	CreateLinkUseCase,
 	DeleteLinkUseCase,
@@ -167,6 +168,7 @@ export class Container {
 	private _deleteTraceabilityUseCase?: DeleteTraceabilityUseCase
 	private _createTaskUseCase?: CreateTaskUseCase
 	private _updateTaskUseCase?: UpdateTaskUseCase
+	private _completeTaskUseCase?: CompleteTaskUseCase
 	private _deleteTaskUseCase?: DeleteTaskUseCase
 	private _createLinkUseCase?: CreateLinkUseCase
 	private _deleteLinkUseCase?: DeleteLinkUseCase
@@ -512,6 +514,12 @@ export class Container {
 	get updateTaskUseCase(): UpdateTaskUseCase {
 		if (!this._updateTaskUseCase) this._updateTaskUseCase = new UpdateTaskUseCase(this._traceabilityRepository, this.tracTriggerService)
 		return this._updateTaskUseCase
+	}
+
+	get completeTaskUseCase(): CompleteTaskUseCase {
+		if (!this._completeTaskUseCase)
+			this._completeTaskUseCase = new CompleteTaskUseCase(this._traceabilityRepository, this.tracTriggerService)
+		return this._completeTaskUseCase
 	}
 
 	get deleteTaskUseCase(): DeleteTaskUseCase {

@@ -48,8 +48,7 @@ const updateTemplateStageSchema = z.object({
 const createTraceabilitySchema = z.object({
 	title: z.string().min(1),
 	description: z.string().optional(),
-	templateId: z.string(),
-	userId: z.string().nullable().optional() // Para permitir que el userId venga del input (en caso de llamada desde MCP) o del req.user (en caso de llamada HTTP)
+	templateId: z.string()
 })
 
 const updateTraceabilitySchema = z.object({
@@ -250,12 +249,12 @@ export function registerTraceabilityRoutes(): void {
 		path: '/api/traceability',
 		toolName: 'create_traceability',
 		toolDescription:
-			'Crea una nueva trazabilidad a partir de un template. Las etapas del template se copian como instancias independientes. Usa list_traceability_templates para obtener los IDs de templates disponibles. userId es obligatorio para tool calls',
+			'Crea una nueva trazabilidad a partir de un template. Las etapas del template se copian como instancias independientes. Usa list_traceability_templates para obtener los IDs de templates disponibles.',
 		inputSchema: createTraceabilitySchema.shape,
 		requiresAuth: true,
 		requiredPermission: { resource: 'traceability', action: 'create' },
 		handler: async ({ input, context: { req } }) =>
-			container.createTraceabilityUseCase.execute({ ...input, createdBy: (input.userId || (req as any).user?.id) ?? null })
+			container.createTraceabilityUseCase.execute({ ...input, createdBy: (req as any).user?.id })
 	})
 
 	registry.register({
@@ -300,7 +299,17 @@ export function registerTraceabilityRoutes(): void {
 	})
 
 	registry.register({
-		useBy: ['server', 'mcp'],
+		useBy: ['server'],
+		method: 'PUT',
+		path: '/api/traceability/tasks/:id',
+		inputSchema: updateTaskSchema.shape,
+		requiresAuth: true,
+		requiredPermission: { resource: 'traceability', action: 'update' },
+		handler: async ({ input }) => container.updateTaskUseCase.execute(input)
+	})
+
+	registry.register({
+		useBy: ['mcp'],
 		method: 'PUT',
 		path: '/api/traceability/tasks/:id',
 		toolName: 'update_traceability_task',
@@ -309,7 +318,20 @@ export function registerTraceabilityRoutes(): void {
 		inputSchema: updateTaskSchema.shape,
 		requiresAuth: true,
 		requiredPermission: { resource: 'traceability', action: 'update' },
-		handler: async ({ input }) => container.updateTaskUseCase.execute(input)
+		handler: async ({ input }) => container.updateTaskUseCase.execute(input, false)
+	})
+
+	registry.register({
+		useBy: ['mcp'],
+		method: 'PUT',
+		path: '/api/traceability/tasks/:id',
+		toolName: 'completed_traceability_task',
+		toolDescription:
+			'Marca una tarea de trazabilidad como completada. El estado de la etapa padre se recalcula automáticamente, y si la etapa queda completa, se disparan los agentes asignados a las etapas siguientes.',
+		inputSchema: z.object({ id: z.string().describe('ID de la tarea a marcar como completada') }).shape,
+		requiresAuth: true,
+		requiredPermission: { resource: 'traceability', action: 'update' },
+		handler: async ({ input }) => container.completeTaskUseCase.execute(input.id)
 	})
 
 	registry.register({

@@ -1,13 +1,12 @@
-import { AgentRepository } from './../repository/agent.repository'
 import { AgentService } from './agent.service.js'
-import type { ITraceabilityRepository } from '../../domain/repositories/index.js'
+import type { IAgentRepository, ITraceabilityRepository } from '../../domain/repositories/index.js'
 
 export class TraceabilityAgentTriggerService {
 	private readonly agentService: AgentService
 
 	constructor(
 		private readonly repo: ITraceabilityRepository,
-		private readonly agentRepository: AgentRepository
+		private readonly agentRepository: IAgentRepository
 	) {
 		this.agentService = new AgentService()
 	}
@@ -54,7 +53,7 @@ export class TraceabilityAgentTriggerService {
 			}
 			await this.agentService.executeAgent({
 				agentSlug: stage.agentSlug,
-				query: `Eres un agente automatizado asignado a la etapa "${stage.name}" de la trazabilidad "${trac?.title ?? stage.traceabilityId}". Revisa el contexto adjunto con toda la información de la trazabilidad, sus etapas y tareas. Completa las tareas de esta etapa (stageId: ${stage.id}) usando las herramientas disponibles (create_traceability_task, update_traceability_task) y actualiza su estado según corresponda.`,
+				query: `Eres un agente automatizado asignado a la etapa "${stage.name}" de la trazabilidad "${trac?.title ?? stage.traceabilityId}". Revisa el contexto adjunto con toda la información de la trazabilidad, sus etapas y tareas. Completa las tareas de esta etapa (stageId: ${stage.id}) usando las herramientas disponibles (create_traceability_task, update_traceability_task, complete_traceability_task) y actualiza su estado según corresponda.`,
 				systemPrompt: `${stage.agentContent} \n\nContexto: ${context}` || undefined,
 				allowedTools: new Set(
 					Object.entries(agent.tools)

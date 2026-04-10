@@ -131,7 +131,7 @@ function grepDirectory(
 }
 
 /** Invoke a registered MCP tool via the in-process registry */
-async function callRegisteredTool(toolName: string, params: Record<string, unknown>): Promise<string> {
+async function callRegisteredTool(toolName: string, params: Record<string, unknown>, userId?: string | null): Promise<string> {
 	const routes = registry.getRoutes()
 	const route = routes.find(
 		(r) =>
@@ -151,9 +151,10 @@ async function callRegisteredTool(toolName: string, params: Record<string, unkno
 		const result = await route.handler({
 			input: params as never,
 			context: {
-				req: {} as Request,
+				req: userId ? ({ user: { id: userId } } as any as Request) : ({} as Request),
 				res: {} as Response,
-				next: (() => {}) as NextFunction
+				next: (() => {}) as NextFunction,
+				signal: new AbortController().signal // Proporcionar una señal de aborto vacía para herramientas que la requieran, aunque no se pueda abortar realmente en este contexto
 			},
 			oauthService: null as never
 		})
@@ -341,15 +342,14 @@ export function buildToolDefinitions(
 
 	const externalMcpTools: Tool[] = mcpExternal ? (mcpExternal.getTools() as Tool[]) : []
 
-
 	if (allowedTools && allowedTools.size > 0) {
 		const filterBaseTools = baseTools.filter((t) => allowedTools.has(t.function.name))
 		const filteredMcp = mcpTools.filter((t) => allowedTools.has(`agent-manager_${t.function.name}`))
 		const filteredExternal = externalMcpTools.filter((t) => allowedTools.has(t.function.name))
-		return [ ...filterBaseTools, ...filteredMcp, ...filteredExternal]
+		return [...filterBaseTools, ...filteredMcp, ...filteredExternal]
 	}
 
-	return [ ...baseTools, ...mcpTools, ...externalMcpTools]
+	return [...baseTools, ...mcpTools, ...externalMcpTools]
 }
 
 /** Execute a single tool call and return a string result */
@@ -363,7 +363,6 @@ export async function executeToolCall(
 	try {
 		originalParams.toolsCallbacks?.onToolCall(toolName, args) // Notificar a callbacks de herramienta invocada, si existe
 		switch (toolName) {
-			
 			case 'get_user_mcp_credentials': {
 				const credCb = originalParams.toolsCallbacks?.credentialCallbacks
 				if (!credCb) return 'Error: credential callbacks not available in this context'
@@ -429,7 +428,7 @@ export async function executeToolCall(
 				if (mcpExternal?.isMcpTool(toolName)) return await mcpExternal.callTool(toolName, args, originalParams.userId)
 
 				// Si no es una herramienta externa, intenta llamar a una herramienta registrada en el registry de la aplicación. Esto permite que las herramientas definidas en el código sean accesibles para los agentes.
-				return await callRegisteredTool(toolName, args)
+				return await callRegisteredTool(toolName, args, originalParams.userId)
 		}
 	} catch (err) {
 		return `Error in tool '${toolName}': ${err instanceof Error ? err.message : String(err)}`
