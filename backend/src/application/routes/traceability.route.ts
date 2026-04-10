@@ -29,6 +29,7 @@ const createTemplateStageSchema = z.object({
 	type: z.enum(['manual', 'agent']).optional(),
 	agentId: z.string().nullable().optional(),
 	documentSchema: z.array(documentSectionSchema).nullable().optional(),
+	effortScore: z.number().int().min(1).max(10).optional(),
 	predecessors: z.array(z.string()).optional()
 })
 
@@ -42,6 +43,7 @@ const updateTemplateStageSchema = z.object({
 	type: z.enum(['manual', 'agent']).optional(),
 	agentId: z.string().nullable().optional(),
 	documentSchema: z.array(documentSectionSchema).nullable().optional(),
+	effortScore: z.number().int().min(1).max(10).optional(),
 	predecessors: z.array(z.string()).optional()
 })
 
@@ -213,6 +215,18 @@ export function registerTraceabilityRoutes(): void {
 		requiresAuth: true,
 		requiredPermission: { resource: 'traceability', action: 'delete' },
 		handler: async ({ input }) => container.deleteTemplateStageUseCase.execute(input.id)
+	})
+
+	// ─── Effort & Assignment ─────────────────────────────────────────────────────
+
+	registry.register({
+		useBy: ['server'],
+		method: 'GET',
+		path: '/api/traceability/my-stages',
+		inputSchema: {},
+		requiresAuth: true,
+		requiredPermission: { resource: 'traceability', action: 'read' },
+		handler: async ({ context: { req } }) => container.getMyStagesUseCase.execute((req as any).user?.id)
 	})
 
 	// ─── Traceabilities (HTTP + MCP) ─────────────────────────────────────────────
@@ -440,5 +454,28 @@ export function registerTraceabilityRoutes(): void {
 		requiresAuth: true,
 		requiredPermission: { resource: 'traceability', action: 'update' },
 		handler: async ({ input }) => container.deleteDocumentUseCase.execute(input.id)
+	})
+
+	registry.register({
+		useBy: ['server'],
+		method: 'GET',
+		path: '/api/traceability/stages/users-by-role',
+		inputSchema: z.object({ role: z.string().describe('ID del rol') }).shape,
+		requiresAuth: true,
+		requiredPermission: { resource: 'traceability', action: 'read' },
+		handler: async ({ input }) => container.getUsersByRoleWithEffortUseCase.execute(input.role)
+	})
+
+	registry.register({
+		useBy: ['server'],
+		method: 'PUT',
+		path: '/api/traceability/stages/:id/assign',
+		inputSchema: z.object({
+			id: z.string(),
+			userId: z.string().nullable()
+		}).shape,
+		requiresAuth: true,
+		requiredPermission: { resource: 'traceability', action: 'update' },
+		handler: async ({ input }) => container.assignStageUserUseCase.execute(input.id, input.userId)
 	})
 }

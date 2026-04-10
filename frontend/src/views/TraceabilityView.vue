@@ -16,6 +16,7 @@ const templates = ref<any[]>([])
 const traceabilities = ref<any[]>([])
 const roles = ref<any[]>([])
 const agents = ref<any[]>([])
+const allUsers = ref<any[]>([])
 const loading = ref(false)
 
 const canCreate = computed(() => auth.hasPermission('traceability', 'create'))
@@ -32,19 +33,28 @@ function agentNameById(id: string) {
   return agents.value.find(a => a.id === id)?.name ?? id
 }
 
+function userNameById(id: string | null | undefined) {
+  if (!id) return ''
+  const u = allUsers.value.find((u: any) => u.id === id)
+  if (!u) return id
+  return [u.firstName, u.lastName].filter(Boolean).join(' ') || u.username
+}
+
 async function fetchAll() {
   loading.value = true
   try {
-    const [tplRes, tracRes, rolesRes, agentsRes] = await Promise.all([
+    const [tplRes, tracRes, rolesRes, agentsRes, usersRes] = await Promise.all([
       api.getTraceabilityTemplates(),
       api.getTraceabilities(),
       api.getRoles(),
       api.getAgents(),
+      api.getUsers(),
     ])
     templates.value = tplRes.data ?? []
     traceabilities.value = tracRes.data ?? []
     roles.value = Array.isArray(rolesRes) ? rolesRes : (rolesRes as any).data ?? []
     agents.value = (Array.isArray(agentsRes) ? agentsRes : (agentsRes as any).data ?? []).filter((a: any) => a.isActive)
+    allUsers.value = Array.isArray(usersRes) ? usersRes : (usersRes as any).data ?? []
   } catch (e: any) {
     toast.error(e.message)
   } finally {
@@ -188,6 +198,10 @@ const showLinkForm = ref(false)
 const linkForm = ref({ label: '', url: '', platform: 'generic' })
 const showDocForm = ref(false)
 const docForm = ref({ name: '', content: '' })
+
+// Assignee state
+const stageUsers = ref<any[]>([])
+const loadingUsers = ref(false)
 // Document viewer modal
 const activeDocument = ref<any>(null)
 const docViewerLoading = ref(false)
@@ -202,6 +216,38 @@ function openStagePanel(stage: any) {
   taskForm.value = { title: '', description: '', type: 'task', status: 'todo' }
   linkForm.value = { label: '', url: '', platform: 'generic' }
   docForm.value = { name: '', content: '' }
+  if (activeStage.value) loadUsersForStage(activeStage.value)
+}
+
+// ── Assignee ─────────────────────────────────────────────────────────────────
+
+async function loadUsersForStage(stage: any) {
+  if (!stage.role) { stageUsers.value = []; return }
+  loadingUsers.value = true
+  try {
+    const res = await api.getUsersByRoleWithEffort(stage.role)
+    stageUsers.value = res.data ?? []
+  } catch {
+    stageUsers.value = []
+  } finally {
+    loadingUsers.value = false
+  }
+}
+
+async function assignUser(userId: string | null) {
+  if (!activeStage.value) return
+  try {
+    await api.assignStageUser(activeStage.value.id, userId)
+    syncStageInTrac({ ...activeStage.value, assignedUserId: userId })
+    toast.success('Asignado actualizado')
+  } catch (e: any) {
+    toast.error(e.message)
+  }
+}
+
+function userDisplayName(u: any) {
+  const name = [u.firstName, u.lastName].filter(Boolean).join(' ') || u.username
+  return `${name} (esfuerzo: ${u.effortScore})`
 }
 
 function syncStageInTrac(updatedStage: any) {
@@ -676,6 +722,10 @@ onMounted(fetchAll)
                           {{ agentNameById(stage.agentId) }}
                         </p>
                         <p v-if="stage.role" class="text-xs text-slate-500 mb-1.5">{{ roleNameById(stage.role) }}</p>
+                        <p v-if="stage.assignedUserId" class="text-xs text-indigo-400 mb-1.5 truncate">
+                          👤 {{ userNameById(stage.assignedUserId) }}
+                        </p>
+                        <p v-else-if="stage.role" class="text-xs text-slate-600 mb-1.5 italic">Sin asignar</p>
                         <div class="flex items-center gap-2 flex-wrap">
                           <span class="text-xs px-2 py-0.5 rounded-full font-medium" :class="stageStatusClass[stage.status]">
                             {{ stageStatusLabel[stage.status] }}
@@ -726,6 +776,24 @@ onMounted(fetchAll)
                 </svg>
               </button>
             </div>
+          </div>
+
+          <!-- ── Assignee ── -->
+          <div v-if="activeStage.role" class="mb-5">
+            <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Asignado</h4>
+            <div v-if="loadingUsers" class="text-xs text-slate-500 italic">Cargando usuarios...</div>
+            <select v-else-if="canUpdate"
+              :value="activeStage.assignedUserId ?? ''"
+              @change="assignUser(($event.target as HTMLSelectElement).value || null)"
+              class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500">
+              <option value="">— Sin asignar —</option>
+              <option v-for="u in stageUsers" :key="u.userId" :value="u.userId">
+                {{ userDisplayName(u) }}
+              </option>
+            </select>
+            <p v-else class="text-xs text-slate-300">
+              {{ stageUsers.find(u => u.userId === activeStage.assignedUserId) ? userDisplayName(stageUsers.find(u => u.userId === activeStage.assignedUserId)) : '— Sin asignar —' }}
+            </p>
           </div>
 
           <!-- ── Tasks ── -->

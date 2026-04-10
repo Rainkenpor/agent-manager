@@ -207,6 +207,14 @@ export const updateTraceabilityDocument = (id: string, data: { name?: string; co
 export const deleteTraceabilityDocument = (id: string) =>
   request<{ success: boolean }>(`/traceability/documents/${id}`, { method: 'DELETE' })
 
+// Effort & Assignment
+export const getUsersByRoleWithEffort = (roleId: string) =>
+  request<{ success: boolean; data: any[] }>(`/traceability/stages/users-by-role?role=${encodeURIComponent(roleId)}`)
+export const assignStageUser = (stageId: string, userId: string | null) =>
+  request<{ success: boolean; data: any }>(`/traceability/stages/${stageId}/assign`, { method: 'PUT', body: JSON.stringify({ userId }) })
+export const getMyStages = () =>
+  request<{ success: boolean; data: any[] }>('/traceability/my-stages')
+
 export function streamMessage(conversationId: string, content: string, signal?: AbortSignal): Promise<Response> {
 	const token = localStorage.getItem('token')
 	return fetch(`${BASE}/chat/conversations/${conversationId}/messages`, {

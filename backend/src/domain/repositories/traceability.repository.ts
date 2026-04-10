@@ -8,6 +8,8 @@ import type {
 	TraceabilityTask,
 	TraceabilityLink,
 	TraceabilityDocument,
+	UserEffort,
+	MyStage,
 	CreateTemplateDTO,
 	UpdateTemplateDTO,
 	CreateTemplateStageDTO,
@@ -50,6 +52,11 @@ export interface ITraceabilityRepository {
 	recomputeStageStatus(stageId: string): Promise<TraceabilityStage>
 	findReadyAgentStages(completedStageId: string): Promise<Array<TraceabilityStage & { agentSlug: string; agentContent: string }>>
 	updateStageStatus(stageId: string, status: StageStatus): Promise<void>
+
+	// ─── Effort & Assignment ─────────────────────────────────────────────────────
+	getUsersByRoleWithEffort(roleId: string): Promise<UserEffort[]>
+	assignUserToStage(stageId: string, userId: string | null): Promise<void>
+	findStagesByUserId(userId: string): Promise<MyStage[]>
 
 	// ─── Tasks ───────────────────────────────────────────────────────────────────
 	createTask(data: CreateTaskDTO): Promise<TraceabilityTask>

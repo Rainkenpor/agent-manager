@@ -78,7 +78,10 @@ import {
 	UpdateDocumentUseCase,
 	DeleteDocumentUseCase,
 	GetDocumentUseCase,
-	GetTemplateByCodeUseCase
+	GetTemplateByCodeUseCase,
+	GetUsersByRoleWithEffortUseCase,
+	AssignStageUserUseCase,
+	GetMyStagesUseCase
 } from './use-cases/index.js'
 import { GetSkillsAllowedForUserUseCase } from './use-cases/skill/get-skills-allowed-user.js'
 import { TraceabilityAgentTriggerService } from '@infra/service/traceability-agent-trigger.service.js'
@@ -177,6 +180,9 @@ export class Container {
 	private _deleteDocumentUseCase?: DeleteDocumentUseCase
 	private _getDocumentUseCase?: GetDocumentUseCase
 	private _getTemplateByCodeUseCase?: GetTemplateByCodeUseCase
+	private _getUsersByRoleWithEffortUseCase?: GetUsersByRoleWithEffortUseCase
+	private _assignStageUserUseCase?: AssignStageUserUseCase
+	private _getMyStagesUseCase?: GetMyStagesUseCase
 
 	constructor() {
 		// Initialize repositories with concrete implementations
@@ -560,6 +566,22 @@ export class Container {
 	get getTemplateByCodeUseCase(): GetTemplateByCodeUseCase {
 		if (!this._getTemplateByCodeUseCase) this._getTemplateByCodeUseCase = new GetTemplateByCodeUseCase(this._traceabilityRepository)
 		return this._getTemplateByCodeUseCase
+	}
+
+	get getUsersByRoleWithEffortUseCase(): GetUsersByRoleWithEffortUseCase {
+		if (!this._getUsersByRoleWithEffortUseCase)
+			this._getUsersByRoleWithEffortUseCase = new GetUsersByRoleWithEffortUseCase(this._traceabilityRepository)
+		return this._getUsersByRoleWithEffortUseCase
+	}
+
+	get assignStageUserUseCase(): AssignStageUserUseCase {
+		if (!this._assignStageUserUseCase) this._assignStageUserUseCase = new AssignStageUserUseCase(this._traceabilityRepository)
+		return this._assignStageUserUseCase
+	}
+
+	get getMyStagesUseCase(): GetMyStagesUseCase {
+		if (!this._getMyStagesUseCase) this._getMyStagesUseCase = new GetMyStagesUseCase(this._traceabilityRepository)
+		return this._getMyStagesUseCase
 	}
 }
 

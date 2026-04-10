@@ -9,9 +9,11 @@ import {
 	traceabilityDocuments,
 	templateStagePredecessors,
 	traceabilityStagePredecessors,
-	agents
+	agents,
+	users,
+	userRoles
 } from '../db/schema.js'
-import { eq, and, inArray } from 'drizzle-orm'
+import { eq, and, inArray, ne } from 'drizzle-orm'
 import { v4 as uuidv4 } from 'uuid'
 import type { ITraceabilityRepository } from '../../domain/repositories/traceability.repository.js'
 import type {
@@ -24,6 +26,9 @@ import type {
 	TraceabilityTask,
 	TraceabilityLink,
 	TraceabilityDocument,
+	UserEffort,
+	MyStage,
+	TraceabilityStatus,
 	CreateTemplateDTO,
 	UpdateTemplateDTO,
 	CreateTemplateStageDTO,
@@ -102,6 +107,7 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 						type: (s.type ?? 'manual') as 'manual' | 'agent',
 						agentId: s.agentId ?? null,
 						documentSchema: parseDocumentSchema(s.documentSchema ?? null),
+						effortScore: s.effortScore ?? 5,
 						predecessors: allPredecessors.filter((p) => p.stageId === s.id).map((p) => p.predecessorStageId)
 					})) as TemplateStage[]
 			)
@@ -125,6 +131,7 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 					type: (s.type ?? 'manual') as 'manual' | 'agent',
 					agentId: s.agentId ?? null,
 					documentSchema: parseDocumentSchema(s.documentSchema ?? null),
+					effortScore: s.effortScore ?? 5,
 					predecessors: predecessors.filter((p) => p.stageId === s.id).map((p) => p.predecessorStageId)
 				})) as TemplateStage[]
 		)
@@ -182,6 +189,7 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 			type: (data.type ?? 'manual') as 'manual' | 'agent',
 			agentId: data.agentId ?? null,
 			documentSchema: serializeDocumentSchema(data.documentSchema ?? null),
+			effortScore: data.effortScore ?? 5,
 			createdAt: now
 		}
 		await db.insert(templateStages).values(row)
@@ -203,9 +211,10 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 	}
 
 	async updateTemplateStage(data: UpdateTemplateStageDTO): Promise<TemplateStage | null> {
-		const { id, predecessors, documentSchema: ds, ...rest } = data
+		const { id, predecessors, documentSchema: ds, effortScore, ...rest } = data
 		const updatePayload: Record<string, unknown> = { ...rest }
 		if (ds !== undefined) updatePayload.documentSchema = serializeDocumentSchema(ds)
+		if (effortScore !== undefined) updatePayload.effortScore = effortScore
 		await db.update(templateStages).set(updatePayload).where(eq(templateStages.id, id))
 		// Replace predecessors if provided
 		if (predecessors !== undefined) {
@@ -243,6 +252,7 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 			type: (rows[0].type ?? 'manual') as 'manual' | 'agent',
 			agentId: rows[0].agentId ?? null,
 			documentSchema: parseDocumentSchema(rows[0].documentSchema ?? null),
+			effortScore: rows[0].effortScore ?? 5,
 			predecessors: preds.map((p) => p.predecessorStageId)
 		} as TemplateStage
 	}
@@ -284,6 +294,7 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 							parallelGroup: ts.parallelGroup ?? null,
 							type: ts.type ?? 'manual',
 							agentId: ts.agentId ?? null,
+							effortScore: ts.effortScore ?? 5,
 							updatedAt: now
 						})
 						.where(eq(traceabilityStages.id, existing.id))
@@ -300,6 +311,7 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 						parallelGroup: ts.parallelGroup ?? null,
 						type: ts.type ?? 'manual',
 						agentId: ts.agentId ?? null,
+						effortScore: ts.effortScore ?? 5,
 						status: 'pending',
 						createdAt: now,
 						updatedAt: now
@@ -392,6 +404,8 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 				agentId: s.agentId ?? null,
 				predecessors: allPredecessors.filter((p) => p.stageId === s.id).map((p) => p.predecessorStageId),
 				status: s.status as StageStatus,
+				effortScore: s.effortScore ?? 5,
+				assignedUserId: s.assignedUserId ?? null,
 				tasks: allTasks.filter((tk) => tk.stageId === s.id),
 				links: allLinks.filter((lk) => lk.stageId === s.id),
 				documents: allDocuments.filter((d) => d.stageId === s.id),
@@ -434,9 +448,38 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 		const stageIdMap = new Map<string, string>()
 		const stageList: TraceabilityStage[] = []
 
+		// Pre-load effort scores per role for auto-assignment
+		const roleIds = [...new Set(template.stages.map((ts) => ts.role).filter((r): r is string => !!r))]
+		const userEffortCache = new Map<string, UserEffort[]>()
+		for (const roleId of roleIds) {
+			userEffortCache.set(roleId, await this.getUsersByRoleWithEffort(roleId))
+		}
+		// Track in-session effort increments (DB not yet reflecting new assignments)
+		const sessionEffortDelta = new Map<string, number>()
+
 		for (const ts of template.stages) {
 			const stageId = uuidv4()
 			stageIdMap.set(ts.id, stageId)
+
+			// Auto-assign user with least effort for the stage role
+			let assignedUserId: string | null = null
+			if (ts.role) {
+				const candidates = userEffortCache.get(ts.role) ?? []
+				if (candidates.length > 0) {
+					let minUser = candidates[0]
+					let minEffort = minUser.effortScore + (sessionEffortDelta.get(minUser.userId) ?? 0)
+					for (const u of candidates) {
+						const total = u.effortScore + (sessionEffortDelta.get(u.userId) ?? 0)
+						if (total < minEffort) {
+							minEffort = total
+							minUser = u
+						}
+					}
+					assignedUserId = minUser.userId
+					sessionEffortDelta.set(minUser.userId, (sessionEffortDelta.get(minUser.userId) ?? 0) + (ts.effortScore ?? 5))
+				}
+			}
+
 			await db.insert(traceabilityStages).values({
 				id: stageId,
 				traceabilityId: id,
@@ -448,6 +491,8 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 				parallelGroup: ts.parallelGroup ?? null,
 				type: ts.type ?? 'manual',
 				agentId: ts.agentId ?? null,
+				effortScore: ts.effortScore ?? 5,
+				assignedUserId,
 				status: 'pending',
 				createdAt: now,
 				updatedAt: now
@@ -465,6 +510,8 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 				agentId: ts.agentId ?? null,
 				predecessors: [],
 				status: 'pending',
+				effortScore: ts.effortScore ?? 5,
+				assignedUserId,
 				tasks: [],
 				links: [],
 				documents: [],
@@ -555,6 +602,8 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 			agentId: s.agentId ?? null,
 			predecessors: predRows.map((p) => p.predecessorStageId),
 			status: newStatus,
+			effortScore: s.effortScore ?? 5,
+			assignedUserId: s.assignedUserId ?? null,
 			tasks: tasks as TraceabilityTask[],
 			links: links as TraceabilityLink[],
 			documents: documents as TraceabilityDocument[],
@@ -614,6 +663,8 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 				type: stage.type as 'agent',
 				agentId: stage.agentId,
 				status: stage.status as StageStatus,
+				effortScore: stage.effortScore ?? 5,
+				assignedUserId: stage.assignedUserId ?? null,
 				predecessors: predIds,
 				tasks: stageTasks as TraceabilityTask[],
 				links: stageLinks as TraceabilityLink[],
@@ -730,5 +781,108 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 		if (!stageIds.length) return []
 		const docRows = await db.select().from(traceabilityDocuments).where(inArray(traceabilityDocuments.stageId, stageIds))
 		return docRows as TraceabilityDocument[]
+	}
+
+	// ─── Effort & Assignment ─────────────────────────────────────────────────────
+
+	async getUsersByRoleWithEffort(roleId: string): Promise<UserEffort[]> {
+		// Get all active users with the given role
+		const usersWithRole = await db
+			.select({
+				userId: userRoles.userId,
+				username: users.username,
+				firstName: users.firstName,
+				lastName: users.lastName,
+				email: users.email
+			})
+			.from(userRoles)
+			.innerJoin(users, eq(userRoles.userId, users.id))
+			.where(and(eq(userRoles.roleId, roleId), eq(users.active, true)))
+
+		// For each user calculate total effort of active (non-completed) assigned stages
+		const result: UserEffort[] = []
+		for (const u of usersWithRole) {
+			const activeStages = await db
+				.select({ effortScore: traceabilityStages.effortScore })
+				.from(traceabilityStages)
+				.where(and(eq(traceabilityStages.assignedUserId, u.userId), ne(traceabilityStages.status, 'completed')))
+			const effortScore = activeStages.reduce((sum, s) => sum + (s.effortScore ?? 5), 0)
+			result.push({
+				userId: u.userId,
+				username: u.username,
+				firstName: u.firstName ?? null,
+				lastName: u.lastName ?? null,
+				email: u.email,
+				effortScore
+			})
+		}
+
+		return result.sort((a, b) => a.effortScore - b.effortScore)
+	}
+
+	async assignUserToStage(stageId: string, userId: string | null): Promise<void> {
+		await db
+			.update(traceabilityStages)
+			.set({ assignedUserId: userId, updatedAt: new Date().toISOString() })
+			.where(eq(traceabilityStages.id, stageId))
+	}
+
+	async findStagesByUserId(userId: string): Promise<MyStage[]> {
+		const stages = await db
+			.select()
+			.from(traceabilityStages)
+			.where(eq(traceabilityStages.assignedUserId, userId))
+
+		if (!stages.length) return []
+
+		const tracIds = [...new Set(stages.map((s) => s.traceabilityId))]
+		const tracRows = await db
+			.select({ id: traceabilities.id, title: traceabilities.title, status: traceabilities.status })
+			.from(traceabilities)
+			.where(inArray(traceabilities.id, tracIds))
+		const tracMap = new Map(tracRows.map((t) => [t.id, t]))
+
+		const result: MyStage[] = []
+		for (const stage of stages) {
+			const trac = tracMap.get(stage.traceabilityId)
+			if (!trac) continue
+			const tasks = await db.select().from(traceabilityTasks).where(eq(traceabilityTasks.stageId, stage.id))
+			const links = await db.select().from(traceabilityLinks).where(eq(traceabilityLinks.stageId, stage.id))
+			const docs = await db.select().from(traceabilityDocuments).where(eq(traceabilityDocuments.stageId, stage.id))
+			const preds = await db.select().from(traceabilityStagePredecessors).where(eq(traceabilityStagePredecessors.stageId, stage.id))
+			const predIds = preds.map((p) => p.predecessorStageId)
+			const predecessorsCompleted = predIds.length === 0
+				? true
+				: (await db
+						.select({ id: traceabilityStages.id, status: traceabilityStages.status })
+						.from(traceabilityStages)
+						.where(inArray(traceabilityStages.id, predIds))
+					).every((s) => s.status === 'completed')
+			result.push({
+				id: stage.id,
+				traceabilityId: stage.traceabilityId,
+				templateStageId: stage.templateStageId,
+				name: stage.name,
+				description: stage.description,
+				role: stage.role,
+				order: stage.order,
+				parallelGroup: stage.parallelGroup,
+				type: (stage.type ?? 'manual') as 'manual' | 'agent',
+				agentId: stage.agentId ?? null,
+				predecessors: preds.map((p) => p.predecessorStageId),
+				status: stage.status as StageStatus,
+				effortScore: stage.effortScore ?? 5,
+				assignedUserId: stage.assignedUserId ?? null,
+				tasks: tasks as TraceabilityTask[],
+				links: links as TraceabilityLink[],
+				documents: docs as TraceabilityDocument[],
+				createdAt: stage.createdAt,
+				updatedAt: stage.updatedAt,
+				traceabilityTitle: trac.title,
+				traceabilityStatus: trac.status as TraceabilityStatus,
+				predecessorsCompleted,
+			})
+		}
+		return result
 	}
 }

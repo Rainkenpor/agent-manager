@@ -7,196 +7,216 @@ export type TraceabilityStatus = 'active' | 'completed' | 'archived'
 // ─── Templates ────────────────────────────────────────────────────────────────
 
 export interface DocumentSection {
-  name: string
-  description?: string
-  required: boolean
+	name: string
+	description?: string
+	required: boolean
 }
 
 export interface TemplateStage {
-  id: string
-  templateId: string
-  name: string
-  description?: string | null
-  role?: string | null
-  order: number
-  parallelGroup?: string | null
-  type: 'manual' | 'agent'
-  agentId?: string | null
-  documentSchema?: DocumentSection[] | null
-  predecessors: string[]
-  createdAt: string
+	id: string
+	templateId: string
+	name: string
+	description?: string | null
+	role?: string | null
+	order: number
+	parallelGroup?: string | null
+	type: 'manual' | 'agent'
+	agentId?: string | null
+	documentSchema?: DocumentSection[] | null
+	effortScore: number
+	predecessors: string[]
+	createdAt: string
+}
+
+export interface UserEffort {
+	userId: string
+	username: string
+	firstName?: string | null
+	lastName?: string | null
+	email: string
+	effortScore: number
 }
 
 export interface TraceabilityTemplate {
-  id: string
-  code: string | null
-  name: string
-  description?: string | null
-  stages: TemplateStage[]
-  createdAt: string
-  updatedAt: string
+	id: string
+	code: string | null
+	name: string
+	description?: string | null
+	stages: TemplateStage[]
+	createdAt: string
+	updatedAt: string
 }
 
 export interface CreateTemplateDTO {
-  name: string
-  description?: string
+	name: string
+	description?: string
 }
 
 export interface UpdateTemplateDTO {
-  id: string
-  name?: string
-  description?: string | null
+	id: string
+	name?: string
+	description?: string | null
 }
 
 export interface CreateTemplateStageDTO {
-  templateId: string
-  name: string
-  description?: string
-  role?: string
-  order: number
-  parallelGroup?: string
-  type?: 'manual' | 'agent'
-  agentId?: string | null
-  documentSchema?: DocumentSection[] | null
-  predecessors?: string[]
+	templateId: string
+	name: string
+	description?: string
+	role?: string
+	order: number
+	parallelGroup?: string
+	type?: 'manual' | 'agent'
+	agentId?: string | null
+	documentSchema?: DocumentSection[] | null
+	effortScore?: number
+	predecessors?: string[]
 }
 
 export interface UpdateTemplateStageDTO {
-  id: string
-  name?: string
-  description?: string | null
-  role?: string | null
-  order?: number
-  parallelGroup?: string | null
-  type?: 'manual' | 'agent'
-  agentId?: string | null
-  documentSchema?: DocumentSection[] | null
-  predecessors?: string[]
+	id: string
+	name?: string
+	description?: string | null
+	role?: string | null
+	order?: number
+	parallelGroup?: string | null
+	type?: 'manual' | 'agent'
+	agentId?: string | null
+	documentSchema?: DocumentSection[] | null
+	effortScore?: number
+	predecessors?: string[]
 }
 
 // ─── Traceability Instances ───────────────────────────────────────────────────
 
 export interface TraceabilityLink {
-  id: string
-  stageId: string
-  label: string
-  url: string
-  platform: LinkPlatform
-  createdAt: string
+	id: string
+	stageId: string
+	label: string
+	url: string
+	platform: LinkPlatform
+	createdAt: string
 }
 
 export interface TraceabilityDocument {
-  id: string
-  stageId: string
-  name: string
-  content: string
-  createdAt: string
-  updatedAt: string
+	id: string
+	stageId: string
+	name: string
+	content: string
+	createdAt: string
+	updatedAt: string
 }
 
 export interface CreateDocumentDTO {
-  stageId: string
-  name: string
-  content?: string
+	stageId: string
+	name: string
+	content?: string
 }
 
 export interface UpdateDocumentDTO {
-  id: string
-  name?: string
-  content?: string
+	id: string
+	name?: string
+	content?: string
 }
 
 export interface TraceabilityTask {
-  id: string
-  stageId: string
-  title: string
-  description?: string | null
-  type: TaskType
-  status: TaskStatus
-  createdAt: string
-  updatedAt: string
+	id: string
+	stageId: string
+	title: string
+	description?: string | null
+	type: TaskType
+	status: TaskStatus
+	createdAt: string
+	updatedAt: string
 }
 
 export interface TraceabilityStage {
-  id: string
-  traceabilityId: string
-  templateStageId?: string | null
-  name: string
-  description?: string | null
-  role?: string | null
-  order: number
-  parallelGroup?: string | null
-  type: 'manual' | 'agent'
-  agentId?: string | null
-  predecessors: string[]
-  status: StageStatus
-  tasks: TraceabilityTask[]
-  links: TraceabilityLink[]
-  documents: TraceabilityDocument[]
-  createdAt: string
-  updatedAt: string
+	id: string
+	traceabilityId: string
+	templateStageId?: string | null
+	name: string
+	description?: string | null
+	role?: string | null
+	order: number
+	parallelGroup?: string | null
+	type: 'manual' | 'agent'
+	agentId?: string | null
+	predecessors: string[]
+	status: StageStatus
+	effortScore: number
+	assignedUserId?: string | null
+	tasks: TraceabilityTask[]
+	links: TraceabilityLink[]
+	documents: TraceabilityDocument[]
+	createdAt: string
+	updatedAt: string
 }
 
 export interface Traceability {
-  id: string
-  title: string
-  description?: string | null
-  status: TraceabilityStatus
-  templateId?: string | null
-  templateName?: string | null
-  createdBy?: string | null
-  stages: TraceabilityStage[]
-  createdAt: string
-  updatedAt: string
+	id: string
+	title: string
+	description?: string | null
+	status: TraceabilityStatus
+	templateId?: string | null
+	templateName?: string | null
+	createdBy?: string | null
+	stages: TraceabilityStage[]
+	createdAt: string
+	updatedAt: string
 }
 
 export interface TraceabilitySummary {
-  id: string
-  title: string
-  description?: string | null
-  status: TraceabilityStatus
-  templateId?: string | null
-  templateName?: string | null
-  createdBy?: string | null
-  stageCount: number
-  completedStages: number
-  createdAt: string
-  updatedAt: string
+	id: string
+	title: string
+	description?: string | null
+	status: TraceabilityStatus
+	templateId?: string | null
+	templateName?: string | null
+	createdBy?: string | null
+	stageCount: number
+	completedStages: number
+	createdAt: string
+	updatedAt: string
 }
 
 export interface CreateTraceabilityDTO {
-  title: string
-  description?: string
-  templateId: string
-  createdBy?: string | null
+	title: string
+	description?: string
+	templateId: string
+	createdBy?: string | null
 }
 
 export interface UpdateTraceabilityDTO {
-  id: string
-  title?: string
-  description?: string | null
-  status?: TraceabilityStatus
+	id: string
+	title?: string
+	description?: string | null
+	status?: TraceabilityStatus
 }
 
 export interface CreateTaskDTO {
-  stageId: string
-  title: string
-  description?: string
-  type?: TaskType
-  status?: TaskStatus
+	stageId: string
+	title: string
+	description?: string
+	type?: TaskType
+	status?: TaskStatus
 }
 
 export interface UpdateTaskDTO {
-  id: string
-  title?: string
-  description?: string | null
-  type?: TaskType
-  status?: TaskStatus
+	id: string
+	title?: string
+	description?: string | null
+	type?: TaskType
+	status?: TaskStatus
 }
 
 export interface CreateLinkDTO {
-  stageId: string
-  label: string
-  url: string
-  platform?: LinkPlatform
+	stageId: string
+	label: string
+	url: string
+	platform?: LinkPlatform
+}
+
+export interface MyStage extends TraceabilityStage {
+	traceabilityTitle: string
+	traceabilityStatus: TraceabilityStatus
+	predecessorsCompleted: boolean
 }

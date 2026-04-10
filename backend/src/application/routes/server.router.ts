@@ -54,6 +54,8 @@ export function registerServerRoutes(oauthService?: McpOAuthService): express.Ro
 					abortController.abort()
 				})
 
+				console.log(`➡️  ${req.method} ${req.url} - Handler: ${route.handler.name || 'anonymous'}`)
+
 				// Execute handler with context
 				const result = await route.handler({
 					input: parseResult.data,
