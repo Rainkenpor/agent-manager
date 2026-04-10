@@ -4,3 +4,4 @@ build
 data
 *.log
 .env
+backend/drizzle
