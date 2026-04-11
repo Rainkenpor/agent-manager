@@ -200,6 +200,8 @@ function parseFrontmatterTools(content: string): Set<string> | null {
 // ── InternalAgentService ──────────────────────────────────────────────────────
 
 export class InternalAgentService implements IAgentService {
+	private agentType: string = ''
+
 	/** Parse AGENT_MODEL string into provider + model name */
 	private parseModel(agentModel: string): ParsedModel {
 		const lower = agentModel.toLowerCase()
@@ -784,7 +786,7 @@ export class InternalAgentService implements IAgentService {
 		}
 
 		if (pruned > 0) {
-			agentLogger.info(`[InternalAgent] Pruned ${pruned} old tool results (context was ${totalChars} chars)`)
+			agentLogger.info(`[${this.agentType}] Pruned ${pruned} old tool results (context was ${totalChars} chars)`)
 		}
 	}
 
@@ -799,7 +801,7 @@ export class InternalAgentService implements IAgentService {
 		mcpExternal?: typeof mcpExternalManager
 	): Promise<string> {
 		for (let i = 0; i < maxIterations; i++) {
-			agentLogger.info(`[InternalAgent] Iteration ${i + 1}/${maxIterations}`)
+			agentLogger.info(`[${this.agentType}] Iteration ${i + 1}/${maxIterations}`)
 
 			// Prune old tool results before sending to avoid context explosion.
 			// Mirrors OpenCode's prune() strategy: keep recent tool outputs intact,
@@ -820,7 +822,7 @@ export class InternalAgentService implements IAgentService {
 				tool_calls: msg.tool_calls
 			})
 
-			agentLogger.info(`[InternalAgent] finish_reason=${msg.finish_reason} tool_calls=${msg.tool_calls?.length ?? 0}`)
+			agentLogger.info(`[${this.agentType}] finish_reason=${msg.finish_reason} tool_calls=${msg.tool_calls?.length ?? 0}`)
 
 			if (msg.finish_reason === 'stop' || !msg.tool_calls?.length) {
 				return msg.content ?? '(no content)'
@@ -834,7 +836,7 @@ export class InternalAgentService implements IAgentService {
 					// malformed JSON — pass empty args
 				}
 
-				agentLogger.info(`[InternalAgent] → ${toolCall.function.name}(${JSON.stringify(toolArgs).slice(0, 200)})`)
+				agentLogger.info(`[${this.agentType}] → ${toolCall.function.name}(${JSON.stringify(toolArgs).slice(0, 200)})`)
 
 				const result = await executeToolCall(
 					() => new InternalAgentService(),
@@ -844,7 +846,7 @@ export class InternalAgentService implements IAgentService {
 					mcpExternal
 				)
 
-				agentLogger.info(`[InternalAgent] ← ${result.slice(0, 200).replace(/\n/g, '\\n').replace(/\r/g, '\\r')}`)
+				agentLogger.info(`[${this.agentType}] ← ${result.slice(0, 200).replace(/\n/g, '\\n').replace(/\r/g, '\\r')}`)
 
 				// Cap large results before storing in history to prevent
 				// per-iteration context bloat (same pattern as OpenCode).
@@ -857,7 +859,7 @@ export class InternalAgentService implements IAgentService {
 			}
 		}
 
-		return '[InternalAgent] Reached maximum iterations.'
+		return `[${this.agentType}] Reached maximum iterations.`
 	}
 
 	/** Core agentic loop — streams content deltas and tool progress in real-time */
@@ -873,7 +875,7 @@ export class InternalAgentService implements IAgentService {
 		const signal = originalParams.signal
 		for (let i = 0; i < maxIterations; i++) {
 			if (signal?.aborted) return
-			agentLogger.info(`[InternalAgent] Stream iteration ${i + 1}/${maxIterations}`)
+			agentLogger.info(`[${this.agentType}] Stream iteration ${i + 1}/${maxIterations}`)
 			this.pruneMessages(messages)
 
 			const body = {
@@ -899,7 +901,7 @@ export class InternalAgentService implements IAgentService {
 				tool_calls: msg.tool_calls
 			})
 
-			agentLogger.info(`[InternalAgent] finish_reason=${msg.finish_reason} tool_calls=${msg.tool_calls?.length ?? 0}`)
+			agentLogger.info(`[${this.agentType}] finish_reason=${msg.finish_reason} tool_calls=${msg.tool_calls?.length ?? 0}`)
 
 			if (msg.finish_reason === 'stop' || !msg.tool_calls?.length) {
 				if (!msg.content) yield '(no content)'
@@ -914,7 +916,7 @@ export class InternalAgentService implements IAgentService {
 					// malformed JSON — pass empty args
 				}
 
-				agentLogger.info(`[InternalAgent] → ${toolCall.function.name}(${JSON.stringify(toolArgs).slice(0, 200)})`)
+				agentLogger.info(`[${this.agentType}] → ${toolCall.function.name}(${JSON.stringify(toolArgs).slice(0, 200)})`)
 
 				const result = await executeToolCall(
 					() => new InternalAgentService(),
@@ -924,7 +926,7 @@ export class InternalAgentService implements IAgentService {
 					mcpExternal
 				)
 
-				agentLogger.info(`[InternalAgent] ← ${result.slice(0, 200).replace(/\n/g, '\\n').replace(/\r/g, '\\r')}`)
+				agentLogger.info(`[${this.agentType}] ← ${result.slice(0, 200).replace(/\n/g, '\\n').replace(/\r/g, '\\r')}`)
 
 				messages.push({
 					role: 'tool',
@@ -934,7 +936,7 @@ export class InternalAgentService implements IAgentService {
 			}
 		}
 
-		yield '[InternalAgent] Reached maximum iterations.'
+		yield `[${this.agentType}] Reached maximum iterations.`
 	}
 
 	// ── Public API ────────────────────────────────────────────────────────────
@@ -942,9 +944,11 @@ export class InternalAgentService implements IAgentService {
 	async executeAgent(params: IAgentServiceExecute): Promise<unknown> {
 		const { query, agentSlug: agentType, systemPrompt, allowedTools, toolsCallbacks } = params
 
-		agentLogger.info(`[InternalAgent] ══════ START agent=${agentType} ══════`)
-		agentLogger.info(`[InternalAgent] model=${envs.AGENT_MODEL}`)
-		agentLogger.info(`[InternalAgent] query=${query.slice(0, 120)}`)
+		this.agentType = agentType
+
+		agentLogger.info(`[${this.agentType}] ══════ START agent=${agentType} ══════`)
+		agentLogger.info(`[${this.agentType}] model=${envs.AGENT_MODEL}`)
+		agentLogger.info(`[${this.agentType}] query=${query.slice(0, 120)}`)
 
 		const parsed = this.parseModel(envs.AGENT_MODEL)
 		const config = this.buildRequestConfig(parsed)
@@ -958,10 +962,10 @@ export class InternalAgentService implements IAgentService {
 
 		try {
 			const result = await this.runLoop(parsed, config, messages, tools, params, 60, mcpExternalManager)
-			agentLogger.info(`[InternalAgent] ══════ END agent=${agentType} ══════`)
+			agentLogger.info(`[${this.agentType}] ══════ END agent=${agentType} ══════`)
 			return result
 		} finally {
-			agentLogger.info(`[InternalAgent] ══════ END stream agent=${agentType} ══════`)
+			agentLogger.info(`[${this.agentType}] ══════ END stream agent=${agentType} ══════`)
 		}
 	}
 
@@ -969,9 +973,11 @@ export class InternalAgentService implements IAgentService {
 	async *executeAgentStream(params: IAgentServiceExecute): AsyncGenerator<string> {
 		const { query, agentSlug: agentType, artifacts, history, systemPrompt, allowedTools, toolsCallbacks } = params
 
-		agentLogger.info(`[InternalAgent] ══════ START stream agent=${agentType} ══════`)
-		agentLogger.info(`[InternalAgent] model=${envs.AGENT_MODEL}`)
-		agentLogger.info(`[InternalAgent] query=${query.slice(0, 120)}`)
+		this.agentType = agentType
+
+		agentLogger.info(`[${this.agentType}] ══════ START stream agent=${agentType} ══════`)
+		agentLogger.info(`[${this.agentType}] model=${envs.AGENT_MODEL}`)
+		// agentLogger.info(`[${this.agentType}] query=${query.slice(0, 120)}`)
 
 		const parsed = this.parseModel(envs.AGENT_MODEL)
 		const config = this.buildRequestConfig(parsed)
@@ -993,7 +999,7 @@ export class InternalAgentService implements IAgentService {
 		try {
 			yield* this.runLoopStream(parsed, config, messages, tools, params, 60, mcpExternalManager)
 		} finally {
-			agentLogger.info(`[InternalAgent] ══════ END stream agent=${agentType} ══════`)
+			agentLogger.info(`[${this.agentType}] ══════ END stream agent=${agentType} ══════`)
 		}
 	}
 }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import AppLayout from '@/components/AppLayout.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import PageLayout from '@/components/PageLayout.vue'
 import { useToastStore } from '@/store/useToast'
 import * as api from '@/api/api'
 import type { User, Role } from '@/types/types'
@@ -165,14 +165,8 @@ async function toggleRole(roleId: string) {
 </script>
 
 <template>
-  <AppLayout>
-    <div class="p-8">
-      <!-- Header -->
-      <div class="flex items-center justify-between mb-8">
-        <div>
-          <h1 class="text-2xl font-bold text-white">Users</h1>
-          <p class="text-slate-500 text-sm mt-0.5">Manage user accounts and role assignments</p>
-        </div>
+    <PageLayout title="Users" description="Manage user accounts and role assignments">
+      <template #actions>
         <button
           class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm"
           @click="openCreate">
@@ -181,7 +175,7 @@ async function toggleRole(roleId: string) {
           </svg>
           Create User
         </button>
-      </div>
+      </template>
 
       <!-- Loading -->
       <div v-if="loading" class="flex items-center justify-center py-20">
@@ -257,7 +251,7 @@ async function toggleRole(roleId: string) {
           </tbody>
         </table>
       </div>
-    </div>
+    </PageLayout>
 
     <!-- User Create/Edit Modal -->
     <div v-if="showUserModal" class="fixed inset-0 z-40 flex items-center justify-center">
@@ -381,5 +375,4 @@ async function toggleRole(roleId: string) {
     <ConfirmDialog v-if="deleteTarget" title="Delete User"
       :message="`Are you sure you want to delete &quot;${deleteTarget.username}&quot;? This action cannot be undone.`"
       :loading="deleting" @confirm="doDelete" @cancel="deleteTarget = null" />
-  </AppLayout>
 </template>

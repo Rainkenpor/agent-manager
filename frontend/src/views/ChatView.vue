@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import * as api from '@/api/api'
-import AppLayout from '@/components/AppLayout.vue'
 
 interface Agent {
 	id: string
@@ -477,7 +476,6 @@ onMounted(fetchInitialData)
 </script>
 
 <template>
-  <AppLayout>
     <div class="flex h-full bg-slate-950 text-white overflow-hidden">
 
       <!-- Sidebar: conversation list -->
@@ -824,5 +822,4 @@ onMounted(fetchInitialData)
       </div>
     </div>
 
-  </AppLayout>
 </template>

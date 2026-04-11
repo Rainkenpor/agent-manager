@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import AppLayout from '@/components/AppLayout.vue'
 import { useAuthStore } from '@/store/useAuth'
 import { useToastStore } from '@/store/useToast'
+import PageLayout from '@/components/PageLayout.vue'
 import * as api from '@/api/api'
 
 const auth = useAuthStore()
@@ -550,15 +550,8 @@ onMounted(fetchAll)
 </script>
 
 <template>
-  <AppLayout>
-    <div class="p-6 bg-slate-950 text-white min-h-full flex flex-col">
-
-      <!-- Header -->
-      <div class="flex items-center justify-between mb-5">
-        <div>
-          <h1 class="text-2xl font-bold text-white">Trazabilidad</h1>
-          <p class="text-slate-400 text-sm mt-0.5">Flujos de trabajo con etapas, tareas y trazabilidad de avance</p>
-        </div>
+    <PageLayout title="Trazabilidad" description="Flujos de trabajo con etapas, tareas y trazabilidad de avance">
+      <template #actions>
         <button v-if="activeTab === 'traceabilities' && canCreate" @click="showCreateTrac = true"
           class="px-4 py-2 text-sm rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium transition-colors">
           + Nueva Trazabilidad
@@ -567,7 +560,7 @@ onMounted(fetchAll)
           class="px-4 py-2 text-sm rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium transition-colors">
           + Nuevo Template
         </button>
-      </div>
+      </template>
 
       <!-- Tabs -->
       <div class="flex gap-1 mb-5 bg-slate-900 rounded-xl p-1 w-fit">
@@ -1304,7 +1297,7 @@ onMounted(fetchAll)
         </div>
       </div>
 
-    </div>
+    </PageLayout>
 
     <!-- ══════════════════════════════════════════════════════════════════════ -->
     <!-- DOCUMENT VIEWER MODAL -->
@@ -1376,5 +1369,4 @@ onMounted(fetchAll)
       </div>
     </div>
 
-  </AppLayout>
 </template>

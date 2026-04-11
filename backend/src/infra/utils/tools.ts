@@ -349,6 +349,10 @@ export function buildToolDefinitions(
 		return [...filterBaseTools, ...filteredMcp, ...filteredExternal]
 	}
 
+	if (!allowedTools || allowedTools.size === 0) {
+		return []
+	}
+
 	return [...baseTools, ...mcpTools, ...externalMcpTools]
 }
 

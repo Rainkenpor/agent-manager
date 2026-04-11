@@ -81,7 +81,8 @@ import {
 	GetTemplateByCodeUseCase,
 	GetUsersByRoleWithEffortUseCase,
 	AssignStageUserUseCase,
-	GetMyStagesUseCase
+	GetMyStagesUseCase,
+	StreamAgentLogsUseCase
 } from './use-cases/index.js'
 import { GetSkillsAllowedForUserUseCase } from './use-cases/skill/get-skills-allowed-user.js'
 import { TraceabilityAgentTriggerService } from '@infra/service/traceability-agent-trigger.service.js'
@@ -183,6 +184,7 @@ export class Container {
 	private _getUsersByRoleWithEffortUseCase?: GetUsersByRoleWithEffortUseCase
 	private _assignStageUserUseCase?: AssignStageUserUseCase
 	private _getMyStagesUseCase?: GetMyStagesUseCase
+	private _streamAgentLogsUseCase?: StreamAgentLogsUseCase
 
 	constructor() {
 		// Initialize repositories with concrete implementations
@@ -582,6 +584,15 @@ export class Container {
 	get getMyStagesUseCase(): GetMyStagesUseCase {
 		if (!this._getMyStagesUseCase) this._getMyStagesUseCase = new GetMyStagesUseCase(this._traceabilityRepository)
 		return this._getMyStagesUseCase
+	}
+
+	// ==========================================
+	// LOGS USE CASES
+	// ==========================================
+
+	get streamAgentLogsUseCase(): StreamAgentLogsUseCase {
+		if (!this._streamAgentLogsUseCase) this._streamAgentLogsUseCase = new StreamAgentLogsUseCase()
+		return this._streamAgentLogsUseCase
 	}
 }
 

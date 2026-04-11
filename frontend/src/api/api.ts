@@ -22,6 +22,14 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 	return (text ? JSON.parse(text) : undefined) as T
 }
 
+function requestAsync<T>(path: string, options: RequestInit = {}, signal?: AbortSignal): Promise<Response> {
+	return fetch(`${BASE}${path}`, {
+		...options,
+		headers: getHeaders(options.headers as Record<string, string>),
+		signal
+	})
+}
+
 // Auth
 export const login = (data: { username: string; password: string }) =>
 	request<{ token: string; user: any }>('/auth/login', { method: 'POST', body: JSON.stringify(data) })
@@ -70,7 +78,8 @@ export const removeAgentFromRole = (roleId: string, agentId: string) =>
 
 // Agents
 export const getAgents = () => request<{ success: boolean; data: any[] }>('/agents')
-export const getAgentsForChat = () => request<{ success: boolean; data: Array<{ id: string; name: string; slug: string; description: string | null }> }>('/agents/for-chat')
+export const getAgentsForChat = () =>
+	request<{ success: boolean; data: Array<{ id: string; name: string; slug: string; description: string | null }> }>('/agents/for-chat')
 export const getAgentById = (id: string) => request<any>(`/agents/${id}`)
 export const getAgentTools = () => request<{ success: boolean; data: any[] }>('/agents/tools')
 export const createAgent = (data: any) => request<any>('/agents', { method: 'POST', body: JSON.stringify(data) })
@@ -146,74 +155,88 @@ export const deleteMcpCredential = (mcpServerId: string, key: string) =>
 // Skills
 export const getRoleSkills = (roleId: string) => request<{ success: boolean; data: any[] }>(`/roles/${roleId}/skills`)
 export const assignSkillToRole = (roleId: string, skillId: string) =>
-  request<{ success: boolean }>(`/roles/${roleId}/skills/${skillId}`, { method: 'POST' })
+	request<{ success: boolean }>(`/roles/${roleId}/skills/${skillId}`, { method: 'POST' })
 export const removeSkillFromRole = (roleId: string, skillId: string) =>
-  request<{ success: boolean }>(`/roles/${roleId}/skills/${skillId}`, { method: 'DELETE' })
+	request<{ success: boolean }>(`/roles/${roleId}/skills/${skillId}`, { method: 'DELETE' })
 
 export const getSkills = () => request<{ success: boolean; data: any[] }>('/skills')
 export const getSkillById = (id: string) => request<{ success: boolean; data: any }>(`/skills/${id}`)
-export const createSkill = (data: any) => request<{ success: boolean; data: any }>('/skills', { method: 'POST', body: JSON.stringify(data) })
-export const updateSkill = (id: string, data: any) => request<{ success: boolean; data: any }>(`/skills/${id}`, { method: 'PUT', body: JSON.stringify(data) })
+export const createSkill = (data: any) =>
+	request<{ success: boolean; data: any }>('/skills', { method: 'POST', body: JSON.stringify(data) })
+export const updateSkill = (id: string, data: any) =>
+	request<{ success: boolean; data: any }>(`/skills/${id}`, { method: 'PUT', body: JSON.stringify(data) })
 export const deleteSkill = (id: string) => request<{ success: boolean }>(`/skills/${id}`, { method: 'DELETE' })
 
 // Traceability Templates
 export const getTraceabilityTemplates = () => request<{ success: boolean; data: any[] }>('/traceability/templates')
 export const getTraceabilityTemplateById = (id: string) => request<{ success: boolean; data: any }>(`/traceability/templates/${id}`)
 export const createTraceabilityTemplate = (data: { name: string; description?: string }) =>
-  request<{ success: boolean; data: any }>('/traceability/templates', { method: 'POST', body: JSON.stringify(data) })
+	request<{ success: boolean; data: any }>('/traceability/templates', { method: 'POST', body: JSON.stringify(data) })
 export const updateTraceabilityTemplate = (id: string, data: { name?: string; description?: string | null }) =>
-  request<{ success: boolean; data: any }>(`/traceability/templates/${id}`, { method: 'PUT', body: JSON.stringify({ id, ...data }) })
+	request<{ success: boolean; data: any }>(`/traceability/templates/${id}`, { method: 'PUT', body: JSON.stringify({ id, ...data }) })
 export const deleteTraceabilityTemplate = (id: string) =>
-  request<{ success: boolean }>(`/traceability/templates/${id}`, { method: 'DELETE' })
+	request<{ success: boolean }>(`/traceability/templates/${id}`, { method: 'DELETE' })
 
 // Template Stages
-export const createTemplateStage = (data: { templateId: string; name: string; description?: string; role?: string; order: number; parallelGroup?: string; type?: string; agentId?: string | null; predecessors?: string[]; documentSchema?: Array<{ name: string; required: boolean }> | null }) =>
-  request<{ success: boolean; data: any }>(`/traceability/templates/${data.templateId}/stages`, { method: 'POST', body: JSON.stringify(data) })
+export const createTemplateStage = (data: {
+	templateId: string
+	name: string
+	description?: string
+	role?: string
+	order: number
+	parallelGroup?: string
+	type?: string
+	agentId?: string | null
+	predecessors?: string[]
+	documentSchema?: Array<{ name: string; required: boolean }> | null
+}) =>
+	request<{ success: boolean; data: any }>(`/traceability/templates/${data.templateId}/stages`, {
+		method: 'POST',
+		body: JSON.stringify(data)
+	})
 export const updateTemplateStage = (id: string, data: any) =>
-  request<{ success: boolean; data: any }>(`/traceability/template-stages/${id}`, { method: 'PUT', body: JSON.stringify({ id, ...data }) })
+	request<{ success: boolean; data: any }>(`/traceability/template-stages/${id}`, { method: 'PUT', body: JSON.stringify({ id, ...data }) })
 export const deleteTemplateStage = (id: string) =>
-  request<{ success: boolean }>(`/traceability/template-stages/${id}`, { method: 'DELETE' })
+	request<{ success: boolean }>(`/traceability/template-stages/${id}`, { method: 'DELETE' })
 
 // Traceabilities
 export const getTraceabilities = () => request<{ success: boolean; data: any[] }>('/traceability')
 export const getTraceabilityById = (id: string) => request<{ success: boolean; data: any }>(`/traceability/${id}`)
 export const createTraceability = (data: { title: string; description?: string; templateId: string }) =>
-  request<{ success: boolean; data: any }>('/traceability', { method: 'POST', body: JSON.stringify(data) })
+	request<{ success: boolean; data: any }>('/traceability', { method: 'POST', body: JSON.stringify(data) })
 export const updateTraceability = (id: string, data: { title?: string; description?: string | null; status?: string }) =>
-  request<{ success: boolean; data: any }>(`/traceability/${id}`, { method: 'PUT', body: JSON.stringify({ id, ...data }) })
+	request<{ success: boolean; data: any }>(`/traceability/${id}`, { method: 'PUT', body: JSON.stringify({ id, ...data }) })
 export const deleteTraceability = (id: string) => request<{ success: boolean }>(`/traceability/${id}`, { method: 'DELETE' })
 
 // Tasks
 export const createTraceabilityTask = (data: { stageId: string; title: string; description?: string; type?: string; status?: string }) =>
-  request<{ success: boolean; data: any }>('/traceability/tasks', { method: 'POST', body: JSON.stringify(data) })
+	request<{ success: boolean; data: any }>('/traceability/tasks', { method: 'POST', body: JSON.stringify(data) })
 export const updateTraceabilityTask = (id: string, data: { title?: string; description?: string | null; type?: string; status?: string }) =>
-  request<{ success: boolean; data: any }>(`/traceability/tasks/${id}`, { method: 'PUT', body: JSON.stringify({ id, ...data }) })
+	request<{ success: boolean; data: any }>(`/traceability/tasks/${id}`, { method: 'PUT', body: JSON.stringify({ id, ...data }) })
 export const deleteTraceabilityTask = (id: string, stageId: string) =>
-  request<{ success: boolean, data: any }>(`/traceability/tasks/${id}`, { method: 'DELETE', body: JSON.stringify({ stageId }) })
+	request<{ success: boolean; data: any }>(`/traceability/tasks/${id}`, { method: 'DELETE', body: JSON.stringify({ stageId }) })
 
 // Links
 export const createTraceabilityLink = (data: { stageId: string; label: string; url: string; platform?: string }) =>
-  request<{ success: boolean; data: any }>('/traceability/links', { method: 'POST', body: JSON.stringify(data) })
-export const deleteTraceabilityLink = (id: string) =>
-  request<{ success: boolean }>(`/traceability/links/${id}`, { method: 'DELETE' })
+	request<{ success: boolean; data: any }>('/traceability/links', { method: 'POST', body: JSON.stringify(data) })
+export const deleteTraceabilityLink = (id: string) => request<{ success: boolean }>(`/traceability/links/${id}`, { method: 'DELETE' })
 
 // Traceability Documents
 export const createTraceabilityDocument = (data: { stageId: string; name: string; content?: string }) =>
-  request<{ success: boolean; data: any }>('/traceability/documents', { method: 'POST', body: JSON.stringify(data) })
-export const getTraceabilityDocument = (id: string) =>
-  request<{ success: boolean; data: any }>(`/traceability/documents/${id}`)
+	request<{ success: boolean; data: any }>('/traceability/documents', { method: 'POST', body: JSON.stringify(data) })
+export const getTraceabilityDocument = (id: string) => request<{ success: boolean; data: any }>(`/traceability/documents/${id}`)
 export const updateTraceabilityDocument = (id: string, data: { name?: string; content?: string }) =>
-  request<{ success: boolean; data: any }>(`/traceability/documents/${id}`, { method: 'PUT', body: JSON.stringify({ id, ...data }) })
+	request<{ success: boolean; data: any }>(`/traceability/documents/${id}`, { method: 'PUT', body: JSON.stringify({ id, ...data }) })
 export const deleteTraceabilityDocument = (id: string) =>
-  request<{ success: boolean }>(`/traceability/documents/${id}`, { method: 'DELETE' })
+	request<{ success: boolean }>(`/traceability/documents/${id}`, { method: 'DELETE' })
 
 // Effort & Assignment
 export const getUsersByRoleWithEffort = (roleId: string) =>
-  request<{ success: boolean; data: any[] }>(`/traceability/stages/users-by-role?role=${encodeURIComponent(roleId)}`)
+	request<{ success: boolean; data: any[] }>(`/traceability/stages/users-by-role?role=${encodeURIComponent(roleId)}`)
 export const assignStageUser = (stageId: string, userId: string | null) =>
-  request<{ success: boolean; data: any }>(`/traceability/stages/${stageId}/assign`, { method: 'PUT', body: JSON.stringify({ userId }) })
-export const getMyStages = () =>
-  request<{ success: boolean; data: any[] }>('/traceability/my-stages')
+	request<{ success: boolean; data: any }>(`/traceability/stages/${stageId}/assign`, { method: 'PUT', body: JSON.stringify({ userId }) })
+export const getMyStages = () => request<{ success: boolean; data: any[] }>('/traceability/my-stages')
+export const streamAgentLogs = (signal?: AbortSignal) => requestAsync('/logs/stream', {}, signal)
 
 export function streamMessage(conversationId: string, content: string, signal?: AbortSignal): Promise<Response> {
 	const token = localStorage.getItem('token')
@@ -224,6 +247,6 @@ export function streamMessage(conversationId: string, content: string, signal?: 
 			...(token ? { Authorization: `Bearer ${token}` } : {})
 		},
 		body: JSON.stringify({ content }),
-		signal,
+		signal
 	})
 }

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import AppLayout from '@/components/AppLayout.vue'
 import { useAuthStore } from '@/store/useAuth'
 import { useToastStore } from '@/store/useToast'
+import PageLayout from '@/components/PageLayout.vue'
 import * as api from '@/api/api'
 
 const router = useRouter()
@@ -161,15 +161,8 @@ onMounted(fetchMyStages)
 </script>
 
 <template>
-  <AppLayout>
-    <div class="min-h-full bg-slate-950 text-white p-6">
-
-      <!-- Header -->
-      <div class="mb-6 flex items-center justify-between">
-        <div>
-          <h1 class="text-2xl font-bold text-white">Mi panel</h1>
-          <p class="text-slate-400 text-sm mt-0.5">Etapas de trazabilidad asignadas a ti</p>
-        </div>
+    <PageLayout title="Mi panel" description="Etapas de trazabilidad asignadas a ti">
+      <template #actions>
         <button @click="fetchMyStages"
           class="flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors">
           <svg class="w-3.5 h-3.5" :class="loading ? 'animate-spin' : ''" fill="none" viewBox="0 0 24 24"
@@ -179,7 +172,7 @@ onMounted(fetchMyStages)
           </svg>
           Actualizar
         </button>
-      </div>
+      </template>
 
       <!-- Tabs -->
       <div v-if="!loading" class="flex gap-1 mb-5 bg-slate-900 rounded-xl p-1 w-fit">
@@ -318,7 +311,7 @@ onMounted(fetchMyStages)
           </div>
         </div>
       </div>
-    </div>
+    </PageLayout>
 
     <!-- ── Modal ──────────────────────────────────────────────────────────────── -->
     <Teleport to="body">
@@ -490,5 +483,4 @@ onMounted(fetchMyStages)
         </div>
       </div>
     </Teleport>
-  </AppLayout>
 </template>

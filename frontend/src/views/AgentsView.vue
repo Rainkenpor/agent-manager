@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import AppLayout from '@/components/AppLayout.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import PageLayout from '@/components/PageLayout.vue'
 import { useToastStore } from '@/store/useToast'
 import * as api from '@/api/api'
 import type { Agent, AgentTool } from '@/types/types'
@@ -239,14 +239,8 @@ const selectedToolSource = ref<string>('')
 </script>
 
 <template>
-  <AppLayout>
-    <div class="p-8">
-      <!-- Header -->
-      <div class="flex items-center justify-between mb-8">
-        <div>
-          <h1 class="text-2xl font-bold text-white">Agents</h1>
-          <p class="text-slate-500 text-sm mt-0.5">Manage primary agents and subagents</p>
-        </div>
+    <PageLayout title="Agents" description="Manage primary agents and subagents">
+      <template #actions>
         <button
           class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm"
           @click="openCreate">
@@ -255,7 +249,7 @@ const selectedToolSource = ref<string>('')
           </svg>
           Create Agent
         </button>
-      </div>
+      </template>
 
       <!-- Loading -->
       <div v-if="loading" class="flex items-center justify-center py-20">
@@ -410,7 +404,7 @@ const selectedToolSource = ref<string>('')
           </div>
         </section>
       </div>
-    </div>
+    </PageLayout>
 
     <!-- Agent Create / Edit Modal -->
     <div v-if="showModal" class="fixed inset-0 z-40 flex items-center justify-center h-full overflow-auto">
@@ -701,5 +695,4 @@ const selectedToolSource = ref<string>('')
     <ConfirmDialog v-if="deleteTarget" title="Delete Agent"
       :message="`Are you sure you want to delete &quot;${deleteTarget.name}&quot;? This action cannot be undone.`"
       :loading="deleting" @confirm="doDelete" @cancel="deleteTarget = null" />
-  </AppLayout>
 </template>

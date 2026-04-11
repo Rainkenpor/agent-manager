@@ -22,7 +22,8 @@
       "Bash(node:*)",
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('Last idx:', d['entries'][-1]['idx'], d['entries'][-1]['tag']\\)\")",
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('Last idx:', d['entries'][-1]['idx']\\)\")",
-      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); e=d['entries'][-1]; print\\(e['idx'], e['tag']\\)\")"
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); e=d['entries'][-1]; print\\(e['idx'], e['tag']\\)\")",
+      "Bash(grep -r \"text/event-stream\\\\|setHeader.*Content-Type\" /c/Users/WO199/OneDrive/Documents/Proyectos/agent-manager/backend/src/application/routes/*.ts)"
     ]
   }
 }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import AppLayout from '@/components/AppLayout.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import PageLayout from '@/components/PageLayout.vue'
 import { useToastStore } from '@/store/useToast'
 import * as api from '@/api/api'
 
@@ -136,29 +136,20 @@ onMounted(async () => {
 </script>
 
 <template>
-  <AppLayout>
-    <div class="p-6 bg-slate-950 text-white min-h-full">
-      <div class="max-w-4xl mx-auto">
-        <!-- Header -->
-        <div class="flex items-center justify-between mb-8">
-          <div>
-            <h1 class="text-2xl font-bold text-white">Credenciales MCP</h1>
-            <p class="text-slate-400 mt-1 text-sm">
-              Claves y tokens personales por servidor MCP. El agente puede acceder a estos valores durante las conversaciones.
-            </p>
-          </div>
-          <button
-            @click="openAdd"
-            class="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-sm font-medium transition-colors"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-            </svg>
-            Nueva credencial
-          </button>
-        </div>
+    <PageLayout title="Credenciales MCP" description="Claves y tokens personales por servidor MCP. El agente puede acceder a estos valores durante las conversaciones." body-class="max-w-4xl mx-auto">
+      <template #actions>
+        <button
+          @click="openAdd"
+          class="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-sm font-medium transition-colors"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+          Nueva credencial
+        </button>
+      </template>
 
-        <!-- Loading -->
+      <!-- Loading -->
         <div v-if="loading" class="text-slate-400 text-sm">Cargando...</div>
 
         <!-- Empty -->
@@ -256,8 +247,7 @@ onMounted(async () => {
             </table>
           </div>
         </div>
-      </div>
-    </div>
+    </PageLayout>
 
     <!-- Add/Edit Modal -->
     <Teleport to="body">
@@ -340,5 +330,4 @@ onMounted(async () => {
       @confirm="confirmDelete"
       @cancel="deleteTarget = null"
     />
-  </AppLayout>
 </template>

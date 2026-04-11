@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
-import AppLayout from '@/components/AppLayout.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import PageLayout from '@/components/PageLayout.vue'
 import { useToastStore } from '@/store/useToast'
 import { useAuthStore } from '@/store/useAuth'
 import * as api from '@/api/api'
@@ -158,15 +158,8 @@ onMounted(fetchSkills)
 </script>
 
 <template>
-  <AppLayout>
-    <div class="min-h-full bg-slate-950 text-white flex flex-col">
-
-      <!-- Header -->
-      <div class="border-b border-slate-800/60 px-8 py-6 flex items-center justify-between shrink-0">
-        <div>
-          <h1 class="text-xl font-bold text-white">Skills</h1>
-          <p class="text-sm text-slate-400 mt-0.5">Bloques de instrucciones reutilizables en markdown</p>
-        </div>
+    <PageLayout title="Skills" description="Bloques de instrucciones reutilizables en markdown">
+      <template #actions>
         <button
           v-if="auth.hasPermission('skills', 'create')"
           class="flex items-center gap-2 px-4 py-2 rounded-lg bg-fuchsia-600 hover:bg-fuchsia-500 text-white text-sm font-medium transition-colors"
@@ -174,7 +167,7 @@ onMounted(fetchSkills)
           <span class="mdi mdi-plus text-base" />
           Nuevo skill
         </button>
-      </div>
+      </template>
 
       <div class="flex flex-1 min-h-0">
         <!-- Skill list -->
@@ -298,7 +291,7 @@ onMounted(fetchSkills)
           </div>
         </div>
       </div>
-    </div>
+    </PageLayout>
 
     <!-- Create / Edit Modal -->
     <Teleport to="body">
@@ -401,5 +394,4 @@ onMounted(fetchSkills)
       :loading="deleting"
       @confirm="confirmDelete"
       @cancel="deleteTarget = null" />
-  </AppLayout>
 </template>

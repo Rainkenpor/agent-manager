@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import AppLayout from '@/components/AppLayout.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import PageLayout from '@/components/PageLayout.vue'
 import { useToastStore } from '@/store/useToast'
 import * as api from '@/api/api'
 import type { McpServer, CredentialField } from '@/types/types'
@@ -182,14 +182,8 @@ async function doDelete() {
 </script>
 
 <template>
-  <AppLayout>
-    <div class="p-8">
-      <!-- Header -->
-      <div class="flex items-center justify-between mb-8">
-        <div>
-          <h1 class="text-2xl font-bold text-white">MCP Servers</h1>
-          <p class="text-slate-500 text-sm mt-0.5">Manage external Model Context Protocol servers</p>
-        </div>
+    <PageLayout title="MCP Servers" description="Manage external Model Context Protocol servers">
+      <template #actions>
         <button
           class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm"
           @click="openCreate">
@@ -198,7 +192,7 @@ async function doDelete() {
           </svg>
           Add MCP Server
         </button>
-      </div>
+      </template>
 
       <!-- Loading -->
       <div v-if="loading" class="flex items-center justify-center py-20">
@@ -339,7 +333,7 @@ async function doDelete() {
           </div>
         </div>
       </div>
-    </div>
+    </PageLayout>
 
     <!-- Create / Edit Modal -->
     <div v-if="showModal" class="fixed inset-0 z-40 flex items-center justify-center">
@@ -480,5 +474,4 @@ async function doDelete() {
     <ConfirmDialog v-if="deleteTarget" title="Delete MCP Server"
       :message="`Are you sure you want to delete &quot;${deleteTarget.displayName || deleteTarget.name}&quot;? Roles that use this server will lose access.`"
       :loading="deleting" @confirm="doDelete" @cancel="deleteTarget = null" />
-  </AppLayout>
 </template>
