@@ -117,7 +117,7 @@ export const mcpServers = sqliteTable('mcp_servers', {
 	name: text('name').notNull().unique(), // identifier, e.g. "atlassian"
 	displayName: text('display_name'), // human-readable name
 	description: text('description'),
-	type: text('type', { enum: ['http', 'stdio'] })
+	type: text('type', { enum: ['http', 'stdio', 'local'] })
 		.notNull()
 		.default('http'),
 	url: text('url'), // for type="http"

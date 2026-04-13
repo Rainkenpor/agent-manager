@@ -345,7 +345,7 @@ class McpStdioClient {
 // ── McpExternalManager ────────────────────────────────────────────────────────
 
 interface StoredServerConfig {
-	type: 'http' | 'stdio'
+	type: 'http' | 'stdio' | 'local'
 	url?: string
 	command?: string
 	args?: string[]
@@ -375,7 +375,7 @@ export class McpExternalManager {
 		servers: Array<{
 			id: string
 			name: string
-			type: 'http' | 'stdio'
+			type: 'http' | 'stdio' | 'local'
 			url?: string | null
 			command?: string | null
 			args?: string[] | null
@@ -457,7 +457,7 @@ export class McpExternalManager {
 	async ensureServerInitialized(
 		serverName: string,
 		config: {
-			type: 'http' | 'stdio'
+			type: 'http' | 'stdio' | 'local'
 			url?: string | null
 			command?: string | null
 			args?: string[] | null

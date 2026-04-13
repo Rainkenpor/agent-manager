@@ -1,7 +1,8 @@
 import { z } from 'zod'
-import { registry } from '@application/services/registry.service.js'
+import { registry } from '@applicationService/registry.service.js'
 import { CreateMcpServerSchema, UpdateMcpServerSchema } from '@domain/entities/mcp-server.entity.js'
 import { container } from '../container.js'
+import { mcpExternalManager } from '@infra/service/mcp-external.js'
 
 export function registerMcpServerRoutes(): void {
 	// List all MCP servers
@@ -188,10 +189,11 @@ export function registerMcpServerRoutes(): void {
 		inputSchema: z.object({ id: z.string() }).shape,
 		requiresAuth: true,
 		requiredPermission: { resource: 'mcp_servers', action: 'read' },
-		handler: async ({ context: { req, res } }) => {
-			const { mcpExternalManager } = await import('@infra/service/mcp-external.js')
+		handler: async ({ input, context: { req, res } }) => {
 			const server = await container.mcpServerRepository.findById(req.params.id as string)
+			if (input.id === 'local') return { success: true, data: { connected: true } }
 			if (!server) return res.status(404).json({ error: 'MCP server not found' })
+
 			return { success: true, data: { connected: mcpExternalManager.isConnected(server.name) } }
 		}
 	})
@@ -205,7 +207,6 @@ export function registerMcpServerRoutes(): void {
 		requiresAuth: true,
 		requiredPermission: { resource: 'mcp_servers', action: 'update' },
 		handler: async ({ context: { req, res } }) => {
-			const { mcpExternalManager } = await import('@infra/service/mcp-external.js')
 			try {
 				const server = await container.mcpServerRepository.findById(req.params.id as string)
 				if (!server) return res.status(404).json({ error: 'MCP server not found' })
@@ -227,10 +228,19 @@ export function registerMcpServerRoutes(): void {
 		requiresAuth: true,
 		requiredPermission: { resource: 'mcp_servers', action: 'read' },
 		handler: async ({ context: { req, res } }) => {
-			const { mcpExternalManager } = await import('@infra/service/mcp-external.js')
 			try {
 				const server = await container.mcpServerRepository.findById(req.params.id as string)
 				if (!server) return res.status(404).json({ error: 'MCP server not found' })
+
+				if (server.type === 'local') {
+					// Para el MCP local, retornar las tools del registry
+					const tools = registry
+						.getRoutes()
+						.filter((r) => r.useBy?.includes('mcp') && r.toolName && r.toolDescription)
+						.map((r) => ({ toolName: r.toolName!, description: r.toolDescription! }))
+					return { success: true, data: tools }
+				}
+
 				await mcpExternalManager.ensureServerInitialized(server.name, server)
 				const tools = mcpExternalManager.getToolsForServer(server.name)
 				return {

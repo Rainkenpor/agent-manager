@@ -380,6 +380,25 @@ async function seed() {
 			console.log('✅ Usuario admin ya existe\n')
 		}
 
+		// MCP local
+		console.log('🛠️  Verificando MCP local...')
+		let localMcp = await container.mcpServerRepository.findByName('local')
+		if (!localMcp) {
+			localMcp = await container.mcpServerRepository.create({
+				name: 'local',
+				displayName: 'MCP Local',
+				description: 'Servidor MCP local',
+				type: 'local',
+				active: true
+			})
+		}
+
+		// Asignar MCP local al rol admin (sin restricción de tools = acceso total)
+		if (localMcp && adminRole) {
+			await container.mcpServerRepository.assignToRole(adminRole.id, localMcp.id)
+			console.log('✅ MCP local asignado al rol admin')
+		}
+
 		console.log('✅ Seed completado exitosamente!')
 	} catch (error: any) {
 		console.error('❌ Error durante el seed:', error.message)

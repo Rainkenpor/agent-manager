@@ -62,7 +62,7 @@ export interface McpServer {
 	name: string
 	displayName?: string | null
 	description?: string | null
-	type: 'http' | 'stdio'
+	type: 'http' | 'stdio' | 'local'
 	url?: string | null
 	command?: string | null
 	args?: string[] | null

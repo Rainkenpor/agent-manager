@@ -4,4 +4,5 @@ build
 data
 *.log
 .env
+settings.local.json
 backend/drizzle

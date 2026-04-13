@@ -75,7 +75,7 @@ function jsonSchemaToZodShape(jsonSchema: Record<string, unknown>): ZodRawShape 
  * Applies external MCP proxy tools and agent tools for the given user's roles.
  * Called once per MCP session after the McpServer instance is created.
  */
-async function applyRoleBasedTools(server: McpServer, user: Record<string, unknown>): Promise<void> {
+async function applyRoleBasedTools(server: McpServer, user: Record<string, unknown>, sessionId: string): Promise<void> {
 	const userId = user.userId as string | undefined
 	if (!userId) return
 
@@ -90,7 +90,7 @@ async function applyRoleBasedTools(server: McpServer, user: Record<string, unkno
 		{
 			mcpServer: {
 				name: string
-				type: 'http' | 'stdio'
+				type: 'http' | 'stdio' | 'local'
 				url?: string | null
 				command?: string | null
 				args?: string[] | null
@@ -129,9 +129,48 @@ async function applyRoleBasedTools(server: McpServer, user: Record<string, unkno
 		}
 	}
 
-	// Register external MCP proxy tools
+	// Register MCP tools (local + external)
 	for (const [, { mcpServer, allowedTools }] of serverToolMap) {
 		try {
+			if (mcpServer.type === 'local') {
+				// MCP local: obtener tools del registry y filtrar por allowedTools
+				const localRoutes = registry.getRoutes().filter(
+					(r) => r.useBy?.includes('mcp') && r.toolName && r.toolDescription && r.inputSchema
+				)
+
+				for (const route of localRoutes) {
+					// Empty allowedTools means "all tools allowed"
+					if (allowedTools.size > 0 && !allowedTools.has(route.toolName!)) continue
+
+					const inputSchemaObj =
+						route.inputSchema instanceof z.ZodObject ? route.inputSchema : z.object(route.inputSchema as ZodRawShape)
+
+					server.tool(
+						route.toolName!,
+						route.toolDescription!,
+						route.inputSchema as ZodRawShape,
+						async (args: Record<string, unknown>) => {
+							try {
+								const parseResult = inputSchemaObj.safeParse(args)
+								if (!parseResult.success) {
+									return {
+										content: [{ type: 'text' as const, text: JSON.stringify({ error: 'Validation error', details: parseResult.error.flatten() }) }],
+										isError: true
+									}
+								}
+								const sessionContext = globalThis.__mcpSessionContexts?.[sessionId] || { req: {}, res: {}, next: () => {} }
+								const result = await route.handler({ input: parseResult.data as never, context: sessionContext })
+								return { content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }] }
+							} catch (err) {
+								return { content: [{ type: 'text' as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true }
+							}
+						}
+					)
+				}
+				continue
+			}
+
+			// MCPs externos: inicializar y registrar tools via mcpExternalManager
 			await mcpExternalManager.ensureServerInitialized(mcpServer.name, mcpServer)
 			const serverTools = mcpExternalManager.getToolsForServer(mcpServer.name)
 
@@ -283,15 +322,10 @@ class CreateMcpServer {
 
 		sessionContexts[this.sessionId] = context
 
-		// Register platform tools from registry
-		if (oauthService) {
-			registry.applyToMcpServer({ server, sessionId: this.sessionId })
-		}
-
-		// Register role-based tools for authenticated user
+		// Register role-based tools (includes local MCP tools filtered by role)
 		const user = context.req.user as Record<string, unknown> | undefined
 		if (user) {
-			await applyRoleBasedTools(server, user).catch((err) => console.warn('[MCP] applyRoleBasedTools error:', err))
+			await applyRoleBasedTools(server, user, this.sessionId).catch((err) => console.warn('[MCP] applyRoleBasedTools error:', err))
 		}
 
 		const transport = await this.initializeTransport()
