@@ -89,7 +89,13 @@ export const duplicateAgent = (id: string) => request<any>(`/agents/${id}/duplic
 
 // MCP Server tools discovery
 export const getMcpServerTools = (mcpServerId: string) =>
-	request<{ success: boolean; data: Array<{ toolName: string; description: string }> }>(`/mcp-servers/${mcpServerId}/tools`)
+	request<{ success: boolean; data: Array<{ toolName: string; description: string; inputSchema: Record<string, any> }> }>(`/mcp-servers/${mcpServerId}/tools`)
+
+export const callMcpServerTool = (mcpServerId: string, toolName: string, args: Record<string, unknown>) =>
+	request<{ success: boolean; data: string }>(`/mcp-servers/${mcpServerId}/tools/call`, {
+		method: 'POST',
+		body: JSON.stringify({ toolName, args })
+	})
 
 // MCP Server connection status & reconnect
 export const getMcpServerStatus = (mcpServerId: string) =>

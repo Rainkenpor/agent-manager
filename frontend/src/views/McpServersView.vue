@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import PageLayout from '@/components/PageLayout.vue'
 import { useToastStore } from '@/store/useToast'
@@ -12,6 +12,109 @@ const servers = ref<McpServer[]>([])
 const loading = ref(false)
 const connectionStatus = ref<Record<string, 'connected' | 'disconnected' | 'checking'>>({})
 const reconnecting = ref<Record<string, boolean>>({})
+
+// ── Tools panel ───────────────────────────────────────────────────────────────
+interface McpToolMeta {
+  toolName: string
+  description: string
+  inputSchema: Record<string, any>
+}
+
+const toolsPanelServer = ref<McpServer | null>(null)
+const toolsList = ref<McpToolMeta[]>([])
+const toolsLoading = ref(false)
+
+async function openToolsPanel(server: McpServer) {
+  toolsPanelServer.value = server
+  toolsList.value = []
+  toolsLoading.value = true
+  try {
+    const res = await api.getMcpServerTools(server.id)
+    toolsList.value = res.data ?? []
+  } catch (e: any) {
+    toast.error(e.message ?? 'Failed to load tools')
+  } finally {
+    toolsLoading.value = false
+  }
+}
+
+function closeToolsPanel() {
+  toolsPanelServer.value = null
+  toolsList.value = []
+  callResult.value = null
+  callError.value = null
+}
+
+// ── Tool call modal ───────────────────────────────────────────────────────────
+const callingTool = ref<McpToolMeta | null>(null)
+const callArgs = ref<Record<string, string>>({})
+const callRunning = ref(false)
+const callResult = ref<string | null>(null)
+const callError = ref<string | null>(null)
+
+function schemaProperties(tool: McpToolMeta): Array<{ key: string; schema: any }> {
+  const props = tool.inputSchema?.properties ?? {}
+  return Object.entries(props).map(([key, schema]) => ({ key, schema: schema as any }))
+}
+
+function requiredFields(tool: McpToolMeta): string[] {
+  return tool.inputSchema?.required ?? []
+}
+
+function openCallModal(tool: McpToolMeta) {
+  callingTool.value = tool
+  callResult.value = null
+  callError.value = null
+  // Initialize args with empty strings
+  const initialArgs: Record<string, string> = {}
+  for (const { key } of schemaProperties(tool)) {
+    initialArgs[key] = ''
+  }
+  callArgs.value = initialArgs
+}
+
+function closeCallModal() {
+  callingTool.value = null
+  callArgs.value = {}
+  callResult.value = null
+  callError.value = null
+}
+
+async function executeTool() {
+  if (!callingTool.value || !toolsPanelServer.value) return
+  callRunning.value = true
+  callResult.value = null
+  callError.value = null
+  try {
+    // Build args: only include non-empty values, parse JSON for object/array fields
+    const args: Record<string, unknown> = {}
+    for (const [key, val] of Object.entries(callArgs.value)) {
+      if (val === '') continue
+      const propSchema = callingTool.value.inputSchema?.properties?.[key]
+      const type = propSchema?.type
+      if (type === 'number' || type === 'integer') {
+        args[key] = Number(val)
+      } else if (type === 'boolean') {
+        args[key] = val === 'true'
+      } else if (type === 'object' || type === 'array') {
+        try { args[key] = JSON.parse(val) } catch { args[key] = val }
+      } else {
+        args[key] = val
+      }
+    }
+    const res = await api.callMcpServerTool(toolsPanelServer.value.id, callingTool.value.toolName, args)
+    callResult.value = typeof res.data === 'string' ? res.data : JSON.stringify(res.data, null, 2)
+  } catch (e: any) {
+    callError.value = e.message ?? 'Tool call failed'
+  } finally {
+    callRunning.value = false
+  }
+}
+
+const formattedResult = computed(() => {
+  if (!callResult.value) return ''
+  try { return JSON.stringify(JSON.parse(callResult.value), null, 2) } catch { return callResult.value }
+})
 
 // Modal
 const showModal = ref(false)
@@ -302,39 +405,230 @@ async function doDelete() {
           </div>
 
           <!-- Actions -->
-          <div class="flex items-center gap-2 pt-3 border-t border-slate-700" v-if="server.type !== 'local'">
-            <button class=" flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium
-            text-slate-200 hover:text-red-600 hover:bg-red-50 transition-colors" @click="confirmDelete(server)">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-              Delete
-            </button>
+          <div class="flex items-center gap-2 pt-3 border-t border-slate-700">
             <button
-              class="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium text-slate-200 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
-              @click="openEdit(server)">
+              class="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium text-slate-200 hover:text-violet-400 hover:bg-violet-900/30 transition-colors"
+              @click="openToolsPanel(server)">
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
-              Edit
+              Tools
             </button>
-            <button v-if="connectionStatus[server.id] === 'disconnected'"
-              class="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium text-slate-200 hover:text-emerald-400 hover:bg-emerald-900/30 transition-colors disabled:opacity-50"
-              :disabled="reconnecting[server.id]" @click="reconnect(server)">
-              <svg class="w-3.5 h-3.5" :class="{ 'animate-spin': reconnecting[server.id] }" fill="none"
-                stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              {{ reconnecting[server.id] ? 'Connecting...' : 'Reconnect' }}
-            </button>
+            <template v-if="server.type !== 'local'">
+              <button class="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium
+              text-slate-200 hover:text-red-600 hover:bg-red-50 transition-colors" @click="confirmDelete(server)">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Delete
+              </button>
+              <button
+                class="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium text-slate-200 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                @click="openEdit(server)">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Edit
+              </button>
+              <button v-if="connectionStatus[server.id] === 'disconnected'"
+                class="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium text-slate-200 hover:text-emerald-400 hover:bg-emerald-900/30 transition-colors disabled:opacity-50"
+                :disabled="reconnecting[server.id]" @click="reconnect(server)">
+                <svg class="w-3.5 h-3.5" :class="{ 'animate-spin': reconnecting[server.id] }" fill="none"
+                  stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                {{ reconnecting[server.id] ? 'Connecting...' : 'Reconnect' }}
+              </button>
+            </template>
           </div>
         </div>
       </div>
     </div>
   </PageLayout>
+
+  <!-- ── Tools Side Panel ──────────────────────────────────────────────────── -->
+  <Teleport to="body">
+    <div v-if="toolsPanelServer" class="fixed inset-0 z-40 flex">
+      <!-- Backdrop -->
+      <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="closeToolsPanel" />
+
+      <!-- Drawer -->
+      <div class="relative ml-auto w-full max-w-xl bg-slate-900 shadow-2xl flex flex-col h-full overflow-hidden">
+        <!-- Header -->
+        <div class="px-6 py-5 border-b border-slate-700 flex items-center justify-between shrink-0">
+          <div>
+            <h2 class="text-base font-semibold text-slate-200">
+              {{ toolsPanelServer.displayName || toolsPanelServer.name }} — Tools
+            </h2>
+            <p class="text-xs text-slate-500 mt-0.5">Browse and call tools exposed by this MCP server</p>
+          </div>
+          <button class="p-2 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition"
+            @click="closeToolsPanel">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Body -->
+        <div class="flex-1 overflow-y-auto p-5">
+          <!-- Loading -->
+          <div v-if="toolsLoading" class="flex items-center justify-center py-16">
+            <svg class="animate-spin h-7 w-7 text-violet-500" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+            </svg>
+          </div>
+
+          <!-- Empty -->
+          <div v-else-if="!toolsList.length" class="text-center py-16 text-slate-500 text-sm">
+            No tools found for this server.
+          </div>
+
+          <!-- Tools list -->
+          <div v-else class="space-y-3">
+            <div v-for="tool in toolsList" :key="tool.toolName"
+              class="bg-slate-800 rounded-xl border border-slate-700 p-4">
+              <div class="flex items-start justify-between gap-3">
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-semibold text-slate-200 font-mono">{{ tool.toolName }}</p>
+                  <p v-if="tool.description" class="text-xs text-slate-400 mt-1 leading-relaxed">
+                    {{ tool.description }}
+                  </p>
+                  <!-- Parameter summary -->
+                  <div v-if="schemaProperties(tool).length" class="flex flex-wrap gap-1 mt-2">
+                    <span v-for="{ key, schema } in schemaProperties(tool)" :key="key"
+                      class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-mono"
+                      :class="requiredFields(tool).includes(key)
+                        ? 'bg-indigo-900/50 text-indigo-300 ring-1 ring-indigo-700'
+                        : 'bg-slate-700 text-slate-400'">
+                      {{ key }}<span class="text-slate-500">:{{ schema?.type ?? 'any' }}</span>
+                    </span>
+                  </div>
+                </div>
+                <button
+                  class="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-violet-600 hover:bg-violet-500 text-white transition-colors"
+                  @click="openCallModal(tool)">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Run
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </Teleport>
+
+  <!-- ── Tool Call Modal ────────────────────────────────────────────────────── -->
+  <Teleport to="body">
+    <div v-if="callingTool" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="closeCallModal" />
+      <div class="relative bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+
+        <!-- Header -->
+        <div class="px-6 py-5 border-b border-slate-700 flex items-center justify-between shrink-0">
+          <div>
+            <h2 class="text-base font-semibold text-slate-200 font-mono">{{ callingTool.toolName }}</h2>
+            <p v-if="callingTool.description" class="text-xs text-slate-400 mt-0.5 line-clamp-2">
+              {{ callingTool.description }}
+            </p>
+          </div>
+          <button class="p-2 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition"
+            @click="closeCallModal">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Form -->
+        <div class="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+          <!-- Parameters -->
+          <template v-if="schemaProperties(callingTool).length">
+            <div v-for="{ key, schema } in schemaProperties(callingTool)" :key="key">
+              <label class="block text-sm font-medium text-slate-300 mb-1.5">
+                <span class="font-mono text-violet-400">{{ key }}</span>
+                <span v-if="requiredFields(callingTool).includes(key)" class="text-red-400 ml-0.5">*</span>
+                <span class="text-slate-500 text-xs font-normal ml-2">{{ schema?.type ?? 'any' }}</span>
+                <span v-if="schema?.description" class="text-slate-500 text-xs font-normal block mt-0.5">
+                  {{ schema.description }}
+                </span>
+              </label>
+              <textarea v-if="schema?.type === 'object' || schema?.type === 'array'"
+                v-model="callArgs[key]" rows="3"
+                :placeholder="schema?.type === 'object' ? '{ }' : '[ ]'"
+                class="w-full px-3 py-2 rounded-lg border border-slate-600 bg-slate-800 text-slate-200 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-violet-500 resize-y" />
+              <select v-else-if="schema?.type === 'boolean'"
+                v-model="callArgs[key]"
+                class="w-full px-3 py-2 rounded-lg border border-slate-600 bg-slate-800 text-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500">
+                <option value="">— optional —</option>
+                <option value="true">true</option>
+                <option value="false">false</option>
+              </select>
+              <input v-else
+                v-model="callArgs[key]"
+                :type="schema?.type === 'number' || schema?.type === 'integer' ? 'number' : 'text'"
+                :placeholder="schema?.examples?.[0] ?? schema?.default ?? ''"
+                class="w-full px-3 py-2 rounded-lg border border-slate-600 bg-slate-800 text-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500" />
+            </div>
+          </template>
+          <p v-else class="text-sm text-slate-500 italic">This tool takes no parameters.</p>
+
+          <!-- Result -->
+          <div v-if="callResult !== null" class="mt-2">
+            <p class="text-xs font-medium text-emerald-400 mb-1.5 flex items-center gap-1">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+              Result
+            </p>
+            <pre class="bg-slate-950 rounded-lg p-3 text-xs text-slate-300 overflow-x-auto whitespace-pre-wrap break-words max-h-60 overflow-y-auto font-mono border border-slate-700">{{ formattedResult }}</pre>
+          </div>
+
+          <!-- Error -->
+          <div v-if="callError" class="mt-2 bg-red-950/40 border border-red-800 rounded-lg px-4 py-3">
+            <p class="text-xs text-red-400">{{ callError }}</p>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="px-6 py-4 border-t border-slate-700 flex gap-3 shrink-0">
+          <button
+            class="flex-1 px-4 py-2.5 rounded-lg border border-slate-700 text-slate-300 text-sm font-medium hover:bg-slate-800 transition-colors"
+            @click="closeCallModal">
+            Close
+          </button>
+          <button
+            class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-60 text-white text-sm font-semibold transition-colors"
+            :disabled="callRunning"
+            @click="executeTool">
+            <svg v-if="callRunning" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+            </svg>
+            <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            {{ callRunning ? 'Running...' : 'Run Tool' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 
   <!-- Create / Edit Modal -->
   <div v-if="showModal" class="fixed inset-0 z-40 flex items-center justify-center">

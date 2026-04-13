@@ -96,6 +96,7 @@ export class HookDispatcherService {
 						try {
 							const event = JSON.parse(raw)
 							if (event.name && event.name !== 'connected') {
+								logger.info(`Hook event "${event.name}" received`)
 								await this.dispatch(serverId, event.name, event.payload ?? {})
 							}
 						} catch {

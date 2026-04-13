@@ -139,15 +139,15 @@ export function registerHookServerRoutes(): void {
 	registry.register({
 		useBy: ['server'],
 		method: 'POST',
-		path: '/api/hook-servers/:id/assignments',
-		inputSchema: { ...CreateHookAssignmentSchema.shape, id: z.string() },
+		path: '/api/hook-servers/:hookServerId/assignments',
+		inputSchema: { ...CreateHookAssignmentSchema.shape },
 		requiresAuth: true,
 		requiredPermission: { resource: 'hook_servers', action: 'update' },
 		handler: async ({ context: { req, res } }) => {
 			try {
 				const assignment = await container.hookServerRepository.createAssignment({
 					...req.body,
-					hookServerId: req.params.id as string
+					hookServerId: req.params.hookServerId as string
 				})
 				return res.status(201).json({ success: true, data: assignment })
 			} catch (error: any) {
