@@ -467,6 +467,46 @@ export const traceabilityDocuments = sqliteTable('traceability_documents', {
 		.$defaultFn(() => new Date().toISOString())
 })
 
+// ─── Hook Servers ─────────────────────────────────────────────────────────────
+
+// Hook Servers table — HTTP services that expose hook/event endpoints
+export const hookServers = sqliteTable('hook_servers', {
+	id: text('id').primaryKey(),
+	name: text('name').notNull().unique(),
+	displayName: text('display_name'),
+	description: text('description'),
+	url: text('url').notNull(), // base URL, e.g. http://localhost:4000/event-source
+	active: integer('active', { mode: 'boolean' }).notNull().default(true),
+	createdAt: text('created_at')
+		.notNull()
+		.$defaultFn(() => new Date().toISOString()),
+	updatedAt: text('updated_at')
+		.notNull()
+		.$defaultFn(() => new Date().toISOString())
+})
+
+// Hook Assignments — agents or mcp tools to call when a hook fires
+export const hookAssignments = sqliteTable('hook_assignments', {
+	id: text('id').primaryKey(),
+	hookServerId: text('hook_server_id')
+		.notNull()
+		.references(() => hookServers.id, { onDelete: 'cascade' }),
+	hookName: text('hook_name').notNull(),
+	assignmentType: text('assignment_type', { enum: ['agent', 'mcp_tool'] }).notNull(),
+	assignmentId: text('assignment_id').notNull(), // agentId or mcpServerId
+	assignmentName: text('assignment_name').notNull(), // agent display name or tool name
+	extraData: text('extra_data', { mode: 'json' }).$type<Record<string, string>>(),
+	createdAt: text('created_at')
+		.notNull()
+		.$defaultFn(() => new Date().toISOString())
+})
+
+// Tipos inferidos
+export type HookServer = typeof hookServers.$inferSelect
+export type NewHookServer = typeof hookServers.$inferInsert
+export type HookAssignment = typeof hookAssignments.$inferSelect
+export type NewHookAssignment = typeof hookAssignments.$inferInsert
+
 // Tipos inferidos
 export type Skill = typeof skills.$inferSelect
 export type NewSkill = typeof skills.$inferInsert

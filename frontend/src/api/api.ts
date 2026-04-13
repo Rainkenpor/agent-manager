@@ -238,6 +238,25 @@ export const assignStageUser = (stageId: string, userId: string | null) =>
 export const getMyStages = () => request<{ success: boolean; data: any[] }>('/traceability/my-stages')
 export const streamAgentLogs = (signal?: AbortSignal) => requestAsync('/logs/stream', {}, signal)
 
+// Hook Servers
+export const getHookServers = () => request<{ success: boolean; data: any[] }>('/hook-servers')
+export const getHookServerById = (id: string) => request<{ success: boolean; data: any }>(`/hook-servers/${id}`)
+export const createHookServer = (data: any) =>
+	request<{ success: boolean; data: any }>('/hook-servers', { method: 'POST', body: JSON.stringify(data) })
+export const updateHookServer = (id: string, data: any) =>
+	request<{ success: boolean; data: any }>(`/hook-servers/${id}`, { method: 'PUT', body: JSON.stringify(data) })
+export const deleteHookServer = (id: string) => request<{ success: boolean }>(`/hook-servers/${id}`, { method: 'DELETE' })
+export const discoverHooks = (id: string) => request<{ success: boolean; data: any[] }>(`/hook-servers/${id}/hooks`)
+export const getHookAssignments = (hookServerId: string) =>
+	request<{ success: boolean; data: any[] }>(`/hook-servers/${hookServerId}/assignments`)
+export const createHookAssignment = (hookServerId: string, data: any) =>
+	request<{ success: boolean; data: any }>(`/hook-servers/${hookServerId}/assignments`, {
+		method: 'POST',
+		body: JSON.stringify(data)
+	})
+export const deleteHookAssignment = (hookServerId: string, assignmentId: string) =>
+	request<{ success: boolean }>(`/hook-servers/${hookServerId}/assignments/${assignmentId}`, { method: 'DELETE' })
+
 export function streamMessage(conversationId: string, content: string, signal?: AbortSignal): Promise<Response> {
 	const token = localStorage.getItem('token')
 	return fetch(`${BASE}/chat/conversations/${conversationId}/messages`, {

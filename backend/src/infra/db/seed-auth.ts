@@ -229,6 +229,36 @@ async function seedDefaultPermissions() {
 			createdAt: new Date().toISOString()
 		},
 
+		// Hook Servers
+		{
+			id: randomUUID(),
+			resource: 'hook_servers',
+			action: 'create',
+			description: 'Crear servidores de hooks',
+			createdAt: new Date().toISOString()
+		},
+		{
+			id: randomUUID(),
+			resource: 'hook_servers',
+			action: 'read',
+			description: 'Ver servidores de hooks',
+			createdAt: new Date().toISOString()
+		},
+		{
+			id: randomUUID(),
+			resource: 'hook_servers',
+			action: 'update',
+			description: 'Actualizar servidores de hooks y asignaciones',
+			createdAt: new Date().toISOString()
+		},
+		{
+			id: randomUUID(),
+			resource: 'hook_servers',
+			action: 'delete',
+			description: 'Eliminar servidores de hooks',
+			createdAt: new Date().toISOString()
+		},
+
 		// Traceability
 		{
 			id: randomUUID(),

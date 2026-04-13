@@ -199,6 +199,19 @@ async function startServers() {
 		})
 
 	// ==========================================
+	// 8.6. Hook Dispatcher Initialization
+	// ==========================================
+	console.log('🪝 Initializing Hook Dispatcher in background...')
+	container.hookDispatcher
+		.initializeAll()
+		.then(() => {
+			console.log('✅ Hook Dispatcher initialized successfully')
+		})
+		.catch((err) => {
+			console.error('⚠️  Hook Dispatcher failed to initialize:', err.message)
+		})
+
+	// ==========================================
 	// 9. Setup Scheduled Services
 	// ==========================================
 	console.log('⏰ Setting up scheduled services...')

@@ -8,7 +8,8 @@ import type {
 	IMcpUserCredentialRepository,
 	IMcpCredentialProvider,
 	ISkillRepository,
-	ITraceabilityRepository
+	ITraceabilityRepository,
+	IHookServerRepository
 } from '@domain/repositories/index.js'
 import { mcpExternalManager } from '@infra/service/mcp-external.js'
 
@@ -21,8 +22,10 @@ import {
 	ChatRepository,
 	McpUserCredentialRepository,
 	SkillRepository,
-	TraceabilityRepository
+	TraceabilityRepository,
+	HookServerRepository
 } from '@infra/repository/index.js'
+import { HookDispatcherService } from '@infra/service/hook-dispatcher.service.js'
 
 import {
 	// User
@@ -154,6 +157,10 @@ export class Container {
 	private _updateSkillUseCase?: UpdateSkillUseCase
 	private _deleteSkillUseCase?: DeleteSkillUseCase
 
+	// Hook Server Repository & Dispatcher
+	private _hookServerRepository: IHookServerRepository
+	private _hookDispatcher?: HookDispatcherService
+
 	// Traceability Repository & Use Cases
 	private _traceabilityRepository: ITraceabilityRepository
 	private _tracTriggerService?: TraceabilityAgentTriggerService
@@ -197,6 +204,7 @@ export class Container {
 		this._mcpUserCredentialRepository = new McpUserCredentialRepository()
 		this._skillRepository = new SkillRepository()
 		this._traceabilityRepository = new TraceabilityRepository()
+		this._hookServerRepository = new HookServerRepository()
 
 		// Inyectar el adaptador de credenciales en McpExternalManager (dependency inversion)
 		mcpExternalManager.setCredentialProvider(new McpCredentialProviderAdapter(this._mcpUserCredentialRepository))
@@ -584,6 +592,21 @@ export class Container {
 	get getMyStagesUseCase(): GetMyStagesUseCase {
 		if (!this._getMyStagesUseCase) this._getMyStagesUseCase = new GetMyStagesUseCase(this._traceabilityRepository)
 		return this._getMyStagesUseCase
+	}
+
+	// ==========================================
+	// HOOK SERVER
+	// ==========================================
+
+	get hookServerRepository(): IHookServerRepository {
+		return this._hookServerRepository
+	}
+
+	get hookDispatcher(): HookDispatcherService {
+		if (!this._hookDispatcher) {
+			this._hookDispatcher = new HookDispatcherService(this._hookServerRepository)
+		}
+		return this._hookDispatcher
 	}
 
 	// ==========================================
