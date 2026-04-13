@@ -237,24 +237,26 @@ async function doDelete() {
                   :class="server.active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'">
                   {{ server.active ? 'active' : 'inactive' }}
                 </span>
-                <!-- Connection status -->
-                <span v-if="connectionStatus[server.id] === 'checking'"
-                  class="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-700 text-slate-400">
-                  <svg class="w-2.5 h-2.5 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                  </svg>
-                </span>
-                <span v-else-if="connectionStatus[server.id] === 'connected'"
-                  class="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-900/40 text-emerald-400">
-                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                  connected
-                </span>
-                <span v-else-if="connectionStatus[server.id] === 'disconnected'"
-                  class="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-900/40 text-red-400">
-                  <span class="w-1.5 h-1.5 rounded-full bg-red-400"></span>
-                  disconnected
-                </span>
+                <template v-if="server.type !== 'local'">
+                  <!-- Connection status -->
+                  <span v-if="connectionStatus[server.id] === 'checking'"
+                    class="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-700 text-slate-400">
+                    <svg class="w-2.5 h-2.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                    </svg>
+                  </span>
+                  <span v-else-if="connectionStatus[server.id] === 'connected'"
+                    class="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-900/40 text-emerald-400">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                    connected
+                  </span>
+                  <span v-else-if="connectionStatus[server.id] === 'disconnected'"
+                    class="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-900/40 text-red-400">
+                    <span class="w-1.5 h-1.5 rounded-full bg-red-400"></span>
+                    disconnected
+                  </span>
+                </template>
               </div>
             </div>
 
@@ -300,10 +302,9 @@ async function doDelete() {
           </div>
 
           <!-- Actions -->
-          <div class="flex items-center gap-2 pt-3 border-t border-slate-700">
-            <button
-              class="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium text-slate-200 hover:text-red-600 hover:bg-red-50 transition-colors"
-              @click="confirmDelete(server)">
+          <div class="flex items-center gap-2 pt-3 border-t border-slate-700" v-if="server.type !== 'local'">
+            <button class=" flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium
+            text-slate-200 hover:text-red-600 hover:bg-red-50 transition-colors" @click="confirmDelete(server)">
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

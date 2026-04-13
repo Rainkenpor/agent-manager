@@ -369,7 +369,7 @@ export const traceabilityStages = sqliteTable('traceability_stages', {
 	traceabilityId: text('traceability_id')
 		.notNull()
 		.references(() => traceabilities.id, { onDelete: 'cascade' }),
-	templateStageId: text('template_stage_id').references(() => templateStages.id, { onDelete: 'set null' }),
+	templateStageId: text('template_stage_id').references(() => templateStages.id, { onDelete: 'cascade' }),
 	name: text('name').notNull(),
 	description: text('description'),
 	role: text('role'),

@@ -11,7 +11,7 @@ export class CreateTemplateStageUseCase {
     try {
       const result = await this.repo.createTemplateStage(data)
       // Propagate new stage to all derived traceabilities
-      this.repo.syncTraceabilitiesFromTemplate(data.templateId).catch(console.error)
+      await this.repo.syncTraceabilitiesFromTemplate(data.templateId)
       return { success: true as const, data: result }
     } catch (error) {
       return { success: false as const, error: error instanceof Error ? error.message : 'Unknown error' }
@@ -27,7 +27,7 @@ export class UpdateTemplateStageUseCase {
       const result = await this.repo.updateTemplateStage(data)
       if (!result) return { success: false as const, error: 'Stage not found' }
       // Propagate changes to all derived traceabilities
-      this.repo.syncTraceabilitiesFromTemplate(result.templateId).catch(console.error)
+      await this.repo.syncTraceabilitiesFromTemplate(result.templateId)
       return { success: true as const, data: result }
     } catch (error) {
       return { success: false as const, error: error instanceof Error ? error.message : 'Unknown error' }
@@ -43,7 +43,7 @@ export class DeleteTemplateStageUseCase {
       // Fetch templateId before deleting so we can sync afterwards
       const stage = await this.repo.findTemplateStageById(id)
       await this.repo.deleteTemplateStage(id)
-      if (stage) this.repo.syncTraceabilitiesFromTemplate(stage.templateId).catch(console.error)
+      if (stage) await this.repo.syncTraceabilitiesFromTemplate(stage.templateId)
       return { success: true as const }
     } catch (error) {
       return { success: false as const, error: error instanceof Error ? error.message : 'Unknown error' }
