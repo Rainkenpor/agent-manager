@@ -133,7 +133,9 @@ export class HookDispatcherService {
 					const mcpServerName = assignment.extraData?.mcpServerName
 					if (!mcpServerName) continue
 					await mcpExternalManager.ensureServerInitialized(mcpServerName, { url: assignment.extraData?.mcpServerUrl ?? '' } as any)
-					logger.info(`HookDispatcher: dispatched hook "${hookName}" to tool "${assignment.assignmentName}"`)
+					const toolId = `mcp__${mcpServerName}__${assignment.assignmentName}`
+					const result = await mcpExternalManager.callTool(toolId, payload)
+					logger.info(`HookDispatcher: dispatched hook "${hookName}" to tool "${assignment.assignmentName}" → ${result}`)
 				}
 			} catch (err: any) {
 				logger.error(`HookDispatcher: error dispatching hook "${hookName}" to "${assignment.assignmentName}": ${err?.message}`)

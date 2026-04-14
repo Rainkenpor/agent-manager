@@ -22,7 +22,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 	return (text ? JSON.parse(text) : undefined) as T
 }
 
-function requestAsync<T>(path: string, options: RequestInit = {}, signal?: AbortSignal): Promise<Response> {
+function requestAsync(path: string, options: RequestInit = {}, signal?: AbortSignal) {
 	return fetch(`${BASE}${path}`, {
 		...options,
 		headers: getHeaders(options.headers as Record<string, string>),
@@ -89,7 +89,9 @@ export const duplicateAgent = (id: string) => request<any>(`/agents/${id}/duplic
 
 // MCP Server tools discovery
 export const getMcpServerTools = (mcpServerId: string) =>
-	request<{ success: boolean; data: Array<{ toolName: string; description: string; inputSchema: Record<string, any> }> }>(`/mcp-servers/${mcpServerId}/tools`)
+	request<{ success: boolean; data: Array<{ toolName: string; description: string; inputSchema: Record<string, any> }> }>(
+		`/mcp-servers/${mcpServerId}/tools`
+	)
 
 export const callMcpServerTool = (mcpServerId: string, toolName: string, args: Record<string, unknown>) =>
 	request<{ success: boolean; data: string }>(`/mcp-servers/${mcpServerId}/tools/call`, {
