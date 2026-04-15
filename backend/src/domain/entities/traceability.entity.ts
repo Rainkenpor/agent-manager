@@ -199,6 +199,8 @@ export interface CreateTaskDTO {
 	description?: string
 	type?: TaskType
 	status?: TaskStatus
+	/** Jira issue ID (e.g. "PROJ-123"). When provided, an event listener is auto-created to sync the task status. */
+	jiraIssueId?: string
 }
 
 export interface UpdateTaskDTO {

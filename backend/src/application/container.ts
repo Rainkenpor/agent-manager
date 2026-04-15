@@ -542,7 +542,13 @@ export class Container {
 	}
 
 	get createTaskUseCase(): CreateTaskUseCase {
-		if (!this._createTaskUseCase) this._createTaskUseCase = new CreateTaskUseCase(this._traceabilityRepository, this.tracTriggerService)
+		if (!this._createTaskUseCase)
+			this._createTaskUseCase = new CreateTaskUseCase(
+				this._traceabilityRepository,
+				this.tracTriggerService,
+				this._eventListenerRepository,
+				this.eventListenerExecutor
+			)
 		return this._createTaskUseCase
 	}
 

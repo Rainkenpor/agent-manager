@@ -65,7 +65,10 @@ const createTaskSchema = z.object({
 	title: z.string().min(1),
 	description: z.string().optional(),
 	type: z.enum(['task', 'bug']).optional(),
-	status: z.enum(['todo', 'in-progress', 'done', 'blocked']).optional()
+	status: z.enum(['todo', 'in-progress', 'done', 'blocked']).optional(),
+	jiraIssueId: z.string().optional().describe(
+		'ID del issue de Jira (e.g. "PROJ-123"). Si se indica, crea automáticamente un event listener que monitorea el issue y actualiza la tarea a "done" cuando el estado del issue sea "Finalizada".'
+	)
 })
 
 const updateTaskSchema = z.object({
@@ -305,7 +308,7 @@ export function registerTraceabilityRoutes(): void {
 		path: '/api/traceability/tasks',
 		toolName: 'create_traceability_task',
 		toolDescription:
-			'Crea una tarea dentro de una etapa de trazabilidad. Usa get_traceability para obtener el stageId de la etapa destino. El estado de la etapa se recalcula automáticamente al crear la tarea.',
+			'Crea una tarea dentro de una etapa de trazabilidad. Usa get_traceability para obtener el stageId de la etapa destino. El estado de la etapa se recalcula automáticamente al crear la tarea. Si se proporciona jiraIssueId, crea automáticamente un event listener que monitorea el issue en Jira y actualiza la tarea a "done" cuando el estado sea "Finalizada".',
 		inputSchema: createTaskSchema.shape,
 		requiresAuth: true,
 		requiredPermission: { resource: 'traceability', action: 'update' },
