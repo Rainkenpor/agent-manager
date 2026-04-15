@@ -9,7 +9,8 @@ import type {
 	IMcpCredentialProvider,
 	ISkillRepository,
 	ITraceabilityRepository,
-	IHookServerRepository
+	IHookServerRepository,
+	IEventListenerRepository
 } from '@domain/repositories/index.js'
 import { mcpExternalManager } from '@infra/service/mcp-external.js'
 
@@ -23,9 +24,11 @@ import {
 	McpUserCredentialRepository,
 	SkillRepository,
 	TraceabilityRepository,
-	HookServerRepository
+	HookServerRepository,
+	EventListenerRepository
 } from '@infra/repository/index.js'
 import { HookDispatcherService } from '@infra/service/hook-dispatcher.service.js'
+import { EventListenerExecutorService } from '@infra/service/event-listener-executor.service.js'
 
 import {
 	// User
@@ -57,6 +60,12 @@ import {
 	GetSkillUseCase,
 	UpdateSkillUseCase,
 	DeleteSkillUseCase,
+	// Event Listener Use Cases
+	CreateEventListenerUseCase,
+	ListEventListenersUseCase,
+	GetEventListenerUseCase,
+	UpdateEventListenerUseCase,
+	DeleteEventListenerUseCase,
 	// Traceability Use Cases
 	ListTemplatesUseCase,
 	GetTemplateUseCase,
@@ -161,6 +170,15 @@ export class Container {
 	private _hookServerRepository: IHookServerRepository
 	private _hookDispatcher?: HookDispatcherService
 
+	// Event Listener Repository, Use Cases & Executor
+	private _eventListenerRepository: IEventListenerRepository
+	private _createEventListenerUseCase?: CreateEventListenerUseCase
+	private _listEventListenersUseCase?: ListEventListenersUseCase
+	private _getEventListenerUseCase?: GetEventListenerUseCase
+	private _updateEventListenerUseCase?: UpdateEventListenerUseCase
+	private _deleteEventListenerUseCase?: DeleteEventListenerUseCase
+	private _eventListenerExecutor?: EventListenerExecutorService
+
 	// Traceability Repository & Use Cases
 	private _traceabilityRepository: ITraceabilityRepository
 	private _tracTriggerService?: TraceabilityAgentTriggerService
@@ -205,6 +223,7 @@ export class Container {
 		this._skillRepository = new SkillRepository()
 		this._traceabilityRepository = new TraceabilityRepository()
 		this._hookServerRepository = new HookServerRepository()
+		this._eventListenerRepository = new EventListenerRepository()
 
 		// Inyectar el adaptador de credenciales en McpExternalManager (dependency inversion)
 		mcpExternalManager.setCredentialProvider(new McpCredentialProviderAdapter(this._mcpUserCredentialRepository))
@@ -616,6 +635,46 @@ export class Container {
 	get streamAgentLogsUseCase(): StreamAgentLogsUseCase {
 		if (!this._streamAgentLogsUseCase) this._streamAgentLogsUseCase = new StreamAgentLogsUseCase()
 		return this._streamAgentLogsUseCase
+	}
+
+	// ==========================================
+	// EVENT LISTENER USE CASES & EXECUTOR
+	// ==========================================
+
+	get createEventListenerUseCase(): CreateEventListenerUseCase {
+		if (!this._createEventListenerUseCase)
+			this._createEventListenerUseCase = new CreateEventListenerUseCase(this._eventListenerRepository)
+		return this._createEventListenerUseCase
+	}
+
+	get listEventListenersUseCase(): ListEventListenersUseCase {
+		if (!this._listEventListenersUseCase)
+			this._listEventListenersUseCase = new ListEventListenersUseCase(this._eventListenerRepository)
+		return this._listEventListenersUseCase
+	}
+
+	get getEventListenerUseCase(): GetEventListenerUseCase {
+		if (!this._getEventListenerUseCase)
+			this._getEventListenerUseCase = new GetEventListenerUseCase(this._eventListenerRepository)
+		return this._getEventListenerUseCase
+	}
+
+	get updateEventListenerUseCase(): UpdateEventListenerUseCase {
+		if (!this._updateEventListenerUseCase)
+			this._updateEventListenerUseCase = new UpdateEventListenerUseCase(this._eventListenerRepository)
+		return this._updateEventListenerUseCase
+	}
+
+	get deleteEventListenerUseCase(): DeleteEventListenerUseCase {
+		if (!this._deleteEventListenerUseCase)
+			this._deleteEventListenerUseCase = new DeleteEventListenerUseCase(this._eventListenerRepository)
+		return this._deleteEventListenerUseCase
+	}
+
+	get eventListenerExecutor(): EventListenerExecutorService {
+		if (!this._eventListenerExecutor)
+			this._eventListenerExecutor = new EventListenerExecutorService(this._eventListenerRepository)
+		return this._eventListenerExecutor
 	}
 }
 

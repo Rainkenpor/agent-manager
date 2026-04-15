@@ -265,6 +265,18 @@ export const createHookAssignment = (hookServerId: string, data: any) =>
 export const deleteHookAssignment = (hookServerId: string, assignmentId: string) =>
 	request<{ success: boolean }>(`/hook-servers/${hookServerId}/assignments/${assignmentId}`, { method: 'DELETE' })
 
+// Event Listeners
+export const getEventListeners = () => request<{ success: boolean; data: any[] }>('/event-listeners')
+export const getEventListenerById = (id: string) => request<{ success: boolean; data: any }>(`/event-listeners/${id}`)
+export const createEventListener = (data: any) =>
+	request<{ success: boolean; data: any }>('/event-listeners', { method: 'POST', body: JSON.stringify(data) })
+export const updateEventListener = (id: string, data: any) =>
+	request<{ success: boolean; data: any }>(`/event-listeners/${id}`, { method: 'PUT', body: JSON.stringify({ id, ...data }) })
+export const deleteEventListener = (id: string) =>
+	request<{ success: boolean }>(`/event-listeners/${id}`, { method: 'DELETE' })
+export const triggerEventListener = (id: string) =>
+	request<{ success: boolean; data: any }>(`/event-listeners/${id}/trigger`, { method: 'POST' })
+
 export function streamMessage(conversationId: string, content: string, signal?: AbortSignal): Promise<Response> {
 	const token = localStorage.getItem('token')
 	return fetch(`${BASE}/chat/conversations/${conversationId}/messages`, {

@@ -18,6 +18,7 @@ const allNavLinks = [
   { to: '/mcp-credentials', label: 'My Credentials', icon: 'mdi-key', resource: 'mcp_credentials' },
   { to: '/traceability', label: 'Trazabilidad', icon: 'mdi-sitemap', resource: 'traceability' },
   { to: '/hook-servers', label: 'Hook Servers', icon: 'mdi-webhook', resource: 'hook_servers' },
+  { to: '/event-listeners', label: 'Event Listeners', icon: 'mdi-broadcast', resource: 'event_listeners' },
 ]
 
 const navLinks = computed(() =>

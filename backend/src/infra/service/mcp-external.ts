@@ -530,7 +530,7 @@ export class McpExternalManager {
 	}
 
 	isMcpTool(toolId: string): boolean {
-		return toolId.startsWith(MCP_PREFIX)
+		return toolId.startsWith(MCP_PREFIX) && !toolId.startsWith('mcp__agent-manager')
 	}
 
 	getTools(): AgentTool[] {

@@ -287,6 +287,36 @@ async function seedDefaultPermissions() {
 			action: 'delete',
 			description: 'Eliminar trazabilidades y templates',
 			createdAt: new Date().toISOString()
+		},
+
+		// Event Listeners
+		{
+			id: randomUUID(),
+			resource: 'event_listeners',
+			action: 'create',
+			description: 'Crear event listeners',
+			createdAt: new Date().toISOString()
+		},
+		{
+			id: randomUUID(),
+			resource: 'event_listeners',
+			action: 'read',
+			description: 'Ver event listeners',
+			createdAt: new Date().toISOString()
+		},
+		{
+			id: randomUUID(),
+			resource: 'event_listeners',
+			action: 'update',
+			description: 'Actualizar y disparar event listeners',
+			createdAt: new Date().toISOString()
+		},
+		{
+			id: randomUUID(),
+			resource: 'event_listeners',
+			action: 'delete',
+			description: 'Eliminar event listeners',
+			createdAt: new Date().toISOString()
 		}
 	]
 

@@ -507,6 +507,36 @@ export type NewHookServer = typeof hookServers.$inferInsert
 export type HookAssignment = typeof hookAssignments.$inferSelect
 export type NewHookAssignment = typeof hookAssignments.$inferInsert
 
+// ─── Event Listeners ──────────────────────────────────────────────────────────
+
+// Event Listeners — poll a tool on a schedule, fire action when condition is met, then self-delete
+export const eventListeners = sqliteTable('event_listeners', {
+	id: text('id').primaryKey(),
+	name: text('name').notNull(),
+	schedule: text('schedule').notNull(), // cron expression e.g. "*/15 * * * *"
+	source: text('source', { mode: 'json' })
+		.$type<{ function_name: string; params: Record<string, unknown> }>()
+		.notNull(),
+	condition: text('condition', { mode: 'json' })
+		.$type<{ field: string; operator: string; value: unknown }>()
+		.notNull(),
+	action: text('action', { mode: 'json' })
+		.$type<Array<{ function_name: string; params: Record<string, unknown> }>>()
+		.notNull(),
+	enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+	lastRunAt: text('last_run_at'),
+	lastRunResult: text('last_run_result'), // 'condition_met' | 'condition_not_met' | error message
+	createdAt: text('created_at')
+		.notNull()
+		.$defaultFn(() => new Date().toISOString()),
+	updatedAt: text('updated_at')
+		.notNull()
+		.$defaultFn(() => new Date().toISOString())
+})
+
+export type EventListenerRecord = typeof eventListeners.$inferSelect
+export type NewEventListenerRecord = typeof eventListeners.$inferInsert
+
 // Tipos inferidos
 export type Skill = typeof skills.$inferSelect
 export type NewSkill = typeof skills.$inferInsert

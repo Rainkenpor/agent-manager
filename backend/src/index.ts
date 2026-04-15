@@ -212,6 +212,19 @@ async function startServers() {
 		})
 
 	// ==========================================
+	// 8.7. Event Listener Executor Initialization
+	// ==========================================
+	console.log('📡 Initializing Event Listener Executor...')
+	container.eventListenerExecutor
+		.initialize()
+		.then(() => {
+			console.log('✅ Event Listener Executor initialized successfully')
+		})
+		.catch((err) => {
+			console.error('⚠️  Event Listener Executor failed to initialize:', err.message)
+		})
+
+	// ==========================================
 	// 9. Setup Scheduled Services
 	// ==========================================
 	console.log('⏰ Setting up scheduled services...')
