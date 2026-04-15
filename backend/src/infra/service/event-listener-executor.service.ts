@@ -1,9 +1,9 @@
 import type { IEventListenerRepository } from '../../domain/repositories/event-listener.repository.js'
 import type { EventListener } from '../../domain/entities/event-listener.entity.js'
-import { registry } from '../../application/services/registry.service.js'
 import { getNextCronRun } from './cron-parser.js'
 import { evaluateCondition } from './field-accessor.js'
 import { executeToolCall } from '@infra/utils/tools.js'
+import { logger } from './logger.service.js'
 
 /**
  * EventListenerExecutorService
@@ -26,7 +26,7 @@ export class EventListenerExecutorService {
 		for (const listener of listeners) {
 			this.scheduleListener(listener)
 		}
-		console.log(`📡 Event Listener Executor: scheduled ${listeners.length} listener(s)`)
+		logger.info(`Event Listener Executor: scheduled ${listeners.length} listener(s)`)
 	}
 
 	/** Schedule (or re-schedule) a single listener. */
@@ -62,7 +62,6 @@ export class EventListenerExecutorService {
 
 		try {
 			// 1. Call source tool
-
 			const sourceResult = await executeToolCall(() => {}, listener.source.function_name, listener.source.params, {
 				agentSlug: 'event-listener',
 				query: '',
@@ -109,7 +108,7 @@ export class EventListenerExecutorService {
 				// Auto-delete
 				this.cancelListener(listenerId)
 				await this.repository.delete(listenerId)
-				console.log(`✅ EventListener "${listener.name}" (${listenerId}): condition met → actions executed → deleted`)
+				logger.info(`EventListener "${listener.name}" (${listenerId}): condition met → actions executed → deleted`)
 				return { conditionMet: true }
 			}
 
@@ -118,7 +117,7 @@ export class EventListenerExecutorService {
 			return { conditionMet: false }
 		} catch (err) {
 			const message = err instanceof Error ? err.message : String(err)
-			console.error(`❌ EventListener "${listener.name}" (${listenerId}): ${message}`)
+			logger.error(`EventListener "${listener.name}" (${listenerId}): ${message}`)
 			try {
 				await this.repository.updateLastRun(listenerId, `error: ${message}`)
 			} catch {
@@ -137,11 +136,11 @@ export class EventListenerExecutorService {
 			const next = getNextCronRun(schedule)
 			const delay = Math.max(0, next.getTime() - Date.now())
 			const t = setTimeout(() => {
-				setImmediate(() => tick().catch((e) => console.error(`EventListener tick error:`, e)))
+				setImmediate(() => tick().catch((e) => logger.error(`EventListener tick error: ${e}`)))
 			}, delay)
 			this.jobs.set(id, t)
 		} catch (err) {
-			console.error(`EventListener schedule error for ${id}:`, err)
+			logger.error(`EventListener schedule error for ${id}: ${err}`)
 		}
 	}
 }
