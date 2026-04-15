@@ -797,8 +797,7 @@ export class InternalAgentService implements IAgentService {
 		messages: MessageParam[],
 		tools: Tool[],
 		originalParams: IAgentServiceExecute,
-		maxIterations = 60,
-		mcpExternal?: typeof mcpExternalManager
+		maxIterations = 60
 	): Promise<string> {
 		for (let i = 0; i < maxIterations; i++) {
 			agentLogger.info(`[${this.agentType}] Iteration ${i + 1}/${maxIterations}`)
@@ -838,13 +837,7 @@ export class InternalAgentService implements IAgentService {
 
 				agentLogger.info(`[${this.agentType}] → ${toolCall.function.name}(${JSON.stringify(toolArgs).slice(0, 200)})`)
 
-				const result = await executeToolCall(
-					() => new InternalAgentService(),
-					toolCall.function.name,
-					toolArgs,
-					originalParams,
-					mcpExternal
-				)
+				const result = await executeToolCall(() => new InternalAgentService(), toolCall.function.name, toolArgs, originalParams)
 
 				agentLogger.info(`[${this.agentType}] ← ${result.slice(0, 200).replace(/\n/g, '\\n').replace(/\r/g, '\\r')}`)
 
@@ -869,8 +862,7 @@ export class InternalAgentService implements IAgentService {
 		messages: MessageParam[],
 		tools: Tool[],
 		originalParams: IAgentServiceExecute,
-		maxIterations = 60,
-		mcpExternal?: typeof mcpExternalManager
+		maxIterations = 60
 	): AsyncGenerator<string> {
 		const signal = originalParams.signal
 		for (let i = 0; i < maxIterations; i++) {
@@ -918,13 +910,7 @@ export class InternalAgentService implements IAgentService {
 
 				agentLogger.info(`[${this.agentType}] → ${toolCall.function.name}(${JSON.stringify(toolArgs).slice(0, 200)})`)
 
-				const result = await executeToolCall(
-					() => new InternalAgentService(),
-					toolCall.function.name,
-					toolArgs,
-					originalParams,
-					mcpExternal
-				)
+				const result = await executeToolCall(() => new InternalAgentService(), toolCall.function.name, toolArgs, originalParams)
 
 				agentLogger.info(`[${this.agentType}] ← ${result.slice(0, 200).replace(/\n/g, '\\n').replace(/\r/g, '\\r')}`)
 
@@ -961,7 +947,7 @@ export class InternalAgentService implements IAgentService {
 		]
 
 		try {
-			const result = await this.runLoop(parsed, config, messages, tools, params, 60, mcpExternalManager)
+			const result = await this.runLoop(parsed, config, messages, tools, params, 60)
 			agentLogger.info(`[${this.agentType}] ══════ END agent=${agentType} ══════`)
 			return result
 		} finally {
@@ -997,7 +983,7 @@ export class InternalAgentService implements IAgentService {
 		]
 
 		try {
-			yield* this.runLoopStream(parsed, config, messages, tools, params, 60, mcpExternalManager)
+			yield* this.runLoopStream(parsed, config, messages, tools, params, 60)
 		} finally {
 			agentLogger.info(`[${this.agentType}] ══════ END stream agent=${agentType} ══════`)
 		}

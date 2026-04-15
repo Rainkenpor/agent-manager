@@ -1,11 +1,11 @@
 import type { IAgentServiceExecute, ToolCallbacks } from '@domain/entities/agent.entity.js'
-import type { mcpExternalManager } from '../service/mcp-external.js'
 import { z, type ZodRawShape } from 'zod'
 import { registry } from '@applicationService/registry.service.js'
 import { agentLogger } from '../service/logger.service.js'
 import nodePath from 'node:path'
 import fs from 'node:fs'
 import { NextFunction, Request, Response } from 'express'
+import { mcpExternalManager } from '../service/mcp-external.js'
 
 interface Tool {
 	type: 'function'
@@ -136,7 +136,7 @@ async function callRegisteredTool(toolName: string, params: Record<string, unkno
 	const route = routes.find(
 		(r) =>
 			r.useBy?.includes('mcp') &&
-			(r.toolName === toolName || r.toolName === `agent-manager_${toolName}` || toolName === `agent-manager_${r.toolName}`)
+			(r.toolName === toolName || r.toolName === `agent-manager_${toolName}` || toolName === `agent-manager_${r.toolName}`) || toolName === `mcp__agent-manager__${r.toolName}`
 	)
 
 	if (!route?.handler) {
@@ -361,8 +361,7 @@ export async function executeToolCall(
 	newAgentService: () => any,
 	toolName: string,
 	args: Record<string, unknown>,
-	originalParams: IAgentServiceExecute,
-	mcpExternal?: typeof mcpExternalManager
+	originalParams: IAgentServiceExecute
 ): Promise<string> {
 	try {
 		originalParams.toolsCallbacks?.onToolCall(toolName, args) // Notificar a callbacks de herramienta invocada, si existe
@@ -429,7 +428,10 @@ export async function executeToolCall(
 			}
 			default:
 				// Primero intenta herramientas externas MCP, luego las registradas en el registry. Las herramientas externas tienen prioridad si hay nombres coincidentes, asumiendo que son más específicas para el contexto de agentes.
-				if (mcpExternal?.isMcpTool(toolName)) return await mcpExternal.callTool(toolName, args, originalParams.userId)
+				if (mcpExternalManager?.isMcpTool(toolName)) {
+					const data = await mcpExternalManager.callTool(toolName, args, originalParams.userId)
+					return data
+				}
 
 				// Si no es una herramienta externa, intenta llamar a una herramienta registrada en el registry de la aplicación. Esto permite que las herramientas definidas en el código sean accesibles para los agentes.
 				return await callRegisteredTool(toolName, args, originalParams.userId)

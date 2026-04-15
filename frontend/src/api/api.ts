@@ -22,7 +22,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 	return (text ? JSON.parse(text) : undefined) as T
 }
 
-function requestAsync<T>(path: string, options: RequestInit = {}, signal?: AbortSignal): Promise<Response> {
+function requestAsync(path: string, options: RequestInit = {}, signal?: AbortSignal) {
 	return fetch(`${BASE}${path}`, {
 		...options,
 		headers: getHeaders(options.headers as Record<string, string>),
@@ -89,7 +89,15 @@ export const duplicateAgent = (id: string) => request<any>(`/agents/${id}/duplic
 
 // MCP Server tools discovery
 export const getMcpServerTools = (mcpServerId: string) =>
-	request<{ success: boolean; data: Array<{ toolName: string; description: string }> }>(`/mcp-servers/${mcpServerId}/tools`)
+	request<{ success: boolean; data: Array<{ toolName: string; description: string; inputSchema: Record<string, any> }> }>(
+		`/mcp-servers/${mcpServerId}/tools`
+	)
+
+export const callMcpServerTool = (mcpServerId: string, toolName: string, args: Record<string, unknown>) =>
+	request<{ success: boolean; data: string }>(`/mcp-servers/${mcpServerId}/tools/call`, {
+		method: 'POST',
+		body: JSON.stringify({ toolName, args })
+	})
 
 // MCP Server connection status & reconnect
 export const getMcpServerStatus = (mcpServerId: string) =>
@@ -237,6 +245,37 @@ export const assignStageUser = (stageId: string, userId: string | null) =>
 	request<{ success: boolean; data: any }>(`/traceability/stages/${stageId}/assign`, { method: 'PUT', body: JSON.stringify({ userId }) })
 export const getMyStages = () => request<{ success: boolean; data: any[] }>('/traceability/my-stages')
 export const streamAgentLogs = (signal?: AbortSignal) => requestAsync('/logs/stream', {}, signal)
+
+// Hook Servers
+export const getHookServers = () => request<{ success: boolean; data: any[] }>('/hook-servers')
+export const getHookServerById = (id: string) => request<{ success: boolean; data: any }>(`/hook-servers/${id}`)
+export const createHookServer = (data: any) =>
+	request<{ success: boolean; data: any }>('/hook-servers', { method: 'POST', body: JSON.stringify(data) })
+export const updateHookServer = (id: string, data: any) =>
+	request<{ success: boolean; data: any }>(`/hook-servers/${id}`, { method: 'PUT', body: JSON.stringify(data) })
+export const deleteHookServer = (id: string) => request<{ success: boolean }>(`/hook-servers/${id}`, { method: 'DELETE' })
+export const discoverHooks = (id: string) => request<{ success: boolean; data: any[] }>(`/hook-servers/${id}/hooks`)
+export const getHookAssignments = (hookServerId: string) =>
+	request<{ success: boolean; data: any[] }>(`/hook-servers/${hookServerId}/assignments`)
+export const createHookAssignment = (hookServerId: string, data: any) =>
+	request<{ success: boolean; data: any }>(`/hook-servers/${hookServerId}/assignments`, {
+		method: 'POST',
+		body: JSON.stringify(data)
+	})
+export const deleteHookAssignment = (hookServerId: string, assignmentId: string) =>
+	request<{ success: boolean }>(`/hook-servers/${hookServerId}/assignments/${assignmentId}`, { method: 'DELETE' })
+
+// Event Listeners
+export const getEventListeners = () => request<{ success: boolean; data: any[] }>('/event-listeners')
+export const getEventListenerById = (id: string) => request<{ success: boolean; data: any }>(`/event-listeners/${id}`)
+export const createEventListener = (data: any) =>
+	request<{ success: boolean; data: any }>('/event-listeners', { method: 'POST', body: JSON.stringify(data) })
+export const updateEventListener = (id: string, data: any) =>
+	request<{ success: boolean; data: any }>(`/event-listeners/${id}`, { method: 'PUT', body: JSON.stringify({ id, ...data }) })
+export const deleteEventListener = (id: string) =>
+	request<{ success: boolean }>(`/event-listeners/${id}`, { method: 'DELETE' })
+export const triggerEventListener = (id: string) =>
+	request<{ success: boolean; data: any }>(`/event-listeners/${id}/trigger`, { method: 'POST' })
 
 export function streamMessage(conversationId: string, content: string, signal?: AbortSignal): Promise<Response> {
 	const token = localStorage.getItem('token')

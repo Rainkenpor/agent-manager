@@ -75,6 +75,18 @@ const router = createRouter({
           component: () => import('@/views/TraceabilityView.vue'),
           meta: { resource: 'traceability' },
         },
+        {
+          path: 'hook-servers',
+          name: 'hook-servers',
+          component: () => import('@/views/HookServersView.vue'),
+          meta: { resource: 'hook_servers' },
+        },
+        {
+          path: 'event-listeners',
+          name: 'event-listeners',
+          component: () => import('@/views/EventListenerView.vue'),
+          meta: { resource: 'event_listeners' },
+        },
       ],
     },
   ],

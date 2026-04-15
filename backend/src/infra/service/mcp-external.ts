@@ -530,7 +530,7 @@ export class McpExternalManager {
 	}
 
 	isMcpTool(toolId: string): boolean {
-		return toolId.startsWith(MCP_PREFIX)
+		return toolId.startsWith(MCP_PREFIX) && !toolId.startsWith('mcp__agent-manager')
 	}
 
 	getTools(): AgentTool[] {
@@ -546,7 +546,10 @@ export class McpExternalManager {
 	 */
 	async callTool(toolId: string, args: Record<string, unknown>, userId?: string): Promise<string> {
 		const entry = this.toolMap.get(toolId) ?? parseMcpToolId(toolId) ?? undefined
-		if (!entry) return `External MCP tool not found: ${toolId}`
+		if (!entry) {
+      agentLogger.warn(`[McpExternal] Attempt to call unknown MCP tool '${toolId}'`)
+      return `External MCP tool not found: ${toolId}`
+    }
 
 		const { serverName, toolName } = entry
 

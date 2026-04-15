@@ -9,6 +9,8 @@ import { registerMcpCredentialRoutes } from './mcp-credential.route.js'
 import { registerSkillRoutes } from './skill.route.js'
 import { registerTraceabilityRoutes } from './traceability.route.js'
 import { registerLogsRoutes } from './logs.route.js'
+import { registerHookServerRoutes } from './hook-server.route.js'
+import { registerEventListenerRoutes } from './event-listener.route.js'
 
 /**
  * Initializes the registry by calling all registration functions.
@@ -26,4 +28,6 @@ export function initializeRegistry(): void {
 	registerSkillRoutes()
 	registerTraceabilityRoutes()
 	registerLogsRoutes()
+	registerHookServerRoutes()
+	registerEventListenerRoutes()
 }

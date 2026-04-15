@@ -141,6 +141,7 @@ export interface TraceabilityStage {
 	type: 'manual' | 'agent'
 	agentId?: string | null
 	predecessors: string[]
+	nextStages?: { id: string; name: string; user?: string }[]
 	status: StageStatus
 	effortScore: number
 	assignedUserId?: string | null

@@ -7,3 +7,5 @@ export * from "./chat.repository.js";
 export * from "./mcp-user-credential.repository.js";
 export * from "./skill.repository.js";
 export * from "./traceability.repository.js";
+export * from "./hook-server.repository.js";
+export * from "./event-listener.repository.js";

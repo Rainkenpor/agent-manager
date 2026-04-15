@@ -32,7 +32,8 @@ export class TraceabilityAgentTriggerService {
 				traceabilityId: stage.traceabilityId,
 				traceabilityTitle: trac?.title,
 				traceabilityDescription: trac?.description,
-				currentStage: { id: stage.id, name: stage.name, description: stage.description }
+				currentStage: { id: stage.id, name: stage.name, description: stage.description },
+				nextStages: stage.nextStages
 			},
 			null,
 			2

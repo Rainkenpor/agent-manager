@@ -199,6 +199,32 @@ async function startServers() {
 		})
 
 	// ==========================================
+	// 8.6. Hook Dispatcher Initialization
+	// ==========================================
+	console.log('🪝 Initializing Hook Dispatcher in background...')
+	container.hookDispatcher
+		.initializeAll()
+		.then(() => {
+			console.log('✅ Hook Dispatcher initialized successfully')
+		})
+		.catch((err) => {
+			console.error('⚠️  Hook Dispatcher failed to initialize:', err.message)
+		})
+
+	// ==========================================
+	// 8.7. Event Listener Executor Initialization
+	// ==========================================
+	console.log('📡 Initializing Event Listener Executor...')
+	container.eventListenerExecutor
+		.initialize()
+		.then(() => {
+			console.log('✅ Event Listener Executor initialized successfully')
+		})
+		.catch((err) => {
+			console.error('⚠️  Event Listener Executor failed to initialize:', err.message)
+		})
+
+	// ==========================================
 	// 9. Setup Scheduled Services
 	// ==========================================
 	console.log('⏰ Setting up scheduled services...')

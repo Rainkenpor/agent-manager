@@ -237,7 +237,7 @@ export function registerMcpServerRoutes(): void {
 					const tools = registry
 						.getRoutes()
 						.filter((r) => r.useBy?.includes('mcp') && r.toolName && r.toolDescription)
-						.map((r) => ({ toolName: r.toolName!, description: r.toolDescription! }))
+						.map((r) => ({ toolName: r.toolName!, description: r.toolDescription!, inputSchema: r.inputSchema ?? {} }))
 					return { success: true, data: tools }
 				}
 
@@ -247,9 +247,49 @@ export function registerMcpServerRoutes(): void {
 					success: true,
 					data: tools.map((t) => ({
 						toolName: t.toolName,
-						description: t.description
+						description: t.description,
+						inputSchema: t.inputSchema
 					}))
 				}
+			} catch (error: any) {
+				res.status(500).json({ error: error.message })
+			}
+		}
+	})
+
+	// Call a tool from an MCP server manually
+	registry.register({
+		useBy: ['server'],
+		method: 'POST',
+		path: '/api/mcp-servers/:id/tools/call',
+		inputSchema: z.object({
+			id: z.string(),
+			toolName: z.string(),
+			args: z.record(z.string(), z.unknown()).optional()
+		}).shape,
+		requiresAuth: true,
+		requiredPermission: { resource: 'mcp_servers', action: 'read' },
+		handler: async ({ input, context: { req, res } }) => {
+			try {
+				const server = await container.mcpServerRepository.findById(input.id)
+				if (!server) return res.status(404).json({ error: 'MCP server not found' })
+
+				const userId = (req as any).user?.id as string | undefined
+				const args = (input.args ?? {}) as Record<string, unknown>
+
+				if (server.type === 'local') {
+					// Para el MCP local, ejecutar la ruta registrada
+					const route = registry
+						.getRoutes()
+						.find((r) => r.useBy?.includes('mcp') && r.toolName === input.toolName)
+					if (!route) return res.status(404).json({ error: `Tool "${input.toolName}" not found` })
+					const result = await route.handler({ input: args, context: { req, res } as any })
+					return { success: true, data: result }
+				}
+
+				const toolId = `mcp__${server.name}__${input.toolName}`
+				const result = await mcpExternalManager.callTool(toolId, args, userId)
+				return { success: true, data: result }
 			} catch (error: any) {
 				res.status(500).json({ error: error.message })
 			}

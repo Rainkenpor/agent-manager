@@ -13,7 +13,7 @@ import {
 	users,
 	userRoles
 } from '../db/schema.js'
-import { eq, and, inArray, ne } from 'drizzle-orm'
+import { eq, and, inArray, ne, sql } from 'drizzle-orm'
 import { v4 as uuidv4 } from 'uuid'
 import type { ITraceabilityRepository } from '../../domain/repositories/traceability.repository.js'
 import type {
@@ -643,6 +643,30 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 			const allCompleted = predStages.every((p) => p.status === 'completed')
 			if (!allCompleted) continue
 
+			// 4. Succesor stage
+			const successorStage = await db
+				.select()
+				.from(traceabilityStagePredecessors)
+				.where(eq(traceabilityStagePredecessors.predecessorStageId, stage.id))
+			const successorStageIds = successorStage.map((s) => s.stageId)
+			const successorStages = await db
+				.select({
+					id: traceabilityStages.id,
+					name: traceabilityStages.name,
+					assignedUserId: traceabilityStages.assignedUserId,
+					userName: sql<string>`${users.firstName} || ' ' || ${users.lastName}`
+				})
+				.from(traceabilityStages)
+				.leftJoin(users, eq(traceabilityStages.assignedUserId, users.id))
+				.where(inArray(traceabilityStages.id, successorStageIds))
+				.then((rows) =>
+					rows.map((s) => ({
+						id: s.id,
+						name: s.name,
+						user: s.userName ?? null
+					}))
+				)
+
 			// 4. Load agent info
 			const agentRows = await db.select().from(agents).where(eq(agents.id, stage.agentId))
 			if (!agentRows[0] || !agentRows[0].isActive) continue
@@ -666,6 +690,7 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 				effortScore: stage.effortScore ?? 5,
 				assignedUserId: stage.assignedUserId ?? null,
 				predecessors: predIds,
+				nextStages: successorStages,
 				tasks: stageTasks as TraceabilityTask[],
 				links: stageLinks as TraceabilityLink[],
 				documents: [],
@@ -828,10 +853,7 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 	}
 
 	async findStagesByUserId(userId: string): Promise<MyStage[]> {
-		const stages = await db
-			.select()
-			.from(traceabilityStages)
-			.where(eq(traceabilityStages.assignedUserId, userId))
+		const stages = await db.select().from(traceabilityStages).where(eq(traceabilityStages.assignedUserId, userId))
 
 		if (!stages.length) return []
 
@@ -851,13 +873,15 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 			const docs = await db.select().from(traceabilityDocuments).where(eq(traceabilityDocuments.stageId, stage.id))
 			const preds = await db.select().from(traceabilityStagePredecessors).where(eq(traceabilityStagePredecessors.stageId, stage.id))
 			const predIds = preds.map((p) => p.predecessorStageId)
-			const predecessorsCompleted = predIds.length === 0
-				? true
-				: (await db
-						.select({ id: traceabilityStages.id, status: traceabilityStages.status })
-						.from(traceabilityStages)
-						.where(inArray(traceabilityStages.id, predIds))
-					).every((s) => s.status === 'completed')
+			const predecessorsCompleted =
+				predIds.length === 0
+					? true
+					: (
+							await db
+								.select({ id: traceabilityStages.id, status: traceabilityStages.status })
+								.from(traceabilityStages)
+								.where(inArray(traceabilityStages.id, predIds))
+						).every((s) => s.status === 'completed')
 			result.push({
 				id: stage.id,
 				traceabilityId: stage.traceabilityId,
@@ -880,7 +904,7 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 				updatedAt: stage.updatedAt,
 				traceabilityTitle: trac.title,
 				traceabilityStatus: trac.status as TraceabilityStatus,
-				predecessorsCompleted,
+				predecessorsCompleted
 			})
 		}
 		return result
