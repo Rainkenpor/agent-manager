@@ -2,6 +2,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import PageLayout from '@/components/PageLayout.vue'
+import AppModal from '@/components/AppModal.vue'
 import { useToastStore } from '@/store/useToast'
 import { useAuthStore } from '@/store/useAuth'
 import * as api from '@/api/api'
@@ -294,97 +295,86 @@ onMounted(fetchSkills)
     </PageLayout>
 
     <!-- Create / Edit Modal -->
-    <Teleport to="body">
-      <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="closeModal" />
-        <div class="relative bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh]">
-          <!-- Modal header -->
-          <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between shrink-0">
-            <h3 class="text-base font-semibold text-white">
-              {{ editingSkill ? 'Editar skill' : 'Nuevo skill' }}
-            </h3>
-            <button class="text-slate-400 hover:text-white transition-colors" @click="closeModal">
-              <span class="mdi mdi-close text-xl" />
-            </button>
-          </div>
+    <AppModal
+      v-if="showModal"
+      size="2xl"
+      :title="editingSkill ? 'Editar skill' : 'Nuevo skill'"
+      @close="closeModal">
+      <div class="px-6 py-5 space-y-5">
+        <!-- Name -->
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1.5">Nombre <span class="text-red-400">*</span></label>
+          <input
+            v-model="form.name"
+            type="text"
+            placeholder="Mi skill de análisis"
+            class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-fuchsia-500 transition-colors" />
+        </div>
 
-          <!-- Modal body -->
-          <div class="overflow-y-auto flex-1 px-6 py-5 space-y-5">
-            <!-- Name -->
-            <div>
-              <label class="block text-xs font-medium text-slate-400 mb-1.5">Nombre <span class="text-red-400">*</span></label>
-              <input
-                v-model="form.name"
-                type="text"
-                placeholder="Mi skill de análisis"
-                class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-fuchsia-500 transition-colors" />
-            </div>
+        <!-- Slug -->
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1.5">Slug <span class="text-red-400">*</span></label>
+          <input
+            v-model="form.slug"
+            type="text"
+            placeholder="mi-skill-de-analisis"
+            class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-fuchsia-300 font-mono placeholder-slate-500 focus:outline-none focus:border-fuchsia-500 transition-colors"
+            @input="slugManuallyEdited = true" />
+          <p class="text-xs text-slate-600 mt-1">Solo minúsculas, números y guiones</p>
+        </div>
 
-            <!-- Slug -->
-            <div>
-              <label class="block text-xs font-medium text-slate-400 mb-1.5">Slug <span class="text-red-400">*</span></label>
-              <input
-                v-model="form.slug"
-                type="text"
-                placeholder="mi-skill-de-analisis"
-                class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-fuchsia-300 font-mono placeholder-slate-500 focus:outline-none focus:border-fuchsia-500 transition-colors"
-                @input="slugManuallyEdited = true" />
-              <p class="text-xs text-slate-600 mt-1">Solo minúsculas, números y guiones</p>
-            </div>
+        <!-- Description -->
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1.5">Descripción</label>
+          <input
+            v-model="form.description"
+            type="text"
+            placeholder="Breve descripción del skill"
+            class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-fuchsia-500 transition-colors" />
+        </div>
 
-            <!-- Description -->
-            <div>
-              <label class="block text-xs font-medium text-slate-400 mb-1.5">Descripción</label>
-              <input
-                v-model="form.description"
-                type="text"
-                placeholder="Breve descripción del skill"
-                class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-fuchsia-500 transition-colors" />
-            </div>
+        <!-- Content -->
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1.5">Contenido (markdown)</label>
+          <textarea
+            v-model="form.content"
+            rows="10"
+            placeholder="# Skill&#10;&#10;Instrucciones del skill en formato markdown..."
+            class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white font-mono placeholder-slate-500 focus:outline-none focus:border-fuchsia-500 transition-colors resize-y" />
+        </div>
 
-            <!-- Content -->
-            <div>
-              <label class="block text-xs font-medium text-slate-400 mb-1.5">Contenido (markdown)</label>
-              <textarea
-                v-model="form.content"
-                rows="10"
-                placeholder="# Skill&#10;&#10;Instrucciones del skill en formato markdown..."
-                class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white font-mono placeholder-slate-500 focus:outline-none focus:border-fuchsia-500 transition-colors resize-y" />
-            </div>
-
-            <!-- Active (only when editing) -->
-            <div v-if="editingSkill" class="flex items-center gap-3">
-              <button
-                type="button"
-                class="relative w-10 h-5 rounded-full transition-colors duration-200 focus:outline-none"
-                :class="form.isActive ? 'bg-fuchsia-600' : 'bg-slate-700'"
-                @click="form.isActive = !form.isActive">
-                <span
-                  class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200"
-                  :class="form.isActive ? 'translate-x-5' : 'translate-x-0'" />
-              </button>
-              <span class="text-sm text-slate-300">{{ form.isActive ? 'Activo' : 'Inactivo' }}</span>
-            </div>
-          </div>
-
-          <!-- Modal footer -->
-          <div class="px-6 py-4 border-t border-slate-800 flex justify-end gap-3 shrink-0">
-            <button
-              class="px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-              @click="closeModal">
-              Cancelar
-            </button>
-            <button
-              class="px-4 py-2 rounded-lg text-sm font-medium bg-fuchsia-600 hover:bg-fuchsia-500 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              :disabled="saving || !form.name || !form.slug"
-              @click="save">
-              <span v-if="saving" class="mdi mdi-loading mdi-spin text-sm" />
-              {{ editingSkill ? 'Guardar cambios' : 'Crear skill' }}
-            </button>
-          </div>
+        <!-- Active (only when editing) -->
+        <div v-if="editingSkill" class="flex items-center gap-3">
+          <button
+            type="button"
+            class="relative w-10 h-5 rounded-full transition-colors duration-200 focus:outline-none"
+            :class="form.isActive ? 'bg-fuchsia-600' : 'bg-slate-700'"
+            @click="form.isActive = !form.isActive">
+            <span
+              class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200"
+              :class="form.isActive ? 'translate-x-5' : 'translate-x-0'" />
+          </button>
+          <span class="text-sm text-slate-300">{{ form.isActive ? 'Activo' : 'Inactivo' }}</span>
         </div>
       </div>
-    </Teleport>
+
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <button
+            class="px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            @click="closeModal">
+            Cancelar
+          </button>
+          <button
+            class="px-4 py-2 rounded-lg text-sm font-medium bg-fuchsia-600 hover:bg-fuchsia-500 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            :disabled="saving || !form.name || !form.slug"
+            @click="save">
+            <span v-if="saving" class="mdi mdi-loading mdi-spin text-sm" />
+            {{ editingSkill ? 'Guardar cambios' : 'Crear skill' }}
+          </button>
+        </div>
+      </template>
+    </AppModal>
 
     <!-- Delete Confirm -->
     <ConfirmDialog

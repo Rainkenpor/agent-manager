@@ -190,6 +190,100 @@ const templateDagLayers = computed(() => {
   return computeDagLayers([...activeTemplate.value.stages].sort((a: any, b: any) => a.order - b.order))
 })
 
+// ── BPMN layout ───────────────────────────────────────────────────────────────
+
+const stageStatusSvgColor: Record<string, { fill: string; text: string }> = {
+  pending: { fill: '#475569', text: '#94a3b8' },
+  active: { fill: '#3b82f6', text: '#93c5fd' },
+  completed: { fill: '#10b981', text: '#6ee7b7' },
+  blocked: { fill: '#ef4444', text: '#fca5a5' },
+  'in-review': { fill: '#f59e0b', text: '#fcd34d' },
+}
+
+function truncateText(s: string, max: number) {
+  return s.length > max ? s.slice(0, max - 1) + '…' : s
+}
+
+const bpmnLayout = computed(() => {
+  const layers = dagLayers.value
+  if (!layers.length) return { nodes: [], edges: [], width: 300, height: 300 }
+
+  // Layout constants
+  const TW = 160, TH = 88      // task node size
+  const ER = 20                 // event (start/end) radius
+  const GH = 18                 // gateway half-size
+  const VG = 50                 // vertical gap between layers
+  const GVG = 20                // vertical gap gateway <-> task
+  const HG = 20                 // horizontal gap between parallel nodes
+  const PX = 40, PY = 36       // canvas padding
+
+  const nodes: any[] = []
+  const edges: any[] = []
+
+  // Canvas width: fit the widest parallel layer
+  const maxLayerW = Math.max(TW, ...layers.map((l: any[]) =>
+    l.length === 1 ? TW : l.length * TW + (l.length - 1) * HG
+  ))
+  const totalW = maxLayerW + PX * 2
+  const cx = totalW / 2
+
+  // Start event
+  let y = PY + ER
+  nodes.push({ id: '__start__', type: 'start', cx, cy: y, r: ER })
+  let prevExits: { x: number; y: number }[] = [{ x: cx, y: y + ER }]
+  y += ER + VG
+
+  for (let li = 0; li < layers.length; li++) {
+    const layer = layers[li]
+
+    if (layer.length > 1) {
+      // Parallel split gateway
+      const gsy = y + GH
+      nodes.push({ id: `gws-${li}`, type: 'gateway', cx, cy: gsy, half: GH })
+      prevExits.forEach((pe, i) =>
+        edges.push({ id: `e-pre-gws-${li}-${i}`, x1: pe.x, y1: pe.y, x2: cx, y2: gsy - GH }))
+      y = gsy + GH + GVG
+
+      const totalLayerW = layer.length * TW + (layer.length - 1) * HG
+      const leftEdge = cx - totalLayerW / 2
+      const tex: { x: number; y: number }[] = []
+
+      layer.forEach((stage: any, si: number) => {
+        const tx = leftEdge + si * (TW + HG)
+        const tcx = tx + TW / 2
+        nodes.push({ id: `task-${stage.id}`, type: 'task', x: tx, y, w: TW, h: TH, data: stage })
+        edges.push({ id: `e-gws-${li}-t-${si}`, x1: cx, y1: gsy + GH, x2: tcx, y2: y })
+        tex.push({ x: tcx, y: y + TH })
+      })
+      y += TH + GVG
+
+      // Parallel join gateway
+      const gjy = y + GH
+      nodes.push({ id: `gwj-${li}`, type: 'gateway', cx, cy: gjy, half: GH })
+      tex.forEach((te, i) =>
+        edges.push({ id: `e-t-${li}-${i}-gwj`, x1: te.x, y1: te.y, x2: cx, y2: gjy - GH }))
+      y = gjy + GH + VG
+      prevExits = [{ x: cx, y: gjy + GH }]
+    } else {
+      const stage = layer[0]
+      const tx = cx - TW / 2
+      nodes.push({ id: `task-${stage.id}`, type: 'task', x: tx, y, w: TW, h: TH, data: stage })
+      prevExits.forEach((pe, i) =>
+        edges.push({ id: `e-pre-t-${stage.id}-${i}`, x1: pe.x, y1: pe.y, x2: cx, y2: y }))
+      y += TH + VG
+      prevExits = [{ x: cx, y: y - VG }]
+    }
+  }
+
+  // End event
+  const ecy = y + ER
+  nodes.push({ id: '__end__', type: 'end', cx, cy: ecy, r: ER })
+  prevExits.forEach((pe, i) =>
+    edges.push({ id: `e-pre-end-${i}`, x1: pe.x, y1: pe.y, x2: cx, y2: ecy - ER }))
+
+  return { nodes, edges, width: totalW, height: ecy + ER + PY }
+})
+
 // ── Stage / Task / Link ───────────────────────────────────────────────────────
 const activeStage = ref<any>(null)
 const showTaskForm = ref(false)
@@ -684,68 +778,97 @@ onMounted(fetchAll)
               </div>
             </div>
 
-            <!-- Stage DAG flow -->
-            <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Etapas del flujo</h3>
-            <div class="space-y-2">
-              <div v-for="(layer, li) in dagLayers" :key="li">
-                <div v-if="layer.length > 1" class="flex items-center gap-2 mb-1">
-                  <div class="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
-                  <span class="text-xs text-amber-400 font-medium">En paralelo</span>
-                </div>
-                <div :class="layer.length > 1 ? 'grid grid-cols-2 gap-2 pl-4 border-l-2 border-amber-400/30' : ''">
-                  <div v-for="stage in layer" :key="stage.id"
-                    class="rounded-xl border p-4 cursor-pointer transition-all select-none"
-                    :class="[
-                      stage.type === 'agent' ? 'bg-violet-950/30' : 'bg-slate-900',
-                      activeStage?.id === stage.id
-                        ? 'border-indigo-500 ring-1 ring-indigo-500/30'
-                        : stage.type === 'agent' ? 'border-violet-800/40 hover:border-violet-700/60' : 'border-slate-800 hover:border-slate-700'
-                    ]"
-                    @click="openStagePanel(stage)">
-                    <div class="flex items-start justify-between gap-3">
-                      <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-2 mb-1 flex-wrap">
-                          <span v-if="stage.type === 'agent'"
-                            class="text-xs px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-400 font-medium shrink-0">
-                            🤖 Agente
-                          </span>
-                          <span class="font-medium text-white text-sm truncate">{{ stage.name }}</span>
-                        </div>
-                        <p v-if="stage.type === 'agent' && stage.agentId" class="text-xs text-violet-400 mb-1.5">
-                          {{ agentNameById(stage.agentId) }}
-                        </p>
-                        <p v-if="stage.role" class="text-xs text-slate-500 mb-1.5">{{ roleNameById(stage.role) }}</p>
-                        <p v-if="stage.assignedUserId" class="text-xs text-indigo-400 mb-1.5 truncate">
-                          👤 {{ userNameById(stage.assignedUserId) }}
-                        </p>
-                        <p v-else-if="stage.role" class="text-xs text-slate-600 mb-1.5 italic">Sin asignar</p>
-                        <div class="flex items-center gap-2 flex-wrap">
-                          <span class="text-xs px-2 py-0.5 rounded-full font-medium" :class="stageStatusClass[stage.status]">
-                            {{ stageStatusLabel[stage.status] }}
-                          </span>
-                          <span v-if="stage.status === 'in-review' && stage.type === 'agent'"
-                            class="text-xs text-violet-400 animate-pulse">ejecutando…</span>
-                        </div>
-                        <div v-if="stage.predecessors?.length" class="flex flex-wrap gap-1 mt-1.5">
-                          <span v-for="pid in stage.predecessors" :key="pid"
-                            class="text-xs px-1.5 py-0.5 rounded bg-slate-800 text-slate-500 truncate max-w-24">
-                            ← {{ activeTrac?.stages?.find((s: any) => s.id === pid)?.name ?? pid }}
-                          </span>
-                        </div>
-                      </div>
-                      <div class="text-right text-xs text-slate-500 shrink-0">
-                        <div>{{ stage.tasks?.filter((t: any) => t.status === 'done').length ?? 0 }}/{{ stage.tasks?.length ?? 0 }} ✓</div>
-                        <div v-if="stage.links?.length" class="mt-0.5">{{ stage.links.length }} 🔗</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div v-if="li < dagLayers.length - 1" class="flex justify-center py-1">
-                  <svg class="w-4 h-4 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-              </div>
+            <!-- BPMN Stage Flow -->
+            <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Flujo de proceso</h3>
+            <div class="overflow-auto rounded-xl border border-slate-800 bg-slate-950/50">
+              <svg :width="bpmnLayout.width" :height="bpmnLayout.height" class="block mx-auto">
+                <defs>
+                  <!-- Arrowhead marker for sequence flows -->
+                  <marker id="bpmn-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                    <polygon points="0 0, 8 3, 0 6" fill="#475569" />
+                  </marker>
+                  <!-- Future: exclusive gateway marker, message flow marker, etc. -->
+                </defs>
+
+                <!-- Sequence flows (vertical bezier curves) -->
+                <path v-for="edge in bpmnLayout.edges" :key="edge.id"
+                  :d="`M ${edge.x1} ${edge.y1} C ${edge.x1} ${edge.y1 + (edge.y2 - edge.y1) * 0.5} ${edge.x2} ${edge.y2 - (edge.y2 - edge.y1) * 0.5} ${edge.x2} ${edge.y2}`"
+                  fill="none" stroke="#334155" stroke-width="1.5" marker-end="url(#bpmn-arrow)" />
+
+                <template v-for="node in bpmnLayout.nodes" :key="node.id">
+
+                  <!-- Start event (BPMN: none start) -->
+                  <g v-if="node.type === 'start'">
+                    <circle :cx="node.cx" :cy="node.cy" :r="node.r"
+                      fill="rgba(16,185,129,0.15)" stroke="#10b981" stroke-width="2.5" />
+                  </g>
+
+                  <!-- End event (BPMN: none end) -->
+                  <g v-if="node.type === 'end'">
+                    <circle :cx="node.cx" :cy="node.cy" :r="node.r"
+                      fill="rgba(239,68,68,0.15)" stroke="#ef4444" stroke-width="3.5" />
+                  </g>
+
+                  <!-- Parallel gateway (BPMN: +) — future: exclusive (×), inclusive (○) -->
+                  <g v-if="node.type === 'gateway'">
+                    <polygon
+                      :points="`${node.cx},${node.cy - node.half} ${node.cx + node.half},${node.cy} ${node.cx},${node.cy + node.half} ${node.cx - node.half},${node.cy}`"
+                      fill="rgba(251,191,36,0.1)" stroke="#fbbf24" stroke-width="1.5" />
+                    <text :x="node.cx" :y="node.cy + 1" text-anchor="middle" dominant-baseline="middle"
+                      fill="#fbbf24" font-size="18" font-weight="bold">+</text>
+                  </g>
+
+                  <!-- Task node (BPMN: user task / service task) -->
+                  <g v-if="node.type === 'task'" @click="openStagePanel(node.data)" style="cursor:pointer">
+                    <!-- Background -->
+                    <rect :x="node.x" :y="node.y" :width="node.w" :height="node.h" rx="8"
+                      fill="rgba(15,23,42,0.95)"
+                      :stroke="activeStage?.id === node.data.id ? '#6366f1' : '#334155'"
+                      :stroke-width="activeStage?.id === node.data.id ? 2.5 : 1.5" />
+                    <!-- Status band (top stripe) -->
+                    <rect :x="node.x + 1" :y="node.y + 1" :width="node.w - 2" height="3" rx="7"
+                      :fill="stageStatusSvgColor[node.data.status]?.fill ?? '#475569'" opacity="0.85" />
+                    <!-- Task type icon (top-left) -->
+                    <text :x="node.x + 10" :y="node.y + 18" dominant-baseline="middle" font-size="11">
+                      {{ node.data.type === 'agent' ? '🤖' : '👤' }}
+                    </text>
+                    <!-- Task progress (top-right) -->
+                    <text :x="node.x + node.w - 8" :y="node.y + 17" text-anchor="end" dominant-baseline="middle"
+                      font-size="9" fill="#64748b">
+                      {{ (node.data.tasks?.filter((t: any) => t.status === 'done').length ?? 0) }}/{{ node.data.tasks?.length ?? 0 }}✓
+                    </text>
+                    <!-- Stage name -->
+                    <text :x="node.x + node.w / 2" :y="node.y + 33" text-anchor="middle" dominant-baseline="middle"
+                      font-size="11" fill="white" font-weight="500">
+                      {{ truncateText(node.data.name, 18) }}
+                    </text>
+                    <!-- Assigned user -->
+                    <text v-if="node.data.role || node.data.assignedUserId"
+                      :x="node.x + node.w / 2" :y="node.y + 51" text-anchor="middle" dominant-baseline="middle"
+                      font-size="9" :fill="node.data.assignedUserId ? '#a5b4fc' : '#475569'">
+                      {{ node.data.assignedUserId ? truncateText(userNameById(node.data.assignedUserId), 22) : '— sin asignar —' }}
+                    </text>
+                    <!-- Documents indicator (bottom-left) -->
+                    <text v-if="(node.data.documents?.length ?? 0) > 0"
+                      :x="node.x + 10" :y="node.y + 68" dominant-baseline="middle"
+                      font-size="9" fill="#2dd4bf">
+                      📄 {{ node.data.documents.length }}
+                    </text>
+                    <!-- Links indicator (bottom-right) -->
+                    <text v-if="(node.data.links?.length ?? 0) > 0"
+                      :x="node.x + node.w - 10" :y="node.y + 68" text-anchor="end" dominant-baseline="middle"
+                      font-size="9" fill="#818cf8">
+                      🔗 {{ node.data.links.length }}
+                    </text>
+                    <!-- Status label (bottom-center) -->
+                    <text :x="node.x + node.w / 2" :y="node.y + node.h - 10" text-anchor="middle" dominant-baseline="middle"
+                      font-size="9" :fill="stageStatusSvgColor[node.data.status]?.text ?? '#94a3b8'">
+                      {{ stageStatusLabel[node.data.status] ?? node.data.status }}
+                    </text>
+                  </g>
+
+                </template>
+              </svg>
             </div>
           </div>
         </div>

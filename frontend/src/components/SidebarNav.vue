@@ -8,21 +8,17 @@ const router = useRouter()
 const auth = useAuthStore()
 
 const allNavLinks = [
-  { to: '/', label: 'Home', icon: 'mdi-home', resource: null },
-  { to: '/chat', label: 'Chat', icon: 'mdi-chat', resource: 'chat' },
-  { to: '/users', label: 'Users', icon: 'mdi-account', resource: 'users' },
-  { to: '/roles', label: 'Roles', icon: 'mdi-shield-account', resource: 'roles' },
-  { to: '/agents', label: 'Agents', icon: 'mdi-robot', resource: 'agents' },
-  { to: '/mcps', label: 'MCP Servers', icon: 'mdi-server', resource: 'mcp_servers' },
-  { to: '/skills', label: 'Skills', icon: 'mdi-lightning-bolt', resource: 'skills' },
-  { to: '/mcp-credentials', label: 'My Credentials', icon: 'mdi-key', resource: 'mcp_credentials' },
-  { to: '/traceability', label: 'Trazabilidad', icon: 'mdi-sitemap', resource: 'traceability' },
-  { to: '/hook-servers', label: 'Hook Servers', icon: 'mdi-webhook', resource: 'hook_servers' },
-  { to: '/event-listeners', label: 'Event Listeners', icon: 'mdi-broadcast', resource: 'event_listeners' },
+  { to: '/', label: 'Home', icon: 'mdi-home', resources: null },
+  { to: '/chat', label: 'Chat', icon: 'mdi-chat', resources: ['chat'] },
+  { to: '/agentes', label: 'Agentes', icon: 'mdi-robot', resources: ['agents', 'skills'] },
+  { to: '/mcp', label: 'MCP', icon: 'mdi-server', resources: ['mcp_servers', 'mcp_credentials'] },
+  { to: '/automatizacion', label: 'Automatización', icon: 'mdi-webhook', resources: ['hook_servers', 'event_listeners'] },
+  { to: '/traceability', label: 'Trazabilidad', icon: 'mdi-sitemap', resources: ['traceability'] },
+  { to: '/admin', label: 'Admin', icon: 'mdi-shield-account', resources: ['users', 'roles'] },
 ]
 
 const navLinks = computed(() =>
-  allNavLinks.filter((l) => l.resource === null || auth.hasResourceAccess(l.resource))
+  allNavLinks.filter((l) => l.resources === null || l.resources.some((r) => auth.hasResourceAccess(r)))
 )
 
 function logout() {
@@ -32,7 +28,7 @@ function logout() {
 </script>
 
 <template>
-  <aside class="flex flex-col w-18 shrink-0 bg-slate-900 h-full text-slate-100 rounded-lg">
+  <aside class="flex flex-col w-18 shrink-0 bg-base-200 h-full rounded-lg  shadow-sm">
     <!-- Logo -->
     <div class="flex items-center gap-3 px-5 py-5 border-b border-slate-700/60">
       <div
