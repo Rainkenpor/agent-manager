@@ -6,9 +6,9 @@ import {
 	UpdateAgentUseCase,
 	DeleteAgentUseCase,
 	DuplicateAgentUseCase,
-} from '@application/use-cases/agent/index.js';
-import type { IAgentRepository } from '@domain/repositories/agent.repository.js';
-import type { AgentWithSubagents, CreateAgentDTO, UpdateAgentDTO } from '@domain/entities/agent.entity.js';
+} from '../../backend/src/application/use-cases/agent/index.js';
+import type { IAgentRepository } from '../../backend/src/domain/repositories/agent.repository.js';
+import type { AgentWithSubagents, CreateAgentDTO, UpdateAgentDTO } from '../../backend/src/domain/entities/agent.entity.js';
 
 // Mock the repository module
 vi.mock('@domain/repositories/agent.repository.js', () => ({
