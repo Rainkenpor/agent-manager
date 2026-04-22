@@ -36,7 +36,7 @@
 
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
-const props = defineProps<{
+defineProps<{
   header?: {
     title?: string,
     description?: string
@@ -44,10 +44,10 @@ const props = defineProps<{
 }>()
 
 const showOption = ref<boolean>(false)
-const containerRef = ref(null);
+const containerRef = ref<HTMLElement | null>(null);
 
 
-const handleClickOutside = (event) => {
+const handleClickOutside = (event: any) => {
   if (containerRef.value && !containerRef.value.contains(event.target)) {
     showOption.value = false;
   }

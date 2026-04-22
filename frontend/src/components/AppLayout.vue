@@ -8,7 +8,7 @@ import AgentLogsPanel from './AgentLogsPanel.vue'
   <div class="flex flex-col h-screen p-4 gap-2 bg-base-300">
     <div class="flex flex-1 gap-4 overflow-hidden min-h-0">
       <SidebarNav />
-      <main class="flex-1 overflow-auto flex flex-col gap-4  bg-base-200 rounded-xl shadow-2xl">
+      <main class="flex-1 overflow-auto flex flex-col gap-2  bg-base-200 rounded-xl shadow-2xl">
         <div class="flex-1 overflow-auto">
           <RouterView />
         </div>

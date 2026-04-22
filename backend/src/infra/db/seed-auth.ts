@@ -424,10 +424,11 @@ async function seed() {
 		const existingAdmin = existingUsers.find((u) => u.username === 'admin')
 
 		if (!existingAdmin) {
+      const randPassword = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
 			const adminUser = await container.createUserUseCase.execute({
 				email: 'admin@agent.com',
 				username: 'admin',
-				password: 'admin123',
+				password: randPassword,
 				firstName: 'Admin',
 				lastName: 'Agent'
 			})
@@ -435,7 +436,7 @@ async function seed() {
 			await container.userRepository.assignRole(adminUser.id, adminRole.id)
 			console.log('✅ Usuario admin creado')
 			console.log('   Email: admin@agent.com')
-			console.log('   Password: admin123\n')
+			console.log(`   Password: ${randPassword}\n`)
 		} else {
 			console.log('✅ Usuario admin ya existe\n')
 		}

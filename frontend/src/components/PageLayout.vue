@@ -25,7 +25,7 @@ defineProps<{
     </div>
 
     <!-- Body -->
-    <div class="flex-1 overflow-auto p-8" :class="bodyClass">
+    <div class="flex-1 overflow-auto p-4" :class="bodyClass">
       <slot />
     </div>
 
