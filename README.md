@@ -17,26 +17,28 @@ A full-stack web application for managing AI agents and Model Context Protocol (
 ## Tech Stack
 
 ### Backend
-| Tech | Version | Purpose |
-|------|---------|---------|
-| Node.js + Express 5 | 5.2.1 | HTTP API server |
-| TypeScript | 5.5 | Type-safe backend |
-| SQLite + Drizzle ORM | 0.45.1 | Database and migrations |
-| Passport.js + JWT | — | Authentication |
-| Zod | 4.3.6 | Input validation |
-| @modelcontextprotocol/sdk | 1.27.1 | MCP protocol server |
-| Winston | 3.19.0 | Logging |
-| bcryptjs | 3.0.3 | Password hashing |
+
+| Tech                      | Version | Purpose                 |
+| ------------------------- | ------- | ----------------------- |
+| Node.js + Express 5       | 5.2.1   | HTTP API server         |
+| TypeScript                | 5.5     | Type-safe backend       |
+| SQLite + Drizzle ORM      | 0.45.1  | Database and migrations |
+| Passport.js + JWT         | —       | Authentication          |
+| Zod                       | 4.3.6   | Input validation        |
+| @modelcontextprotocol/sdk | 1.27.1  | MCP protocol server     |
+| Winston                   | 3.19.0  | Logging                 |
+| bcryptjs                  | 3.0.3   | Password hashing        |
 
 ### Frontend
-| Tech | Version | Purpose |
-|------|---------|---------|
-| Vue 3 | 3.4.0 | UI framework |
-| Vite | 5.4.0 | Build tool and dev server |
-| TypeScript | 5.5 | Type-safe frontend |
-| Vue Router | 4.3.0 | Client-side routing |
-| Pinia | 2.1.0 | State management |
-| Tailwind CSS | 4.0.0 | Utility-first styling |
+
+| Tech         | Version | Purpose                   |
+| ------------ | ------- | ------------------------- |
+| Vue 3        | 3.4.0   | UI framework              |
+| Vite         | 5.4.0   | Build tool and dev server |
+| TypeScript   | 5.5     | Type-safe frontend        |
+| Vue Router   | 4.3.0   | Client-side routing       |
+| Pinia        | 2.1.0   | State management          |
+| Tailwind CSS | 4.0.0   | Utility-first styling     |
 
 ---
 
@@ -137,18 +139,15 @@ npm run db:seed
 npm run dev
 
 # Or run them separately
-npm run server:dev   # Backend API on http://localhost:3200
+npm run server   # Backend API on http://localhost:3200
 npm run ui:dev       # Frontend on http://localhost:5173 (proxies /api to backend)
 ```
 
 ### Production Build
 
 ```bash
-# Build both backend and frontend
-npm run build
-
 # Start production server (serves API + compiled frontend)
-npm run server:start
+npm run start:prod
 ```
 
 ---
@@ -162,18 +161,18 @@ npm run server:start
 
 ### Schema Overview
 
-| Table | Description |
-|-------|-------------|
-| `users` | User accounts with hashed passwords |
-| `roles` | Role definitions |
-| `permissions` | Fine-grained permissions (resource + action) |
-| `user_roles` | Users ↔ Roles (many-to-many) |
-| `role_permissions` | Roles ↔ Permissions (many-to-many) |
-| `agents` | AI agent definitions (markdown-based) |
-| `agent_subagents` | Agent hierarchy (self-referential many-to-many) |
-| `mcp_servers` | External MCP server registrations |
-| `role_mcps` | Roles ↔ MCP Servers (many-to-many) |
-| `role_agents` | Roles ↔ Agents (many-to-many) |
+| Table              | Description                                     |
+| ------------------ | ----------------------------------------------- |
+| `users`            | User accounts with hashed passwords             |
+| `roles`            | Role definitions                                |
+| `permissions`      | Fine-grained permissions (resource + action)    |
+| `user_roles`       | Users ↔ Roles (many-to-many)                    |
+| `role_permissions` | Roles ↔ Permissions (many-to-many)              |
+| `agents`           | AI agent definitions (markdown-based)           |
+| `agent_subagents`  | Agent hierarchy (self-referential many-to-many) |
+| `mcp_servers`      | External MCP server registrations               |
+| `role_mcps`        | Roles ↔ MCP Servers (many-to-many)              |
+| `role_agents`      | Roles ↔ Agents (many-to-many)                   |
 
 ### Database Scripts
 
@@ -192,71 +191,71 @@ npm run db:generate   # Generate new migration from schema changes
 
 ### Auth
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/auth/login` | Login and receive JWT token |
-| `GET` | `/auth/me` | Get current user profile |
-| `POST` | `/auth/check-permission` | Verify user permission |
+| Method | Endpoint                 | Description                 |
+| ------ | ------------------------ | --------------------------- |
+| `POST` | `/auth/login`            | Login and receive JWT token |
+| `GET`  | `/auth/me`               | Get current user profile    |
+| `POST` | `/auth/check-permission` | Verify user permission      |
 
 ### Users
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/users` | List all users |
-| `GET` | `/users/:id` | Get user by ID |
-| `POST` | `/users/register` | Create user |
-| `PUT` | `/users/:id` | Update user |
-| `DELETE` | `/users/:id` | Delete user |
-| `POST` | `/users/:userId/roles/:roleId` | Assign role to user |
+| Method   | Endpoint                       | Description           |
+| -------- | ------------------------------ | --------------------- |
+| `GET`    | `/users`                       | List all users        |
+| `GET`    | `/users/:id`                   | Get user by ID        |
+| `POST`   | `/users/register`              | Create user           |
+| `PUT`    | `/users/:id`                   | Update user           |
+| `DELETE` | `/users/:id`                   | Delete user           |
+| `POST`   | `/users/:userId/roles/:roleId` | Assign role to user   |
 | `DELETE` | `/users/:userId/roles/:roleId` | Remove role from user |
 
 ### Roles
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/roles` | List all roles |
-| `GET` | `/roles/:id` | Get role by ID |
-| `POST` | `/roles` | Create role |
-| `PUT` | `/roles/:id` | Update role |
-| `DELETE` | `/roles/:id` | Delete role |
-| `POST` | `/roles/:roleId/permissions/:permissionId` | Assign permission to role |
+| Method   | Endpoint                                   | Description                 |
+| -------- | ------------------------------------------ | --------------------------- |
+| `GET`    | `/roles`                                   | List all roles              |
+| `GET`    | `/roles/:id`                               | Get role by ID              |
+| `POST`   | `/roles`                                   | Create role                 |
+| `PUT`    | `/roles/:id`                               | Update role                 |
+| `DELETE` | `/roles/:id`                               | Delete role                 |
+| `POST`   | `/roles/:roleId/permissions/:permissionId` | Assign permission to role   |
 | `DELETE` | `/roles/:roleId/permissions/:permissionId` | Remove permission from role |
 
 ### Agents
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/agents` | List all agents |
-| `GET` | `/agents/:id` | Get agent by ID |
-| `GET` | `/agents/tools` | List available tools |
-| `POST` | `/agents` | Create agent |
-| `PUT` | `/agents/:id` | Update agent |
-| `DELETE` | `/agents/:id` | Delete agent |
+| Method   | Endpoint        | Description          |
+| -------- | --------------- | -------------------- |
+| `GET`    | `/agents`       | List all agents      |
+| `GET`    | `/agents/:id`   | Get agent by ID      |
+| `GET`    | `/agents/tools` | List available tools |
+| `POST`   | `/agents`       | Create agent         |
+| `PUT`    | `/agents/:id`   | Update agent         |
+| `DELETE` | `/agents/:id`   | Delete agent         |
 
 ### MCP Servers
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/mcp-servers` | List MCP servers |
-| `GET` | `/mcp-servers/:id` | Get MCP server by ID |
-| `POST` | `/mcp-servers` | Register MCP server |
-| `PUT` | `/mcp-servers/:id` | Update MCP server |
-| `DELETE` | `/mcp-servers/:id` | Delete MCP server |
-| `GET` | `/roles/:roleId/mcps` | Get MCP servers assigned to role |
-| `POST` | `/roles/:roleId/mcps/:mcpServerId` | Assign MCP server to role |
-| `DELETE` | `/roles/:roleId/mcps/:mcpServerId` | Remove MCP server from role |
-| `GET` | `/roles/:roleId/agents` | Get agents assigned to role |
-| `POST` | `/roles/:roleId/agents/:agentId` | Assign agent to role |
-| `DELETE` | `/roles/:roleId/agents/:agentId` | Remove agent from role |
+| Method   | Endpoint                           | Description                      |
+| -------- | ---------------------------------- | -------------------------------- |
+| `GET`    | `/mcp-servers`                     | List MCP servers                 |
+| `GET`    | `/mcp-servers/:id`                 | Get MCP server by ID             |
+| `POST`   | `/mcp-servers`                     | Register MCP server              |
+| `PUT`    | `/mcp-servers/:id`                 | Update MCP server                |
+| `DELETE` | `/mcp-servers/:id`                 | Delete MCP server                |
+| `GET`    | `/roles/:roleId/mcps`              | Get MCP servers assigned to role |
+| `POST`   | `/roles/:roleId/mcps/:mcpServerId` | Assign MCP server to role        |
+| `DELETE` | `/roles/:roleId/mcps/:mcpServerId` | Remove MCP server from role      |
+| `GET`    | `/roles/:roleId/agents`            | Get agents assigned to role      |
+| `POST`   | `/roles/:roleId/agents/:agentId`   | Assign agent to role             |
+| `DELETE` | `/roles/:roleId/agents/:agentId`   | Remove agent from role           |
 
 ### MCP Protocol Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET/POST` | `/mcp` | MCP streamable HTTP endpoint |
-| `GET` | `/mcp/tools` | List available MCP tools |
-| `GET` | `/mcp/prompts` | List available MCP prompts |
-| `GET` | `/.well-known/oauth-authorization-server` | OAuth metadata |
+| Method     | Endpoint                                  | Description                  |
+| ---------- | ----------------------------------------- | ---------------------------- |
+| `GET/POST` | `/mcp`                                    | MCP streamable HTTP endpoint |
+| `GET`      | `/mcp/tools`                              | List available MCP tools     |
+| `GET`      | `/mcp/prompts`                            | List available MCP prompts   |
+| `GET`      | `/.well-known/oauth-authorization-server` | OAuth metadata               |
 
 ---
 
@@ -277,6 +276,7 @@ The backend follows a **Clean Architecture / DDD** pattern with four layers:
 ```
 
 Key patterns used:
+
 - **Repository Pattern** — Data access abstracted behind interfaces
 - **Use Case Pattern** — One class per business operation
 - **Dependency Injection** — `container.ts` wires all dependencies
@@ -286,18 +286,18 @@ Key patterns used:
 
 ## Scripts Reference
 
-| Script | Description |
-|--------|-------------|
-| `npm run dev` | Start backend + frontend in watch/dev mode |
-| `npm run build` | Build backend and frontend for production |
-| `npm run server:dev` | Start backend in watch mode (tsx) |
-| `npm run server:build` | Compile backend with tsc |
-| `npm run server:start` | Run compiled backend |
-| `npm run ui:dev` | Start Vite dev server |
-| `npm run ui:build` | Build frontend assets |
-| `npm run db:migrate` | Apply pending DB migrations |
-| `npm run db:seed` | Seed initial data |
-| `npm run db:generate` | Generate migration from schema changes |
+| Script                 | Description                                |
+| ---------------------- | ------------------------------------------ |
+| `npm run dev`          | Start backend + frontend in watch/dev mode |
+| `npm run build`        | Build backend and frontend for production  |
+| `npm run server:dev`   | Start backend in watch mode (tsx)          |
+| `npm run server:build` | Compile backend with tsc                   |
+| `npm run server:start` | Run compiled backend                       |
+| `npm run ui:dev`       | Start Vite dev server                      |
+| `npm run ui:build`     | Build frontend assets                      |
+| `npm run db:migrate`   | Apply pending DB migrations                |
+| `npm run db:seed`      | Seed initial data                          |
+| `npm run db:generate`  | Generate migration from schema changes     |
 
 ---
 
