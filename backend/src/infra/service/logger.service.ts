@@ -1,13 +1,9 @@
 import * as winston from 'winston'
-import { join, dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { join } from 'node:path'
 import { existsSync, mkdirSync } from 'node:fs'
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
-
 // Crear directorio de logs si no existe
-export const LOG_PATH = join(__dirname, '../../../logs')
+export const LOG_PATH = join(process.cwd(), 'logs')
 if (!existsSync(LOG_PATH)) {
 	mkdirSync(LOG_PATH, { recursive: true })
 }

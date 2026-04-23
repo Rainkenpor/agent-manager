@@ -4,8 +4,7 @@ import { createServer } from 'node:http'
 import cors from 'cors'
 import passport from 'passport'
 import history from 'connect-history-api-fallback'
-import path, { join, dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { join } from 'node:path'
 import { existsSync } from 'node:fs'
 import 'reflect-metadata'
 
@@ -19,12 +18,9 @@ import { configurePassport } from './infra/service/passport.service.js'
 import { registerServerRoutes } from '@application/routes/server.router.js'
 import { mcpExternalManager } from '@infra/service/mcp-external.js'
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
-
 const API_PORT = envs.SERVER_PORT
 const MCP_PORT = envs.MCP_PORT
-const UI_PATH = join(__dirname, '../../frontend/dist')
+const UI_PATH = join(process.cwd(), '/frontend/dist')
 
 // extraer parametros
 const isUI = process.argv.includes('--ui')

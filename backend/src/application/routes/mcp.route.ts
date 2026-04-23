@@ -134,38 +134,35 @@ async function applyRoleBasedTools(server: McpServer, user: Record<string, unkno
 		try {
 			if (mcpServer.type === 'local') {
 				// MCP local: obtener tools del registry y filtrar por allowedTools
-				const localRoutes = registry.getRoutes().filter(
-					(r) => r.useBy?.includes('mcp') && r.toolName && r.toolDescription && r.inputSchema
-				)
+				const localRoutes = registry.getRoutes().filter((r) => r.useBy?.includes('mcp') && r.toolName && r.toolDescription && r.inputSchema)
 
 				for (const route of localRoutes) {
 					// Empty allowedTools means "all tools allowed"
 					if (allowedTools.size > 0 && !allowedTools.has(route.toolName!)) continue
 
-					const inputSchemaObj =
-						route.inputSchema instanceof z.ZodObject ? route.inputSchema : z.object(route.inputSchema as ZodRawShape)
+					const inputSchemaObj = route.inputSchema instanceof z.ZodObject ? route.inputSchema : z.object(route.inputSchema as ZodRawShape)
 
-					server.tool(
-						route.toolName!,
-						route.toolDescription!,
-						route.inputSchema as ZodRawShape,
-						async (args: Record<string, unknown>) => {
-							try {
-								const parseResult = inputSchemaObj.safeParse(args)
-								if (!parseResult.success) {
-									return {
-										content: [{ type: 'text' as const, text: JSON.stringify({ error: 'Validation error', details: parseResult.error.flatten() }) }],
-										isError: true
-									}
+					server.tool(route.toolName!, route.toolDescription!, route.inputSchema as ZodRawShape, async (args: Record<string, unknown>) => {
+						try {
+							const parseResult = inputSchemaObj.safeParse(args)
+							if (!parseResult.success) {
+								return {
+									content: [
+										{ type: 'text' as const, text: JSON.stringify({ error: 'Validation error', details: parseResult.error.flatten() }) }
+									],
+									isError: true
 								}
-								const sessionContext = globalThis.__mcpSessionContexts?.[sessionId] || { req: {}, res: {}, next: () => {} }
-								const result = await route.handler({ input: parseResult.data as never, context: sessionContext })
-								return { content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }] }
-							} catch (err) {
-								return { content: [{ type: 'text' as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true }
+							}
+							const sessionContext = globalThis.__mcpSessionContexts?.[sessionId] || { req: {}, res: {}, next: () => {} }
+							const result = await route.handler({ input: parseResult.data as never, context: sessionContext })
+							return { content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }] }
+						} catch (err) {
+							return {
+								content: [{ type: 'text' as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }],
+								isError: true
 							}
 						}
-					)
+					})
 				}
 				continue
 			}
@@ -391,10 +388,10 @@ export function registerMCPRoutes(oauth?: McpOAuthService): express.Router {
 
 		if (sessionId && transports[sessionId]) {
 			transport = transports[sessionId]
-			sessionContexts[sessionId] = { req, res, next }
+			sessionContexts[sessionId] = { req, res, next, signal: new AbortController().signal }
 		} else if (!sessionId && isInitializeRequest(req.body)) {
 			const mcpServer = new CreateMcpServer(sessionId)
-			transport = await mcpServer.connect({ context: { req, res, next } })
+			transport = await mcpServer.connect({ context: { req, res, next, signal: new AbortController().signal } })
 		} else {
 			res.status(400).json({
 				jsonrpc: '2.0',
@@ -472,7 +469,7 @@ export function registerMCPOauthRoutes(oauthService: McpOAuthService): express.R
 				}
 				const result = await route.handler({
 					input: parseResult.data,
-					context: { req, res, next },
+					context: { req, res, next, signal: new AbortController().signal },
 					oauthService
 				})
 				if (result !== null) res.json(result)
