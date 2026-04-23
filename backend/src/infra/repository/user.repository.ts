@@ -1,189 +1,148 @@
-import { eq, and } from "drizzle-orm";
-import { db } from "@infra/db/database.js";
+import { AppDataSource } from '@infra/db/database.js'
 import {
-	users,
-	userRoles,
-	rolePermissions,
-	roles,
-	permissions,
-	type User as DbUser,
-	type NewUser,
-} from "@infra/db/schema.js";
-import type { IUserRepository } from "@domain/repositories/user.repository.js";
-import type {
-	User,
-	CreateUser,
-	UpdateUser,
-} from "@domain/entities/user.entity.js";
-import { randomUUID } from "crypto";
-import bcrypt from "bcryptjs";
+	UserEntity,
+	UserRoleEntity,
+	RoleEntity,
+	RolePermissionEntity,
+	PermissionEntity
+} from '@infra/db/entities.js'
+import type { IUserRepository } from '@domain/repositories/user.repository.js'
+import type { User, CreateUser, UpdateUser } from '@domain/entities/user.entity.js'
+import { randomUUID } from 'crypto'
+import bcrypt from 'bcryptjs'
 
 export class UserRepository implements IUserRepository {
-	async create(data: CreateUser): Promise<User> {
-		const hashedPassword = await bcrypt.hash(data.password, 10);
+	private get repo() {
+		return AppDataSource.getRepository(UserEntity)
+	}
 
-		const newUser: NewUser = {
+	async create(data: CreateUser): Promise<User> {
+		const hashedPassword = await bcrypt.hash(data.password, 10)
+		const now = new Date().toISOString()
+		const entity = this.repo.create({
 			id: randomUUID(),
 			email: data.email,
 			username: data.username,
 			password: hashedPassword,
-			firstName: data.firstName,
-			lastName: data.lastName,
+			firstName: data.firstName ?? null,
+			lastName: data.lastName ?? null,
 			active: true,
-			createdAt: new Date().toISOString(),
-			updatedAt: new Date().toISOString(),
-		};
-
-		const [created] = await db.insert(users).values(newUser).returning();
-		return this.mapToEntity(created);
+			createdAt: now,
+			updatedAt: now,
+			lastLoginAt: null
+		})
+		const saved = await this.repo.save(entity)
+		return this.mapToEntity(saved)
 	}
 
 	async findById(id: string): Promise<User | null> {
-		const [user] = await db.select().from(users).where(eq(users.id, id));
-		return user ? this.mapToEntity(user) : null;
+		const user = await this.repo.findOneBy({ id })
+		return user ? this.mapToEntity(user) : null
 	}
 
 	async findByEmail(email: string): Promise<User | null> {
-		const [user] = await db.select().from(users).where(eq(users.email, email));
-		return user ? this.mapToEntity(user) : null;
+		const user = await this.repo.findOneBy({ email })
+		return user ? this.mapToEntity(user) : null
 	}
 
 	async findByUsername(username: string): Promise<User | null> {
-		const [user] = await db
-			.select()
-			.from(users)
-			.where(eq(users.username, username));
-		return user ? this.mapToEntity(user) : null;
+		const user = await this.repo.findOneBy({ username })
+		return user ? this.mapToEntity(user) : null
 	}
 
-	async findAll(filters?: {
-		active?: boolean;
-	}): Promise<(User & { isActive: boolean })[]> {
-		const results = await (filters?.active !== undefined
-			? db.select().from(users).where(eq(users.active, filters.active))
-			: db.select().from(users));
-
-		const usersWithStatus = results.map((user) => ({
+	async findAll(filters?: { active?: boolean }): Promise<(User & { isActive: boolean })[]> {
+		const where = filters?.active !== undefined ? { active: filters.active } : {}
+		const results = await this.repo.findBy(where)
+		return results.map((user) => ({
 			...this.mapToEntity(user),
-			isActive: user.active,
-		}));
-
-		return usersWithStatus;
+			isActive: user.active
+		}))
 	}
 
 	async update(id: string, data: UpdateUser): Promise<User> {
-		const updateData: Partial<NewUser> = {
+		const updateData: Partial<UserEntity> = {
 			...data,
-			updatedAt: new Date().toISOString(),
-		};
-
-		if (data.password) {
-			updateData.password = await bcrypt.hash(data.password, 10);
+			updatedAt: new Date().toISOString()
 		}
-
-		const [updated] = await db
-			.update(users)
-			.set(updateData)
-			.where(eq(users.id, id))
-			.returning();
-
-		return this.mapToEntity(updated);
+		if (data.password) {
+			updateData.password = await bcrypt.hash(data.password, 10)
+		}
+		await this.repo.update(id, updateData)
+		const updated = await this.repo.findOneByOrFail({ id })
+		return this.mapToEntity(updated)
 	}
 
 	async delete(id: string): Promise<void> {
-		await db.delete(users).where(eq(users.id, id));
+		await this.repo.delete(id)
 	}
 
 	async updateLastLogin(id: string): Promise<void> {
-		await db
-			.update(users)
-			.set({ lastLoginAt: new Date().toISOString() })
-			.where(eq(users.id, id));
+		await this.repo.update(id, { lastLoginAt: new Date().toISOString() })
 	}
 
-	// Gestión de roles
 	async assignRole(userId: string, roleId: string): Promise<void> {
-		await db.insert(userRoles).values({
+		const repo = AppDataSource.getRepository(UserRoleEntity)
+		const entry = repo.create({
 			id: randomUUID(),
 			userId,
 			roleId,
-			assignedAt: new Date().toISOString(),
-		});
+			assignedAt: new Date().toISOString()
+		})
+		await repo.save(entry)
 	}
 
 	async removeRole(userId: string, roleId: string): Promise<void> {
-		await db
-			.delete(userRoles)
-			.where(and(eq(userRoles.userId, userId), eq(userRoles.roleId, roleId)));
+		const repo = AppDataSource.getRepository(UserRoleEntity)
+		await repo.delete({ userId, roleId })
 	}
 
 	async getRoles(userId: string): Promise<Array<{ id: string; name: string }>> {
-		const results = await db
-			.select({
-				id: roles.id,
-				name: roles.name,
-			})
-			.from(userRoles)
-			.innerJoin(roles, eq(userRoles.roleId, roles.id))
-			.where(eq(userRoles.userId, userId));
-
-		return results;
+		const results = await AppDataSource.createQueryBuilder(UserRoleEntity, 'ur')
+			.innerJoin(RoleEntity, 'r', 'ur.role_id = r.id')
+			.select(['r.id AS id', 'r.name AS name'])
+			.where('ur.user_id = :userId', { userId })
+			.getRawMany()
+		return results.map((r) => ({ id: r.id, name: r.name }))
 	}
 
-	// Verificación de permisos
-	async hasPermission(
-		userId: string,
-		resource: string,
-		action: string,
-	): Promise<boolean> {
-		const result = await db
-			.select({ id: permissions.id })
-			.from(userRoles)
-			.innerJoin(roles, eq(userRoles.roleId, roles.id))
-			.innerJoin(rolePermissions, eq(roles.id, rolePermissions.roleId))
-			.innerJoin(permissions, eq(rolePermissions.permissionId, permissions.id))
-			.where(
-				and(
-					eq(userRoles.userId, userId),
-					eq(permissions.resource, resource),
-					eq(permissions.action, action),
-					eq(roles.active, true),
-				),
-			)
-			.limit(1);
-
-		return result.length > 0;
+	async hasPermission(userId: string, resource: string, action: string): Promise<boolean> {
+		const result = await AppDataSource.createQueryBuilder(UserRoleEntity, 'ur')
+			.innerJoin(RoleEntity, 'r', 'ur.role_id = r.id')
+			.innerJoin(RolePermissionEntity, 'rp', 'r.id = rp.role_id')
+			.innerJoin(PermissionEntity, 'p', 'rp.permission_id = p.id')
+			.where('ur.user_id = :userId', { userId })
+			.andWhere('p.resource = :resource', { resource })
+			.andWhere('p.action = :action', { action })
+			.andWhere('r.active = :active', { active: true })
+			.limit(1)
+			.getCount()
+		return result > 0
 	}
 
-	async getPermissions(
-		userId: string,
-	): Promise<Array<{ resource: string; action: string }>> {
-		const results = await db
-			.select({
-				resource: permissions.resource,
-				action: permissions.action,
-			})
-			.from(userRoles)
-			.innerJoin(roles, eq(userRoles.roleId, roles.id))
-			.innerJoin(rolePermissions, eq(roles.id, rolePermissions.roleId))
-			.innerJoin(permissions, eq(rolePermissions.permissionId, permissions.id))
-			.where(and(eq(userRoles.userId, userId), eq(roles.active, true)));
-
-		return results;
+	async getPermissions(userId: string): Promise<Array<{ resource: string; action: string }>> {
+		const results = await AppDataSource.createQueryBuilder(UserRoleEntity, 'ur')
+			.innerJoin(RoleEntity, 'r', 'ur.role_id = r.id')
+			.innerJoin(RolePermissionEntity, 'rp', 'r.id = rp.role_id')
+			.innerJoin(PermissionEntity, 'p', 'rp.permission_id = p.id')
+			.select(['p.resource AS resource', 'p.action AS action'])
+			.where('ur.user_id = :userId', { userId })
+			.andWhere('r.active = :active', { active: true })
+			.getRawMany()
+		return results.map((r) => ({ resource: r.resource, action: r.action }))
 	}
 
-	private mapToEntity(dbUser: DbUser): User {
+	private mapToEntity(e: UserEntity): User {
 		return {
-			id: dbUser.id,
-			email: dbUser.email,
-			username: dbUser.username,
-			password: dbUser.password,
-			firstName: dbUser.firstName ?? undefined,
-			lastName: dbUser.lastName ?? undefined,
-			active: dbUser.active,
-			createdAt: dbUser.createdAt,
-			updatedAt: dbUser.updatedAt,
-			lastLoginAt: dbUser.lastLoginAt ?? undefined,
-		};
+			id: e.id,
+			email: e.email,
+			username: e.username,
+			password: e.password,
+			firstName: e.firstName ?? undefined,
+			lastName: e.lastName ?? undefined,
+			active: e.active,
+			createdAt: e.createdAt,
+			updatedAt: e.updatedAt,
+			lastLoginAt: e.lastLoginAt ?? undefined
+		}
 	}
 }

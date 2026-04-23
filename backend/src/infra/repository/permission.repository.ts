@@ -1,71 +1,52 @@
-import { eq, and } from "drizzle-orm";
-import { db } from "@infra/db/database.js";
-import {
-	permissions,
-	type Permission as DbPermission,
-	type NewPermission,
-} from "@infra/db/schema.js";
-import type { IPermissionRepository } from "@domain/repositories/permission.repository.js";
-import type {
-	Permission,
-	CreatePermission,
-} from "@domain/entities/permission.entity.js";
-import { randomUUID } from "crypto";
+import { AppDataSource } from '@infra/db/database.js'
+import { PermissionEntity } from '@infra/db/entities.js'
+import type { IPermissionRepository } from '@domain/repositories/permission.repository.js'
+import type { Permission, CreatePermission } from '@domain/entities/permission.entity.js'
+import { randomUUID } from 'crypto'
 
 export class PermissionRepository implements IPermissionRepository {
+	private get repo() {
+		return AppDataSource.getRepository(PermissionEntity)
+	}
+
 	async create(data: CreatePermission): Promise<Permission> {
-		const newPermission: NewPermission = {
+		const entity = this.repo.create({
 			id: randomUUID(),
 			resource: data.resource,
 			action: data.action,
-			description: data.description,
-			createdAt: new Date().toISOString(),
-		};
-
-		const [created] = await db
-			.insert(permissions)
-			.values(newPermission)
-			.returning();
-		return this.mapToEntity(created);
+			description: data.description ?? null,
+			createdAt: new Date().toISOString()
+		})
+		const saved = await this.repo.save(entity)
+		return this.mapToEntity(saved)
 	}
 
 	async findById(id: string): Promise<Permission | null> {
-		const [permission] = await db
-			.select()
-			.from(permissions)
-			.where(eq(permissions.id, id));
-		return permission ? this.mapToEntity(permission) : null;
+		const p = await this.repo.findOneBy({ id })
+		return p ? this.mapToEntity(p) : null
 	}
 
-	async findByResourceAndAction(
-		resource: string,
-		action: string,
-	): Promise<Permission | null> {
-		const [permission] = await db
-			.select()
-			.from(permissions)
-			.where(
-				and(eq(permissions.resource, resource), eq(permissions.action, action)),
-			);
-		return permission ? this.mapToEntity(permission) : null;
+	async findByResourceAndAction(resource: string, action: string): Promise<Permission | null> {
+		const p = await this.repo.findOneBy({ resource, action })
+		return p ? this.mapToEntity(p) : null
 	}
 
 	async findAll(): Promise<Permission[]> {
-		const results = await db.select().from(permissions);
-		return results.map((permission) => this.mapToEntity(permission));
+		const results = await this.repo.find()
+		return results.map((p) => this.mapToEntity(p))
 	}
 
 	async delete(id: string): Promise<void> {
-		await db.delete(permissions).where(eq(permissions.id, id));
+		await this.repo.delete(id)
 	}
 
-	private mapToEntity(dbPermission: DbPermission): Permission {
+	private mapToEntity(e: PermissionEntity): Permission {
 		return {
-			id: dbPermission.id,
-			resource: dbPermission.resource,
-			action: dbPermission.action,
-			description: dbPermission.description ?? undefined,
-			createdAt: dbPermission.createdAt,
-		};
+			id: e.id,
+			resource: e.resource,
+			action: e.action,
+			description: e.description ?? undefined,
+			createdAt: e.createdAt
+		}
 	}
 }

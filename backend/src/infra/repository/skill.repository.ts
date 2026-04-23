@@ -1,118 +1,102 @@
-import { db } from '../db/database.js'
-import { skills, roleSkills, userRoles } from '../db/schema.js'
-import { eq, asc, and, inArray } from 'drizzle-orm'
+import { AppDataSource } from '@infra/db/database.js'
+import { SkillEntity, RoleSkillEntity, UserRoleEntity } from '@infra/db/entities.js'
+import { In } from 'typeorm'
 import { v4 as uuidv4 } from 'uuid'
 import type { ISkillRepository } from '../../domain/repositories/skill.repository.js'
 import type { SkillRecord, CreateSkillDTO, UpdateSkillDTO } from '../../domain/entities/skill.entity.js'
 
 export class SkillRepository implements ISkillRepository {
-	private toRecord(row: typeof skills.$inferSelect): SkillRecord {
-		return { ...row }
+	private get repo() {
+		return AppDataSource.getRepository(SkillEntity)
+	}
+
+	private toRecord(e: SkillEntity): SkillRecord {
+		return { ...e }
 	}
 
 	async findAll(): Promise<SkillRecord[]> {
-		const rows = await db.select().from(skills).orderBy(asc(skills.name))
+		const rows = await this.repo.find({ order: { name: 'ASC' } })
 		return rows.map((r) => this.toRecord(r))
 	}
 
 	async findById(id: string): Promise<SkillRecord | undefined> {
-		const rows = await db.select().from(skills).where(eq(skills.id, id)).limit(1)
-		return rows[0] ? this.toRecord(rows[0]) : undefined
+		const row = await this.repo.findOneBy({ id })
+		return row ? this.toRecord(row) : undefined
 	}
 
 	async findBySlug(slug: string): Promise<SkillRecord | undefined> {
-		const rows = await db.select().from(skills).where(eq(skills.slug, slug)).limit(1)
-		return rows[0] ? this.toRecord(rows[0]) : undefined
+		const row = await this.repo.findOneBy({ slug })
+		return row ? this.toRecord(row) : undefined
 	}
 
 	async create(data: CreateSkillDTO): Promise<SkillRecord> {
-		const id = uuidv4()
 		const now = new Date().toISOString()
-		await db.insert(skills).values({
-			id,
+		const entity = this.repo.create({
+			id: uuidv4(),
 			name: data.name,
 			slug: data.slug,
 			description: data.description ?? null,
 			content: data.content,
 			isActive: true,
 			createdAt: now,
-			updatedAt: now,
+			updatedAt: now
 		})
-		return (await this.findById(id))!
+		await this.repo.save(entity)
+		return (await this.findById(entity.id))!
 	}
 
 	async update(data: UpdateSkillDTO): Promise<SkillRecord | undefined> {
-		const now = new Date().toISOString()
-		const updateValues: Partial<typeof skills.$inferInsert> = { updatedAt: now }
-
+		const updateValues: Partial<SkillEntity> = { updatedAt: new Date().toISOString() }
 		if (data.name !== undefined) updateValues.name = data.name
 		if (data.slug !== undefined) updateValues.slug = data.slug
 		if (data.description !== undefined) updateValues.description = data.description
 		if (data.content !== undefined) updateValues.content = data.content
 		if (data.isActive !== undefined) updateValues.isActive = data.isActive
-
-		await db.update(skills).set(updateValues).where(eq(skills.id, data.id))
+		await this.repo.update(data.id, updateValues)
 		return this.findById(data.id)
 	}
 
 	async delete(id: string): Promise<boolean> {
-		const result = await db.delete(skills).where(eq(skills.id, id))
-		return result.changes > 0
+		const result = await this.repo.delete(id)
+		return (result.affected ?? 0) > 0
 	}
 
-	// ── Role ↔ Skill assignment ───────────────────────────────────────────────
-
 	async assignToRole(roleId: string, skillId: string): Promise<void> {
-		const existing = await db
-			.select()
-			.from(roleSkills)
-			.where(and(eq(roleSkills.roleId, roleId), eq(roleSkills.skillId, skillId)))
-		if (existing.length > 0) return
-		await db.insert(roleSkills).values({
-			id: uuidv4(),
-			roleId,
-			skillId,
-			assignedAt: new Date().toISOString(),
-		})
+		const repo = AppDataSource.getRepository(RoleSkillEntity)
+		const existing = await repo.findOneBy({ roleId, skillId })
+		if (existing) return
+		await repo.save(repo.create({ id: uuidv4(), roleId, skillId, assignedAt: new Date().toISOString() }))
 	}
 
 	async removeFromRole(roleId: string, skillId: string): Promise<void> {
-		await db.delete(roleSkills).where(and(eq(roleSkills.roleId, roleId), eq(roleSkills.skillId, skillId)))
+		const repo = AppDataSource.getRepository(RoleSkillEntity)
+		await repo.delete({ roleId, skillId })
 	}
 
 	async getByRole(roleId: string): Promise<SkillRecord[]> {
-		const rows = await db
-			.select({ skill: skills })
-			.from(roleSkills)
-			.innerJoin(skills, eq(roleSkills.skillId, skills.id))
-			.where(eq(roleSkills.roleId, roleId))
-			.orderBy(asc(skills.name))
-		return rows.map((r) => this.toRecord(r.skill))
+		const rsRepo = AppDataSource.getRepository(RoleSkillEntity)
+		const relations = await rsRepo.findBy({ roleId })
+		if (!relations.length) return []
+		const skillIds = relations.map((r) => r.skillId)
+		const rows = await this.repo.find({ where: { id: In(skillIds) }, order: { name: 'ASC' } })
+		return rows.map((r) => this.toRecord(r))
 	}
 
 	async getSkillsAllowedForUser(userId: string): Promise<SkillRecord[]> {
-		// Get user's role IDs
-		const userRoleRows = await db.select().from(userRoles).where(eq(userRoles.userId, userId))
-		const roleIds = userRoleRows.map((r) => r.roleId)
-
+		const urRepo = AppDataSource.getRepository(UserRoleEntity)
+		const userRoles = await urRepo.findBy({ userId })
+		const roleIds = userRoles.map((r) => r.roleId)
 		if (!roleIds.length) return []
 
-		// Return only skills explicitly assigned to the user's roles
-		const restricted = await db
-			.select({ skill: skills })
-			.from(roleSkills)
-			.innerJoin(skills, eq(roleSkills.skillId, skills.id))
-			.where(and(inArray(roleSkills.roleId, roleIds), eq(skills.isActive, true)))
-			.orderBy(asc(skills.name))
+		const rsRepo = AppDataSource.getRepository(RoleSkillEntity)
+		const relations = await rsRepo.findBy({ roleId: In(roleIds) })
+		if (!relations.length) return []
 
-		// Deduplicate (user may have multiple roles with same skill)
-		const seen = new Set<string>()
-		return restricted
-			.filter((r) => {
-				if (seen.has(r.skill.id)) return false
-				seen.add(r.skill.id)
-				return true
-			})
-			.map((r) => this.toRecord(r.skill))
+		const skillIds = [...new Set(relations.map((r) => r.skillId))]
+		const rows = await this.repo.find({
+			where: { id: In(skillIds), isActive: true },
+			order: { name: 'ASC' }
+		})
+		return rows.map((r) => this.toRecord(r))
 	}
 }

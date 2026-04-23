@@ -255,9 +255,9 @@ export function registerOAuthRoutes(): void {
 		path: '/api/oauth/clients',
 		requiresAuth: true,
 		handler: async ({ context: { req, res } }) => {
-			const { db } = await import('@infra/db/database.js')
-			const { oauthClients } = await import('@infra/db/schema.js')
-			const clients = await db.select().from(oauthClients)
+			const { AppDataSource } = await import('@infra/db/database.js')
+			const { OAuthClientEntity } = await import('@infra/db/entities.js')
+			const clients = await AppDataSource.getRepository(OAuthClientEntity).find()
 			return {
 				success: true,
 				data: clients.map((c) => ({

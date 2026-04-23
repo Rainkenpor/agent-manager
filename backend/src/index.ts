@@ -7,6 +7,7 @@ import history from 'connect-history-api-fallback'
 import path, { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { existsSync } from 'node:fs'
+import 'reflect-metadata'
 
 import { initializeRegistry } from './application/routes/index.js'
 import { registerMCPRoutes } from './application/routes/mcp.route.js'
@@ -35,6 +36,9 @@ async function startServers() {
 	// 1. Initialize Database
 	// ==========================================
 	console.log('📦 Initializing database...')
+	const { AppDataSource } = await import('./infra/db/database.js')
+	await AppDataSource.initialize()
+	console.log('✅ Database initialized')
 	console.log('')
 
 	// ==========================================

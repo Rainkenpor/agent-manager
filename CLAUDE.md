@@ -3,7 +3,7 @@
 ## Project Overview
 
 Full-stack application for managing AI agents, MCP servers, users, and RBAC.
-- **Backend**: Express.js + Drizzle ORM (SQLite) + MCP protocol server
+- **Backend**: Express.js + TypeORM (SQLite) + MCP protocol server
 - **Frontend**: Vue 3 + Pinia + Tailwind CSS
 - **Auth**: JWT + Azure AD OAuth2 + MCP OAuth2/PKCE
 
@@ -15,29 +15,34 @@ Full-stack application for managing AI agents, MCP servers, users, and RBAC.
 
 Follow these steps every time you add a new resource or endpoint.
 
-### 1. Define DB Tables (if needed)
+### 1. Define DB Entities (if needed)
 
-Edit `backend/src/infra/db/schema.ts`:
+Edit `backend/src/infra/db/entities.ts` and add a new TypeORM entity class:
 
 ```typescript
-export const myTable = sqliteTable('my_table', {
-  id: text('id').primaryKey(),
-  name: text('name').notNull(),
-  createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
-})
+import { Entity, PrimaryColumn, Column } from 'typeorm'
 
-export type MyRecord = typeof myTable.$inferSelect
-export type NewMyRecord = typeof myTable.$inferInsert
+@Entity('my_table')
+export class MyTableEntity {
+  @PrimaryColumn({ type: 'text' })
+  id!: string
+
+  @Column({ type: 'text' })
+  name!: string
+
+  @Column({ name: 'created_at', type: 'text' })
+  createdAt!: string
+}
 ```
 
-Then generate and apply the migration:
+Then register the entity in `backend/src/infra/db/database.ts` inside the `entities` array of `AppDataSource`. TypeORM's `synchronize: true` will auto-create/update the table on startup.
+
+To generate and run explicit migrations:
 
 ```bash
-npm run db:generate   # creates a new SQL file in backend/drizzle/
+npm run db:generate   # generates a new TypeORM migration
 npm run db:migrate    # applies pending migrations
 ```
-
-Or manually create `backend/drizzle/000N_description.sql` and add an entry to `backend/drizzle/meta/_journal.json`.
 
 ### 2. Create Domain Entities
 

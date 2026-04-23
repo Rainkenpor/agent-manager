@@ -1,120 +1,87 @@
-import { eq, and } from "drizzle-orm";
-import { db } from "@infra/db/database.js";
-import {
-	roles,
-	rolePermissions,
-	permissions,
-	type Role as DbRole,
-	type NewRole,
-} from "@infra/db/schema.js";
-import type { IRoleRepository } from "@domain/repositories/role.repository.js";
-import type {
-	Role,
-	CreateRole,
-	UpdateRole,
-} from "@domain/entities/role.entity.js";
-import { randomUUID } from "crypto";
+import { AppDataSource } from '@infra/db/database.js'
+import { RoleEntity, RolePermissionEntity, PermissionEntity } from '@infra/db/entities.js'
+import type { IRoleRepository } from '@domain/repositories/role.repository.js'
+import type { Role, CreateRole, UpdateRole } from '@domain/entities/role.entity.js'
+import { randomUUID } from 'crypto'
 
 export class RoleRepository implements IRoleRepository {
+	private get repo() {
+		return AppDataSource.getRepository(RoleEntity)
+	}
+
 	async create(data: CreateRole): Promise<Role> {
-		const newRole: NewRole = {
+		const now = new Date().toISOString()
+		const entity = this.repo.create({
 			id: randomUUID(),
 			name: data.name,
-			description: data.description,
+			description: data.description ?? null,
 			active: true,
-			createdAt: new Date().toISOString(),
-			updatedAt: new Date().toISOString(),
-		};
-
-		const [created] = await db.insert(roles).values(newRole).returning();
-		return this.mapToEntity(created);
+			createdAt: now,
+			updatedAt: now
+		})
+		const saved = await this.repo.save(entity)
+		return this.mapToEntity(saved)
 	}
 
 	async findById(id: string): Promise<Role | null> {
-		const [role] = await db.select().from(roles).where(eq(roles.id, id));
-		return role ? this.mapToEntity(role) : null;
+		const role = await this.repo.findOneBy({ id })
+		return role ? this.mapToEntity(role) : null
 	}
 
 	async findByName(name: string): Promise<Role | null> {
-		const [role] = await db.select().from(roles).where(eq(roles.name, name));
-		return role ? this.mapToEntity(role) : null;
+		const role = await this.repo.findOneBy({ name })
+		return role ? this.mapToEntity(role) : null
 	}
 
 	async findAll(filters?: { active?: boolean }): Promise<Role[]> {
-		let query = db.select().from(roles);
-
-		if (filters?.active !== undefined) {
-			query = query.where(eq(roles.active, filters.active));
-		}
-
-		const results = await query;
-		return results.map((role) => this.mapToEntity(role));
+		const where = filters?.active !== undefined ? { active: filters.active } : {}
+		const results = await this.repo.findBy(where)
+		return results.map((r) => this.mapToEntity(r))
 	}
 
 	async update(id: string, data: UpdateRole): Promise<Role> {
-		const updateData: Partial<NewRole> = {
-			...data,
-			updatedAt: new Date().toISOString(),
-		};
-
-		const [updated] = await db
-			.update(roles)
-			.set(updateData)
-			.where(eq(roles.id, id))
-			.returning();
-
-		return this.mapToEntity(updated);
+		await this.repo.update(id, { ...data, updatedAt: new Date().toISOString() })
+		const updated = await this.repo.findOneByOrFail({ id })
+		return this.mapToEntity(updated)
 	}
 
 	async delete(id: string): Promise<void> {
-		await db.delete(roles).where(eq(roles.id, id));
+		await this.repo.delete(id)
 	}
 
-	// Gestión de permisos
 	async assignPermission(roleId: string, permissionId: string): Promise<void> {
-		await db.insert(rolePermissions).values({
+		const repo = AppDataSource.getRepository(RolePermissionEntity)
+		const entry = repo.create({
 			id: randomUUID(),
 			roleId,
 			permissionId,
-			assignedAt: new Date().toISOString(),
-		});
+			assignedAt: new Date().toISOString()
+		})
+		await repo.save(entry)
 	}
 
 	async removePermission(roleId: string, permissionId: string): Promise<void> {
-		await db
-			.delete(rolePermissions)
-			.where(
-				and(
-					eq(rolePermissions.roleId, roleId),
-					eq(rolePermissions.permissionId, permissionId),
-				),
-			);
+		const repo = AppDataSource.getRepository(RolePermissionEntity)
+		await repo.delete({ roleId, permissionId })
 	}
 
-	async getPermissions(
-		roleId: string,
-	): Promise<Array<{ id: string; resource: string; action: string }>> {
-		const results = await db
-			.select({
-				id: permissions.id,
-				resource: permissions.resource,
-				action: permissions.action,
-			})
-			.from(rolePermissions)
-			.innerJoin(permissions, eq(rolePermissions.permissionId, permissions.id))
-			.where(eq(rolePermissions.roleId, roleId));
-
-		return results;
+	async getPermissions(roleId: string): Promise<Array<{ id: string; resource: string; action: string }>> {
+		const results = await AppDataSource.createQueryBuilder(RolePermissionEntity, 'rp')
+			.innerJoin(PermissionEntity, 'p', 'rp.permission_id = p.id')
+			.select(['p.id AS id', 'p.resource AS resource', 'p.action AS action'])
+			.where('rp.role_id = :roleId', { roleId })
+			.getRawMany()
+		return results.map((r) => ({ id: r.id, resource: r.resource, action: r.action }))
 	}
 
-	private mapToEntity(dbRole: DbRole): Role {
+	private mapToEntity(e: RoleEntity): Role {
 		return {
-			id: dbRole.id,
-			name: dbRole.name,
-			description: dbRole.description ?? undefined,
-			active: dbRole.active,
-			createdAt: dbRole.createdAt,
-			updatedAt: dbRole.updatedAt,
-		};
+			id: e.id,
+			name: e.name,
+			description: e.description ?? undefined,
+			active: e.active,
+			createdAt: e.createdAt,
+			updatedAt: e.updatedAt
+		}
 	}
 }

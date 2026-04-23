@@ -1,70 +1,78 @@
-import { db } from '../db/database.js'
-import { conversations, messages } from '../db/schema.js'
-import { eq, asc, desc } from 'drizzle-orm'
+import { AppDataSource } from '@infra/db/database.js'
+import { ConversationEntity, MessageEntity } from '@infra/db/entities.js'
 import { v4 as uuidv4 } from 'uuid'
 import type { IChatRepository } from '../../domain/repositories/chat.repository.js'
-import type {
-	ConversationRecord,
-	ConversationWithMessages,
-	CreateConversationDTO,
-	MessageRecord,
-} from '../../domain/entities/chat.entity.js'
+import type { ConversationRecord, ConversationWithMessages, CreateConversationDTO, MessageRecord } from '../../domain/entities/chat.entity.js'
 
 export class ChatRepository implements IChatRepository {
+	private get convRepo() {
+		return AppDataSource.getRepository(ConversationEntity)
+	}
+
+	private get msgRepo() {
+		return AppDataSource.getRepository(MessageEntity)
+	}
+
 	async createConversation(data: CreateConversationDTO): Promise<ConversationRecord> {
-		const id = uuidv4()
 		const now = new Date().toISOString()
-		await db.insert(conversations).values({
-			id,
+		const entity = this.convRepo.create({
+			id: uuidv4(),
 			title: data.title,
 			agentId: data.agentId,
 			userId: data.userId,
+			draft: null,
 			createdAt: now,
-			updatedAt: now,
+			updatedAt: now
 		})
-		return { id, title: data.title, agentId: data.agentId, userId: data.userId, draft: null, createdAt: now, updatedAt: now }
+		await this.convRepo.save(entity)
+		return { id: entity.id, title: entity.title, agentId: entity.agentId, userId: entity.userId, draft: null, createdAt: now, updatedAt: now }
 	}
 
 	async findConversationsByUser(userId: string): Promise<ConversationRecord[]> {
-		return db
-			.select()
-			.from(conversations)
-			.where(eq(conversations.userId, userId))
-			.orderBy(desc(conversations.updatedAt)) as Promise<ConversationRecord[]>
+		const rows = await this.convRepo.find({
+			where: { userId },
+			order: { updatedAt: 'DESC' }
+		})
+		return rows as ConversationRecord[]
 	}
 
 	async findConversationById(id: string): Promise<ConversationWithMessages | null> {
-		const rows = await db.select().from(conversations).where(eq(conversations.id, id))
-		if (rows.length === 0) return null
-		const conv = rows[0] as ConversationRecord
+		const conv = await this.convRepo.findOneBy({ id })
+		if (!conv) return null
 		const msgs = await this.getMessages(id)
-		return { ...conv, messages: msgs }
+		return { ...(conv as ConversationRecord), messages: msgs }
 	}
 
 	async deleteConversation(id: string): Promise<void> {
-		await db.delete(conversations).where(eq(conversations.id, id))
+		await this.convRepo.delete(id)
 	}
 
 	async addMessage(conversationId: string, role: 'user' | 'assistant', content: string): Promise<MessageRecord> {
-		const id = uuidv4()
 		const createdAt = new Date().toISOString()
-		await db.insert(messages).values({ id, conversationId, role, content, createdAt })
-		return { id, conversationId, role, content, createdAt }
+		const entity = this.msgRepo.create({
+			id: uuidv4(),
+			conversationId,
+			role,
+			content,
+			createdAt
+		})
+		await this.msgRepo.save(entity)
+		return { id: entity.id, conversationId, role, content, createdAt }
 	}
 
 	async getMessages(conversationId: string): Promise<MessageRecord[]> {
-		return db
-			.select()
-			.from(messages)
-			.where(eq(messages.conversationId, conversationId))
-			.orderBy(asc(messages.createdAt)) as Promise<MessageRecord[]>
+		const rows = await this.msgRepo.find({
+			where: { conversationId },
+			order: { createdAt: 'ASC' }
+		})
+		return rows as MessageRecord[]
 	}
 
 	async touchConversation(id: string): Promise<void> {
-		await db.update(conversations).set({ updatedAt: new Date().toISOString() }).where(eq(conversations.id, id))
+		await this.convRepo.update(id, { updatedAt: new Date().toISOString() })
 	}
 
 	async updateDraft(id: string, draft: string): Promise<void> {
-		await db.update(conversations).set({ draft }).where(eq(conversations.id, id))
+		await this.convRepo.update(id, { draft })
 	}
 }

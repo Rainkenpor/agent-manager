@@ -10,6 +10,8 @@
     "rootDir": ".",
     "declaration": true,
     "resolveJsonModule": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
     "paths": {
       "@application/*": ["./src/application/*"],
       "@shared/*": ["./shared/*"],
