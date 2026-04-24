@@ -15,6 +15,7 @@ const allNavLinks = [
   { to: '/automatizacion', label: 'Automatización', icon: 'mdi-webhook', resources: ['hook_servers', 'event_listeners'] },
   { to: '/traceability', label: 'Trazabilidad', icon: 'mdi-sitemap', resources: ['traceability'] },
   { to: '/admin', label: 'Admin', icon: 'mdi-shield-account', resources: ['users', 'roles'] },
+  { to: '/config', label: 'Configuración', icon: 'mdi-cog-transfer', resources: ['users'] },
 ]
 
 const navLinks = computed(() =>

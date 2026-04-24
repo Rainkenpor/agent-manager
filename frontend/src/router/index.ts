@@ -59,6 +59,12 @@ const router = createRouter({
           name: 'admin',
           component: () => import('@/views/AdminView.vue'),
         },
+        {
+          path: 'config',
+          name: 'config',
+          component: () => import('@/views/ConfigView.vue'),
+          meta: { resource: 'users' },
+        },
         // Redirects for backward compatibility
         { path: 'agents', redirect: '/agentes' },
         { path: 'skills', redirect: '/agentes' },
