@@ -31,7 +31,7 @@ async function startServers() {
 	// ==========================================
 	// 1. Initialize Database
 	// ==========================================
-	console.log('📦 Initializing database...')
+	console.log('📦 Initializing database...', envs.SERVER_DB_DIALECT)
 	const { AppDataSource } = await import('./infra/db/database.js')
 	await AppDataSource.initialize()
 	console.log('✅ Database initialized')
