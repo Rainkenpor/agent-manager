@@ -24,7 +24,7 @@ variables:
 - name: repositorioK8s
   value: "$(System.CollectionUri)$(System.TeamProject)/_git/self-service-devops"
 - name: ramaK8s
-  value: $(Build.SourceBranchName)
+  value: 'QA'
 - name: repositorioOrigen
   value: $(Build.Repository.Name)
 - group: self-service-devops
