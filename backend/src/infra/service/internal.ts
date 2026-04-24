@@ -882,10 +882,10 @@ export class InternalAgentService implements IAgentService {
 			const gen = this.fetchCompletionStream(config, body, signal)
 			let iterResult = await gen.next()
 			while (!iterResult.done) {
-				yield iterResult.value
+				yield iterResult.value as string
 				iterResult = await gen.next()
 			}
-			const msg = iterResult.value
+			const msg = iterResult.value as CompletionMessage
 
 			messages.push({
 				role: 'assistant',

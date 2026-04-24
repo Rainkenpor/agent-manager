@@ -153,7 +153,9 @@ async function applyRoleBasedTools(server: McpServer, user: Record<string, unkno
 									isError: true
 								}
 							}
-							const sessionContext = globalThis.__mcpSessionContexts?.[sessionId] || { req: {}, res: {}, next: () => {} }
+							const sessionContext: HttpContext =
+								globalThis.__mcpSessionContexts?.[sessionId] ||
+								({ req: {}, res: {}, next: () => {}, signal: new AbortController().signal } as unknown as HttpContext)
 							const result = await route.handler({ input: parseResult.data as never, context: sessionContext })
 							return { content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }] }
 						} catch (err) {

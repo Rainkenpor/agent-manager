@@ -23,8 +23,6 @@
     "models": "bun ./scripts/auth.ts models"
   },
   "dependencies": {
-    "@biomejs/biome": "^2.4.8",
-    "@mdi/font": "^7.4.47",
     "@modelcontextprotocol/sdk": "^1.27.1",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.8.0",
@@ -44,6 +42,8 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.8",
+    "@mdi/font": "^7.4.47",
     "@types/connect-history-api-fallback": "^1.5.4",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
@@ -53,6 +53,8 @@
     "@types/passport-local": "^1.0.38",
     "concurrently": "^9.2.1",
     "daisyui": "^5.5.19",
-    "tsc-alias": "^1.8.16"
+    "tsc-alias": "^1.8.16",
+    "typescript": "^5.5.0",
+    "tsx": "^4.21.0"
   }
 }
