@@ -47,20 +47,23 @@ export const logger = winston.createLogger({
 		new winston.transports.File({
 			filename: join(LOG_PATH, 'combined.log'),
 			maxsize: 5242880, // 5MB
-			maxFiles: 5
+			maxFiles: 5,
+			tailable: true
 		}),
 		// File transport solo para errores
 		new winston.transports.File({
 			filename: join(LOG_PATH, 'error.log'),
 			level: 'error',
 			maxsize: 5242880, // 5MB
-			maxFiles: 5
+			maxFiles: 5,
+			tailable: true
 		}),
 		// File transport para requests HTTP
 		new winston.transports.File({
 			filename: join(LOG_PATH, 'requests.log'),
 			maxsize: 5242880, // 5MB
-			maxFiles: 5
+			maxFiles: 5,
+			tailable: true
 		})
 	]
 })
@@ -73,7 +76,8 @@ export const requestLogger = winston.createLogger({
 		new winston.transports.File({
 			filename: join(LOG_PATH, 'requests.log'),
 			maxsize: 5242880, // 5MB
-			maxFiles: 5
+			maxFiles: 5,
+			tailable: true
 		})
 	]
 })
@@ -86,7 +90,8 @@ export const agentLogger = winston.createLogger({
 		new winston.transports.File({
 			filename: join(LOG_PATH, 'agents.log'),
 			maxsize: 5242880, // 5MB
-			maxFiles: 5
+			maxFiles: 5,
+			tailable: true
 		})
 	]
 })
