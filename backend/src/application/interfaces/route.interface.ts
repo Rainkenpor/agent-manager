@@ -15,7 +15,7 @@ export interface HttpContext {
 	signal: AbortSignal
 }
 
-export interface RouteToolConfig<T extends ZodRawShape> {
+export interface RouteToolConfig<T extends ZodRawShape | z.ZodObject<any>> {
 	// By which servers this route is available
 	useBy: string[]
 

@@ -1,32 +1,38 @@
-import { db } from '../db/database.js'
-import { hookServers, hookAssignments } from '../db/schema.js'
-import { eq, and } from 'drizzle-orm'
+import { AppDataSource } from '@infra/db/database.js'
+import { HookServerEntity, HookAssignmentEntity } from '@infra/db/entities.js'
 import { v4 as uuidv4 } from 'uuid'
 import type { IHookServerRepository } from '../../domain/repositories/hook-server.repository.js'
 import type {
-	HookServerEntity,
+	HookServerEntity as HookServerDomain,
 	CreateHookServerDTO,
 	UpdateHookServerDTO,
-	HookAssignmentEntity,
+	HookAssignmentEntity as HookAssignmentDomain,
 	CreateHookAssignmentDTO
 } from '../../domain/entities/hook-server.entity.js'
 
 export class HookServerRepository implements IHookServerRepository {
-	async findAll(): Promise<HookServerEntity[]> {
-		const rows = await db.select().from(hookServers)
+	private get serverRepo() {
+		return AppDataSource.getRepository(HookServerEntity)
+	}
+
+	private get assignmentRepo() {
+		return AppDataSource.getRepository(HookAssignmentEntity)
+	}
+
+	async findAll(): Promise<HookServerDomain[]> {
+		const rows = await this.serverRepo.find()
 		return rows.map(this.mapServer)
 	}
 
-	async findById(id: string): Promise<HookServerEntity | null> {
-		const rows = await db.select().from(hookServers).where(eq(hookServers.id, id))
-		return rows[0] ? this.mapServer(rows[0]) : null
+	async findById(id: string): Promise<HookServerDomain | null> {
+		const row = await this.serverRepo.findOneBy({ id })
+		return row ? this.mapServer(row) : null
 	}
 
-	async create(data: CreateHookServerDTO): Promise<HookServerEntity> {
-		const id = uuidv4()
+	async create(data: CreateHookServerDTO): Promise<HookServerDomain> {
 		const now = new Date().toISOString()
-		await db.insert(hookServers).values({
-			id,
+		const entity = this.serverRepo.create({
+			id: uuidv4(),
 			name: data.name,
 			displayName: data.displayName ?? null,
 			description: data.description ?? null,
@@ -35,82 +41,73 @@ export class HookServerRepository implements IHookServerRepository {
 			createdAt: now,
 			updatedAt: now
 		})
-		return (await this.findById(id))!
+		await this.serverRepo.save(entity)
+		return (await this.findById(entity.id))!
 	}
 
-	async update(id: string, data: UpdateHookServerDTO): Promise<HookServerEntity> {
-		const now = new Date().toISOString()
-		await db
-			.update(hookServers)
-			.set({
-				...(data.displayName !== undefined && { displayName: data.displayName }),
-				...(data.description !== undefined && { description: data.description }),
-				...(data.url !== undefined && { url: data.url }),
-				...(data.active !== undefined && { active: data.active }),
-				updatedAt: now
-			})
-			.where(eq(hookServers.id, id))
+	async update(id: string, data: UpdateHookServerDTO): Promise<HookServerDomain> {
+		const updateData: Partial<HookServerEntity> = { updatedAt: new Date().toISOString() }
+		if (data.displayName !== undefined) updateData.displayName = data.displayName
+		if (data.description !== undefined) updateData.description = data.description
+		if (data.url !== undefined) updateData.url = data.url
+		if (data.active !== undefined) updateData.active = data.active
+		await this.serverRepo.update(id, updateData)
 		return (await this.findById(id))!
 	}
 
 	async delete(id: string): Promise<void> {
-		await db.delete(hookServers).where(eq(hookServers.id, id))
+		await this.serverRepo.delete(id)
 	}
 
-	async getAssignments(hookServerId: string, hookName?: string): Promise<HookAssignmentEntity[]> {
-		const conditions = [eq(hookAssignments.hookServerId, hookServerId)]
-		if (hookName) conditions.push(eq(hookAssignments.hookName, hookName))
-		const rows = await db
-			.select()
-			.from(hookAssignments)
-			.where(and(...conditions))
+	async getAssignments(hookServerId: string, hookName?: string): Promise<HookAssignmentDomain[]> {
+		const where: Record<string, string> = { hookServerId }
+		if (hookName) where.hookName = hookName
+		const rows = await this.assignmentRepo.findBy(where as any)
 		return rows.map(this.mapAssignment)
 	}
 
-	async createAssignment(data: CreateHookAssignmentDTO): Promise<HookAssignmentEntity> {
-		const id = uuidv4()
-		const now = new Date().toISOString()
-		await db.insert(hookAssignments).values({
-			id,
+	async createAssignment(data: CreateHookAssignmentDTO): Promise<HookAssignmentDomain> {
+		const entity = this.assignmentRepo.create({
+			id: uuidv4(),
 			hookServerId: data.hookServerId,
 			hookName: data.hookName,
 			assignmentType: data.assignmentType,
 			assignmentId: data.assignmentId,
 			assignmentName: data.assignmentName,
 			extraData: data.extraData ?? null,
-			createdAt: now
+			createdAt: new Date().toISOString()
 		})
-		const rows = await db.select().from(hookAssignments).where(eq(hookAssignments.id, id))
-		return this.mapAssignment(rows[0])
+		await this.assignmentRepo.save(entity)
+		return this.mapAssignment((await this.assignmentRepo.findOneByOrFail({ id: entity.id })))
 	}
 
 	async deleteAssignment(assignmentId: string): Promise<void> {
-		await db.delete(hookAssignments).where(eq(hookAssignments.id, assignmentId))
+		await this.assignmentRepo.delete(assignmentId)
 	}
 
-	private mapServer(row: typeof hookServers.$inferSelect): HookServerEntity {
+	private mapServer(e: HookServerEntity): HookServerDomain {
 		return {
-			id: row.id,
-			name: row.name,
-			displayName: row.displayName,
-			description: row.description,
-			url: row.url,
-			active: row.active,
-			createdAt: row.createdAt,
-			updatedAt: row.updatedAt
+			id: e.id,
+			name: e.name,
+			displayName: e.displayName,
+			description: e.description,
+			url: e.url,
+			active: e.active,
+			createdAt: e.createdAt,
+			updatedAt: e.updatedAt
 		}
 	}
 
-	private mapAssignment(row: typeof hookAssignments.$inferSelect): HookAssignmentEntity {
+	private mapAssignment(e: HookAssignmentEntity): HookAssignmentDomain {
 		return {
-			id: row.id,
-			hookServerId: row.hookServerId,
-			hookName: row.hookName,
-			assignmentType: row.assignmentType as 'agent' | 'mcp_tool',
-			assignmentId: row.assignmentId,
-			assignmentName: row.assignmentName,
-			extraData: row.extraData,
-			createdAt: row.createdAt
+			id: e.id,
+			hookServerId: e.hookServerId,
+			hookName: e.hookName,
+			assignmentType: e.assignmentType as 'agent' | 'mcp_tool',
+			assignmentId: e.assignmentId,
+			assignmentName: e.assignmentName,
+			extraData: e.extraData,
+			createdAt: e.createdAt
 		}
 	}
 }

@@ -77,7 +77,8 @@ export function registerRoleRoutes() {
 			const roleRepository = container.roleRepository
 
 			try {
-				const role = await roleRepository.update(req.params.id, req.body)
+				const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id
+				const role = await roleRepository.update(id, req.body)
 				return role
 			} catch (error: any) {
 				res.status(500).json({ error: error.message })

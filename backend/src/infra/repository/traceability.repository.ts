@@ -1,19 +1,19 @@
-import { db } from '../db/database.js'
+import { AppDataSource } from '@infra/db/database.js'
 import {
-	traceabilityTemplates,
-	templateStages,
-	traceabilities,
-	traceabilityStages,
-	traceabilityTasks,
-	traceabilityLinks,
-	traceabilityDocuments,
-	templateStagePredecessors,
-	traceabilityStagePredecessors,
-	agents,
-	users,
-	userRoles
-} from '../db/schema.js'
-import { eq, and, inArray, ne, sql } from 'drizzle-orm'
+	TraceabilityTemplateEntity,
+	TemplateStageEntity,
+	TemplateStagePredecessorEntity,
+	TraceabilityEntity,
+	TraceabilityStageEntity,
+	TraceabilityStagePredecessorEntity,
+	TraceabilityTaskEntity,
+	TraceabilityLinkEntity,
+	TraceabilityDocumentEntity,
+	AgentEntity,
+	UserEntity,
+	UserRoleEntity
+} from '@infra/db/entities.js'
+import { In, Not } from 'typeorm'
 import { v4 as uuidv4 } from 'uuid'
 import type { ITraceabilityRepository } from '../../domain/repositories/traceability.repository.js'
 import type {
@@ -52,13 +52,11 @@ function generateCode(): string {
 }
 
 async function generateUniqueCode(): Promise<string> {
+	const repo = AppDataSource.getRepository(TraceabilityTemplateEntity)
 	for (let attempt = 0; attempt < 20; attempt++) {
 		const code = generateCode()
-		const existing = await db
-			.select({ id: traceabilityTemplates.id })
-			.from(traceabilityTemplates)
-			.where(eq(traceabilityTemplates.code, code))
-		if (!existing.length) return code
+		const existing = await repo.findOneBy({ code })
+		if (!existing) return code
 	}
 	throw new Error('Could not generate a unique template code')
 }
@@ -77,7 +75,7 @@ function serializeDocumentSchema(schema: DocumentSection[] | null | undefined): 
 	return JSON.stringify(schema)
 }
 
-function buildTemplate(row: any, stages: TemplateStage[]): TraceabilityTemplate {
+function buildTemplate(row: TraceabilityTemplateEntity, stages: TemplateStage[]): TraceabilityTemplate {
 	return {
 		id: row.id,
 		code: row.code ?? null,
@@ -93,9 +91,14 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 	// ─── Templates ──────────────────────────────────────────────────────────────
 
 	async findAllTemplates(): Promise<TraceabilityTemplate[]> {
-		const temps = await db.select().from(traceabilityTemplates)
-		const stages = await db.select().from(templateStages)
-		const allPredecessors = await db.select().from(templateStagePredecessors)
+		const tplRepo = AppDataSource.getRepository(TraceabilityTemplateEntity)
+		const stageRepo = AppDataSource.getRepository(TemplateStageEntity)
+		const predRepo = AppDataSource.getRepository(TemplateStagePredecessorEntity)
+
+		const temps = await tplRepo.find()
+		const stages = await stageRepo.find()
+		const allPredecessors = await predRepo.find()
+
 		return temps.map((t) =>
 			buildTemplate(
 				t,
@@ -115,15 +118,19 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 	}
 
 	async findTemplateById(id: string): Promise<TraceabilityTemplate | null> {
-		const rows = await db.select().from(traceabilityTemplates).where(eq(traceabilityTemplates.id, id))
-		if (!rows[0]) return null
-		const stages = await db.select().from(templateStages).where(eq(templateStages.templateId, id))
+		const tplRepo = AppDataSource.getRepository(TraceabilityTemplateEntity)
+		const stageRepo = AppDataSource.getRepository(TemplateStageEntity)
+		const predRepo = AppDataSource.getRepository(TemplateStagePredecessorEntity)
+
+		const tpl = await tplRepo.findOneBy({ id })
+		if (!tpl) return null
+
+		const stages = await stageRepo.findBy({ templateId: id })
 		const stageIds = stages.map((s) => s.id)
-		const predecessors = stageIds.length
-			? await db.select().from(templateStagePredecessors).where(inArray(templateStagePredecessors.stageId, stageIds))
-			: []
+		const predecessors = stageIds.length ? await predRepo.findBy({ stageId: In(stageIds) }) : []
+
 		return buildTemplate(
-			rows[0],
+			tpl,
 			stages
 				.sort((a, b) => a.order - b.order)
 				.map((s) => ({
@@ -138,47 +145,48 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 	}
 
 	async findTemplateByCode(code: string): Promise<TraceabilityTemplate | null> {
-		const rows = await db.select().from(traceabilityTemplates).where(eq(traceabilityTemplates.code, code.toUpperCase()))
-		if (!rows[0]) return null
-		return this.findTemplateById(rows[0].id)
+		const tplRepo = AppDataSource.getRepository(TraceabilityTemplateEntity)
+		const tpl = await tplRepo.findOneBy({ code: code.toUpperCase() })
+		if (!tpl) return null
+		return this.findTemplateById(tpl.id)
 	}
 
 	async findTemplateStageByTraceabilityStageId(traceabilityStageId: string): Promise<TemplateStage | null> {
-		const stageRows = await db.select().from(traceabilityStages).where(eq(traceabilityStages.id, traceabilityStageId))
-		if (!stageRows[0]?.templateStageId) return null
-		return this.findTemplateStageById(stageRows[0].templateStageId)
+		const stageRepo = AppDataSource.getRepository(TraceabilityStageEntity)
+		const stage = await stageRepo.findOneBy({ id: traceabilityStageId })
+		if (!stage?.templateStageId) return null
+		return this.findTemplateStageById(stage.templateStageId)
 	}
 
 	async createTemplate(data: CreateTemplateDTO): Promise<TraceabilityTemplate> {
+		const tplRepo = AppDataSource.getRepository(TraceabilityTemplateEntity)
 		const id = uuidv4()
 		const code = await generateUniqueCode()
 		const now = new Date().toISOString()
-		await db
-			.insert(traceabilityTemplates)
-			.values({ id, code, name: data.name, description: data.description ?? null, createdAt: now, updatedAt: now })
+		await tplRepo.save(tplRepo.create({ id, code, name: data.name, description: data.description ?? null, createdAt: now, updatedAt: now }))
 		return { id, code, name: data.name, description: data.description ?? null, stages: [], createdAt: now, updatedAt: now }
 	}
 
 	async updateTemplate(data: UpdateTemplateDTO): Promise<TraceabilityTemplate | null> {
-		const now = new Date().toISOString()
+		const tplRepo = AppDataSource.getRepository(TraceabilityTemplateEntity)
 		const { id, ...rest } = data
-		await db
-			.update(traceabilityTemplates)
-			.set({ ...rest, updatedAt: now })
-			.where(eq(traceabilityTemplates.id, id))
+		await tplRepo.update(id, { ...rest, updatedAt: new Date().toISOString() })
 		return this.findTemplateById(id)
 	}
 
 	async deleteTemplate(id: string): Promise<void> {
-		await db.delete(traceabilityTemplates).where(eq(traceabilityTemplates.id, id))
+		const tplRepo = AppDataSource.getRepository(TraceabilityTemplateEntity)
+		await tplRepo.delete(id)
 	}
 
 	// ─── Template Stages ────────────────────────────────────────────────────────
 
 	async createTemplateStage(data: CreateTemplateStageDTO): Promise<TemplateStage> {
+		const stageRepo = AppDataSource.getRepository(TemplateStageEntity)
+		const predRepo = AppDataSource.getRepository(TemplateStagePredecessorEntity)
 		const id = uuidv4()
 		const now = new Date().toISOString()
-		const row = {
+		const entity = stageRepo.create({
 			id,
 			templateId: data.templateId,
 			name: data.name,
@@ -186,93 +194,92 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 			role: data.role ?? null,
 			order: data.order,
 			parallelGroup: data.parallelGroup ?? null,
-			type: (data.type ?? 'manual') as 'manual' | 'agent',
+			type: (data.type ?? 'manual') as string,
 			agentId: data.agentId ?? null,
 			documentSchema: serializeDocumentSchema(data.documentSchema ?? null),
 			effortScore: data.effortScore ?? 5,
 			createdAt: now
-		}
-		await db.insert(templateStages).values(row)
-		// Insert predecessors if provided
-		if (data.predecessors && data.predecessors.length > 0) {
-			for (const predId of data.predecessors) {
-				await db.insert(templateStagePredecessors).values({
-					id: uuidv4(),
-					stageId: id,
-					predecessorStageId: predId
-				})
-			}
+		})
+		await stageRepo.save(entity)
+		if (data.predecessors?.length) {
+			const preds = data.predecessors.map((predId) =>
+				predRepo.create({ id: uuidv4(), stageId: id, predecessorStageId: predId })
+			)
+			await predRepo.save(preds)
 		}
 		return {
-			...row,
+			...entity,
 			documentSchema: data.documentSchema ?? null,
 			predecessors: data.predecessors ?? []
 		} as TemplateStage
 	}
 
 	async updateTemplateStage(data: UpdateTemplateStageDTO): Promise<TemplateStage | null> {
+		const stageRepo = AppDataSource.getRepository(TemplateStageEntity)
+		const predRepo = AppDataSource.getRepository(TemplateStagePredecessorEntity)
 		const { id, predecessors, documentSchema: ds, effortScore, ...rest } = data
 		const updatePayload: Record<string, unknown> = { ...rest }
 		if (ds !== undefined) updatePayload.documentSchema = serializeDocumentSchema(ds)
 		if (effortScore !== undefined) updatePayload.effortScore = effortScore
-		await db.update(templateStages).set(updatePayload).where(eq(templateStages.id, id))
-		// Replace predecessors if provided
+		await stageRepo.update(id, updatePayload)
 		if (predecessors !== undefined) {
-			await db.delete(templateStagePredecessors).where(eq(templateStagePredecessors.stageId, id))
-			for (const predId of predecessors) {
-				await db.insert(templateStagePredecessors).values({
-					id: uuidv4(),
-					stageId: id,
-					predecessorStageId: predId
-				})
+			await predRepo.delete({ stageId: id })
+			if (predecessors.length) {
+				const preds = predecessors.map((predId) =>
+					predRepo.create({ id: uuidv4(), stageId: id, predecessorStageId: predId })
+				)
+				await predRepo.save(preds)
 			}
 		}
-		const rows = await db.select().from(templateStages).where(eq(templateStages.id, id))
-		if (!rows[0]) return null
-		const predRows = await db.select().from(templateStagePredecessors).where(eq(templateStagePredecessors.stageId, id))
+		const row = await stageRepo.findOneBy({ id })
+		if (!row) return null
+		const predRows = await predRepo.findBy({ stageId: id })
 		return {
-			...rows[0],
-			type: (rows[0].type ?? 'manual') as 'manual' | 'agent',
-			agentId: rows[0].agentId ?? null,
-			documentSchema: parseDocumentSchema(rows[0].documentSchema ?? null),
+			...row,
+			type: (row.type ?? 'manual') as 'manual' | 'agent',
+			agentId: row.agentId ?? null,
+			documentSchema: parseDocumentSchema(row.documentSchema ?? null),
 			predecessors: predRows.map((p) => p.predecessorStageId)
 		} as TemplateStage
 	}
 
 	async deleteTemplateStage(id: string): Promise<void> {
-		await db.delete(templateStages).where(eq(templateStages.id, id))
+		const stageRepo = AppDataSource.getRepository(TemplateStageEntity)
+		await stageRepo.delete(id)
 	}
 
 	async findTemplateStageById(id: string): Promise<TemplateStage | null> {
-		const rows = await db.select().from(templateStages).where(eq(templateStages.id, id))
-		if (!rows[0]) return null
-		const preds = await db.select().from(templateStagePredecessors).where(eq(templateStagePredecessors.stageId, id))
+		const stageRepo = AppDataSource.getRepository(TemplateStageEntity)
+		const predRepo = AppDataSource.getRepository(TemplateStagePredecessorEntity)
+		const row = await stageRepo.findOneBy({ id })
+		if (!row) return null
+		const preds = await predRepo.findBy({ stageId: id })
 		return {
-			...rows[0],
-			type: (rows[0].type ?? 'manual') as 'manual' | 'agent',
-			agentId: rows[0].agentId ?? null,
-			documentSchema: parseDocumentSchema(rows[0].documentSchema ?? null),
-			effortScore: rows[0].effortScore ?? 5,
+			...row,
+			type: (row.type ?? 'manual') as 'manual' | 'agent',
+			agentId: row.agentId ?? null,
+			documentSchema: parseDocumentSchema(row.documentSchema ?? null),
+			effortScore: row.effortScore ?? 5,
 			predecessors: preds.map((p) => p.predecessorStageId)
 		} as TemplateStage
 	}
 
 	async syncTraceabilitiesFromTemplate(templateId: string): Promise<void> {
+		const tplRepo = AppDataSource.getRepository(TraceabilityTemplateEntity)
+		const tracRepo = AppDataSource.getRepository(TraceabilityEntity)
+		const tsRepo = AppDataSource.getRepository(TraceabilityStageEntity)
+		const tspRepo = AppDataSource.getRepository(TraceabilityStagePredecessorEntity)
+
 		const template = await this.findTemplateById(templateId)
 		if (!template) return
 
-		const tracRows = await db.select().from(traceabilities).where(eq(traceabilities.templateId, templateId))
+		const tracRows = await tracRepo.findBy({ templateId })
 
 		for (const trac of tracRows) {
 			const now = new Date().toISOString()
+			await tracRepo.update(trac.id, { templateName: template.name, updatedAt: now })
 
-			// Snapshot updated template name
-			await db.update(traceabilities).set({ templateName: template.name, updatedAt: now }).where(eq(traceabilities.id, trac.id))
-
-			// Load existing traceability stages
-			const existingStages = await db.select().from(traceabilityStages).where(eq(traceabilityStages.traceabilityId, trac.id))
-
-			// Build map templateStageId → traceabilityStageId
+			const existingStages = await tsRepo.findBy({ traceabilityId: trac.id })
 			const tplToTrac = new Map<string, string>()
 			for (const es of existingStages) {
 				if (es.templateStageId) tplToTrac.set(es.templateStageId, es.id)
@@ -280,27 +287,23 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 
 			const templateStageIds = new Set(template.stages.map((ts) => ts.id))
 
-			// ── Pass 1: create new stages, update existing ones ──────────────────
 			for (const ts of template.stages) {
 				const existing = existingStages.find((s) => s.templateStageId === ts.id)
 				if (existing) {
-					await db
-						.update(traceabilityStages)
-						.set({
-							name: ts.name,
-							description: ts.description ?? null,
-							role: ts.role ?? null,
-							order: ts.order,
-							parallelGroup: ts.parallelGroup ?? null,
-							type: ts.type ?? 'manual',
-							agentId: ts.agentId ?? null,
-							effortScore: ts.effortScore ?? 5,
-							updatedAt: now
-						})
-						.where(eq(traceabilityStages.id, existing.id))
+					await tsRepo.update(existing.id, {
+						name: ts.name,
+						description: ts.description ?? null,
+						role: ts.role ?? null,
+						order: ts.order,
+						parallelGroup: ts.parallelGroup ?? null,
+						type: ts.type ?? 'manual',
+						agentId: ts.agentId ?? null,
+						effortScore: ts.effortScore ?? 5,
+						updatedAt: now
+					})
 				} else {
 					const newId = uuidv4()
-					await db.insert(traceabilityStages).values({
+					await tsRepo.save(tsRepo.create({
 						id: newId,
 						traceabilityId: trac.id,
 						templateStageId: ts.id,
@@ -315,32 +318,27 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 						status: 'pending',
 						createdAt: now,
 						updatedAt: now
-					})
+					}))
 					tplToTrac.set(ts.id, newId)
 				}
 			}
 
-			// Delete stages removed from template (cascade removes tasks/links/predecessors)
 			for (const es of existingStages) {
 				if (es.templateStageId && !templateStageIds.has(es.templateStageId)) {
-					await db.delete(traceabilityStages).where(eq(traceabilityStages.id, es.id))
+					await tsRepo.delete(es.id)
 				}
 			}
 
-			// ── Pass 2: sync predecessors (map is now complete) ──────────────────
 			for (const ts of template.stages) {
 				const tracStageId = tplToTrac.get(ts.id)
 				if (!tracStageId) continue
-				await db.delete(traceabilityStagePredecessors).where(eq(traceabilityStagePredecessors.stageId, tracStageId))
-				for (const predTplId of ts.predecessors) {
-					const predTracId = tplToTrac.get(predTplId)
-					if (predTracId) {
-						await db.insert(traceabilityStagePredecessors).values({
-							id: uuidv4(),
-							stageId: tracStageId,
-							predecessorStageId: predTracId
-						})
-					}
+				await tspRepo.delete({ stageId: tracStageId })
+				if (ts.predecessors.length) {
+					const preds = ts.predecessors
+						.map((predTplId) => tplToTrac.get(predTplId))
+						.filter((predTracId): predTracId is string => !!predTracId)
+						.map((predTracId) => tspRepo.create({ id: uuidv4(), stageId: tracStageId, predecessorStageId: predTracId }))
+					if (preds.length) await tspRepo.save(preds)
 				}
 			}
 		}
@@ -349,8 +347,10 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 	// ─── Traceabilities ─────────────────────────────────────────────────────────
 
 	async findAll(): Promise<TraceabilitySummary[]> {
-		const rows = await db.select().from(traceabilities)
-		const allStages = await db.select().from(traceabilityStages)
+		const tracRepo = AppDataSource.getRepository(TraceabilityEntity)
+		const tsRepo = AppDataSource.getRepository(TraceabilityStageEntity)
+		const rows = await tracRepo.find()
+		const allStages = await tsRepo.find()
 		return rows.map((t) => {
 			const stages = allStages.filter((s) => s.traceabilityId === t.id)
 			return {
@@ -370,25 +370,26 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 	}
 
 	async findById(id: string): Promise<Traceability | null> {
-		const rows = await db.select().from(traceabilities).where(eq(traceabilities.id, id))
-		if (!rows[0]) return null
-		const t = rows[0]
-		const stages = await db.select().from(traceabilityStages).where(eq(traceabilityStages.traceabilityId, id))
-		// Fetch all tasks, links, documents, and predecessors for all stages
-		const allTasks: TraceabilityTask[] = []
-		const allLinks: TraceabilityLink[] = []
-		const allDocuments: TraceabilityDocument[] = []
-		const allPredecessors: Array<{ stageId: string; predecessorStageId: string }> = []
-		for (const stage of stages) {
-			const stageTasks = await db.select().from(traceabilityTasks).where(eq(traceabilityTasks.stageId, stage.id))
-			const stageLinks = await db.select().from(traceabilityLinks).where(eq(traceabilityLinks.stageId, stage.id))
-			const stageDocs = await db.select().from(traceabilityDocuments).where(eq(traceabilityDocuments.stageId, stage.id))
-			const stagePreds = await db.select().from(traceabilityStagePredecessors).where(eq(traceabilityStagePredecessors.stageId, stage.id))
-			allTasks.push(...(stageTasks as TraceabilityTask[]))
-			allLinks.push(...(stageLinks as TraceabilityLink[]))
-			allDocuments.push(...(stageDocs as TraceabilityDocument[]))
-			allPredecessors.push(...stagePreds)
-		}
+		const tracRepo = AppDataSource.getRepository(TraceabilityEntity)
+		const tsRepo = AppDataSource.getRepository(TraceabilityStageEntity)
+		const taskRepo = AppDataSource.getRepository(TraceabilityTaskEntity)
+		const linkRepo = AppDataSource.getRepository(TraceabilityLinkEntity)
+		const docRepo = AppDataSource.getRepository(TraceabilityDocumentEntity)
+		const predRepo = AppDataSource.getRepository(TraceabilityStagePredecessorEntity)
+
+		const t = await tracRepo.findOneBy({ id })
+		if (!t) return null
+
+		const stages = await tsRepo.findBy({ traceabilityId: id })
+		const stageIds = stages.map((s) => s.id)
+
+		const [allTasks, allLinks, allDocuments, allPredecessors] = await Promise.all([
+			stageIds.length ? taskRepo.findBy({ stageId: In(stageIds) }) : Promise.resolve([]),
+			stageIds.length ? linkRepo.findBy({ stageId: In(stageIds) }) : Promise.resolve([]),
+			stageIds.length ? docRepo.findBy({ stageId: In(stageIds) }) : Promise.resolve([]),
+			stageIds.length ? predRepo.findBy({ stageId: In(stageIds) }) : Promise.resolve([])
+		])
+
 		const stageList: TraceabilityStage[] = stages
 			.sort((a, b) => a.order - b.order)
 			.map((s) => ({
@@ -406,12 +407,13 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 				status: s.status as StageStatus,
 				effortScore: s.effortScore ?? 5,
 				assignedUserId: s.assignedUserId ?? null,
-				tasks: allTasks.filter((tk) => tk.stageId === s.id),
-				links: allLinks.filter((lk) => lk.stageId === s.id),
-				documents: allDocuments.filter((d) => d.stageId === s.id),
+				tasks: allTasks.filter((tk) => tk.stageId === s.id) as TraceabilityTask[],
+				links: allLinks.filter((lk) => lk.stageId === s.id) as TraceabilityLink[],
+				documents: allDocuments.filter((d) => d.stageId === s.id) as TraceabilityDocument[],
 				createdAt: s.createdAt,
 				updatedAt: s.updatedAt
 			}))
+
 		return {
 			id: t.id,
 			title: t.title,
@@ -427,12 +429,16 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 	}
 
 	async create(data: CreateTraceabilityDTO): Promise<Traceability> {
+		const tracRepo = AppDataSource.getRepository(TraceabilityEntity)
+		const tsRepo = AppDataSource.getRepository(TraceabilityStageEntity)
+		const tspRepo = AppDataSource.getRepository(TraceabilityStagePredecessorEntity)
+
 		const id = uuidv4()
 		const now = new Date().toISOString()
-		// Get template to snapshot its name and stages
 		const template = await this.findTemplateById(data.templateId)
 		if (!template) throw new Error(`Template ${data.templateId} not found`)
-		await db.insert(traceabilities).values({
+
+		await tracRepo.save(tracRepo.create({
 			id,
 			title: data.title,
 			description: data.description ?? null,
@@ -442,26 +448,22 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 			createdBy: data.createdBy ?? null,
 			createdAt: now,
 			updatedAt: now
-		})
-		// Create stage instances from template stages
-		// Build a map templateStageId → new traceability stageId for predecessor remapping
+		}))
+
 		const stageIdMap = new Map<string, string>()
 		const stageList: TraceabilityStage[] = []
 
-		// Pre-load effort scores per role for auto-assignment
 		const roleIds = [...new Set(template.stages.map((ts) => ts.role).filter((r): r is string => !!r))]
 		const userEffortCache = new Map<string, UserEffort[]>()
 		for (const roleId of roleIds) {
 			userEffortCache.set(roleId, await this.getUsersByRoleWithEffort(roleId))
 		}
-		// Track in-session effort increments (DB not yet reflecting new assignments)
 		const sessionEffortDelta = new Map<string, number>()
 
 		for (const ts of template.stages) {
 			const stageId = uuidv4()
 			stageIdMap.set(ts.id, stageId)
 
-			// Auto-assign user with least effort for the stage role
 			let assignedUserId: string | null = null
 			if (ts.role) {
 				const candidates = userEffortCache.get(ts.role) ?? []
@@ -470,17 +472,14 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 					let minEffort = minUser.effortScore + (sessionEffortDelta.get(minUser.userId) ?? 0)
 					for (const u of candidates) {
 						const total = u.effortScore + (sessionEffortDelta.get(u.userId) ?? 0)
-						if (total < minEffort) {
-							minEffort = total
-							minUser = u
-						}
+						if (total < minEffort) { minEffort = total; minUser = u }
 					}
 					assignedUserId = minUser.userId
 					sessionEffortDelta.set(minUser.userId, (sessionEffortDelta.get(minUser.userId) ?? 0) + (ts.effortScore ?? 5))
 				}
 			}
 
-			await db.insert(traceabilityStages).values({
+			await tsRepo.save(tsRepo.create({
 				id: stageId,
 				traceabilityId: id,
 				templateStageId: ts.id,
@@ -496,44 +495,29 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 				status: 'pending',
 				createdAt: now,
 				updatedAt: now
-			})
+			}))
+
 			stageList.push({
-				id: stageId,
-				traceabilityId: id,
-				templateStageId: ts.id,
-				name: ts.name,
-				description: ts.description,
-				role: ts.role,
-				order: ts.order,
-				parallelGroup: ts.parallelGroup,
-				type: ts.type ?? 'manual',
-				agentId: ts.agentId ?? null,
-				predecessors: [],
-				status: 'pending',
-				effortScore: ts.effortScore ?? 5,
-				assignedUserId,
-				tasks: [],
-				links: [],
-				documents: [],
-				createdAt: now,
-				updatedAt: now
+				id: stageId, traceabilityId: id, templateStageId: ts.id,
+				name: ts.name, description: ts.description, role: ts.role,
+				order: ts.order, parallelGroup: ts.parallelGroup,
+				type: ts.type ?? 'manual', agentId: ts.agentId ?? null,
+				predecessors: [], status: 'pending', effortScore: ts.effortScore ?? 5,
+				assignedUserId, tasks: [], links: [], documents: [],
+				createdAt: now, updatedAt: now
 			})
 		}
 
-		// Insert predecessor relationships using mapped IDs
 		for (const ts of template.stages) {
 			const newStageId = stageIdMap.get(ts.id)
 			if (!newStageId) continue
-			for (const predTemplateStageId of ts.predecessors) {
-				const newPredId = stageIdMap.get(predTemplateStageId)
-				if (!newPredId) continue
-				await db.insert(traceabilityStagePredecessors).values({
-					id: uuidv4(),
-					stageId: newStageId,
-					predecessorStageId: newPredId
-				})
+			if (ts.predecessors.length) {
+				const preds = ts.predecessors
+					.map((pid) => stageIdMap.get(pid))
+					.filter((pid): pid is string => pid !== undefined)
+					.map((predTracId) => tspRepo.create({ id: uuidv4(), stageId: newStageId, predecessorStageId: predTracId }))
+				if (preds.length) await tspRepo.save(preds)
 			}
-			// Update the stageList entry with remapped predecessors
 			const stageEntry = stageList.find((s) => s.id === newStageId)
 			if (stageEntry) {
 				stageEntry.predecessors = ts.predecessors.map((pid) => stageIdMap.get(pid)).filter((pid): pid is string => pid !== undefined)
@@ -541,37 +525,35 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 		}
 
 		return {
-			id,
-			title: data.title,
-			description: data.description ?? null,
-			status: 'active',
-			templateId: data.templateId,
-			templateName: template.name,
-			createdBy: data.createdBy ?? null,
-			stages: stageList,
-			createdAt: now,
-			updatedAt: now
+			id, title: data.title, description: data.description ?? null,
+			status: 'active', templateId: data.templateId, templateName: template.name,
+			createdBy: data.createdBy ?? null, stages: stageList,
+			createdAt: now, updatedAt: now
 		}
 	}
 
 	async update(data: UpdateTraceabilityDTO): Promise<Traceability | null> {
-		const now = new Date().toISOString()
+		const tracRepo = AppDataSource.getRepository(TraceabilityEntity)
 		const { id, ...rest } = data
-		await db
-			.update(traceabilities)
-			.set({ ...rest, updatedAt: now })
-			.where(eq(traceabilities.id, id))
+		await tracRepo.update(id, { ...rest, updatedAt: new Date().toISOString() })
 		return this.findById(id)
 	}
 
 	async delete(id: string): Promise<void> {
-		await db.delete(traceabilities).where(eq(traceabilities.id, id))
+		const tracRepo = AppDataSource.getRepository(TraceabilityEntity)
+		await tracRepo.delete(id)
 	}
 
 	// ─── Stage status ────────────────────────────────────────────────────────────
 
 	async recomputeStageStatus(stageId: string): Promise<TraceabilityStage> {
-		const tasks = await db.select().from(traceabilityTasks).where(eq(traceabilityTasks.stageId, stageId))
+		const tsRepo = AppDataSource.getRepository(TraceabilityStageEntity)
+		const taskRepo = AppDataSource.getRepository(TraceabilityTaskEntity)
+		const linkRepo = AppDataSource.getRepository(TraceabilityLinkEntity)
+		const docRepo = AppDataSource.getRepository(TraceabilityDocumentEntity)
+		const predRepo = AppDataSource.getRepository(TraceabilityStagePredecessorEntity)
+
+		const tasks = await taskRepo.findBy({ stageId })
 		let newStatus: StageStatus = 'pending'
 		if (tasks.length > 0) {
 			const allDone = tasks.every((t) => t.status === 'done')
@@ -582,122 +564,84 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 			else if (anyInReview) newStatus = 'in-review'
 			else newStatus = 'active'
 		}
+
 		const now = new Date().toISOString()
-		await db.update(traceabilityStages).set({ status: newStatus, updatedAt: now }).where(eq(traceabilityStages.id, stageId))
-		const rows = await db.select().from(traceabilityStages).where(eq(traceabilityStages.id, stageId))
-		const s = rows[0]!
-		const links = await db.select().from(traceabilityLinks).where(eq(traceabilityLinks.stageId, stageId))
-		const documents = await db.select().from(traceabilityDocuments).where(eq(traceabilityDocuments.stageId, stageId))
-		const predRows = await db.select().from(traceabilityStagePredecessors).where(eq(traceabilityStagePredecessors.stageId, stageId))
+		await tsRepo.update(stageId, { status: newStatus, updatedAt: now })
+		const s = await tsRepo.findOneByOrFail({ id: stageId })
+		const [links, documents, predRows] = await Promise.all([
+			linkRepo.findBy({ stageId }),
+			docRepo.findBy({ stageId }),
+			predRepo.findBy({ stageId })
+		])
+
 		return {
-			id: s.id,
-			traceabilityId: s.traceabilityId,
-			templateStageId: s.templateStageId,
-			name: s.name,
-			description: s.description,
-			role: s.role,
-			order: s.order,
-			parallelGroup: s.parallelGroup,
-			type: (s.type ?? 'manual') as 'manual' | 'agent',
-			agentId: s.agentId ?? null,
-			predecessors: predRows.map((p) => p.predecessorStageId),
-			status: newStatus,
-			effortScore: s.effortScore ?? 5,
-			assignedUserId: s.assignedUserId ?? null,
-			tasks: tasks as TraceabilityTask[],
-			links: links as TraceabilityLink[],
-			documents: documents as TraceabilityDocument[],
-			createdAt: s.createdAt,
-			updatedAt: now
+			id: s.id, traceabilityId: s.traceabilityId, templateStageId: s.templateStageId,
+			name: s.name, description: s.description, role: s.role, order: s.order,
+			parallelGroup: s.parallelGroup, type: (s.type ?? 'manual') as 'manual' | 'agent',
+			agentId: s.agentId ?? null, predecessors: predRows.map((p) => p.predecessorStageId),
+			status: newStatus, effortScore: s.effortScore ?? 5, assignedUserId: s.assignedUserId ?? null,
+			tasks: tasks as TraceabilityTask[], links: links as TraceabilityLink[],
+			documents: documents as TraceabilityDocument[], createdAt: s.createdAt, updatedAt: now
 		}
 	}
 
 	async findReadyAgentStages(completedStageId: string): Promise<Array<TraceabilityStage & { agentSlug: string; agentContent: string }>> {
-		// 1. Find stages that have completedStageId as a predecessor
-		const successorRels = await db
-			.select()
-			.from(traceabilityStagePredecessors)
-			.where(eq(traceabilityStagePredecessors.predecessorStageId, completedStageId))
+		const tsRepo = AppDataSource.getRepository(TraceabilityStageEntity)
+		const tspRepo = AppDataSource.getRepository(TraceabilityStagePredecessorEntity)
+		const taskRepo = AppDataSource.getRepository(TraceabilityTaskEntity)
+		const linkRepo = AppDataSource.getRepository(TraceabilityLinkEntity)
+		const agentRepo = AppDataSource.getRepository(AgentEntity)
+		const userRepo = AppDataSource.getRepository(UserEntity)
 
+		const successorRels = await tspRepo.findBy({ predecessorStageId: completedStageId })
 		if (!successorRels.length) return []
 
 		const successorIds = successorRels.map((r) => r.stageId)
-
-		// 2. Load those stages, filter for agent type
-		const successorStages = await db
-			.select()
-			.from(traceabilityStages)
-			.where(and(inArray(traceabilityStages.id, successorIds), eq(traceabilityStages.type, 'agent')))
+		const successorStages = await tsRepo.find({ where: { id: In(successorIds), type: 'agent' } })
 
 		const result: Array<TraceabilityStage & { agentSlug: string; agentContent: string }> = []
 
 		for (const stage of successorStages) {
 			if (!stage.agentId) continue
 
-			// 3. Check ALL predecessors of this stage are completed
-			const allPreds = await db.select().from(traceabilityStagePredecessors).where(eq(traceabilityStagePredecessors.stageId, stage.id))
+			const allPreds = await tspRepo.findBy({ stageId: stage.id })
 			const predIds = allPreds.map((p) => p.predecessorStageId)
 			if (!predIds.length) continue
 
-			const predStages = await db.select().from(traceabilityStages).where(inArray(traceabilityStages.id, predIds))
-			const allCompleted = predStages.every((p) => p.status === 'completed')
-			if (!allCompleted) continue
+			const predStages = await tsRepo.findBy({ id: In(predIds) })
+			if (!predStages.every((p) => p.status === 'completed')) continue
 
-			// 4. Succesor stage
-			const successorStage = await db
-				.select()
-				.from(traceabilityStagePredecessors)
-				.where(eq(traceabilityStagePredecessors.predecessorStageId, stage.id))
-			const successorStageIds = successorStage.map((s) => s.stageId)
-			const successorStages = await db
-				.select({
-					id: traceabilityStages.id,
-					name: traceabilityStages.name,
-					assignedUserId: traceabilityStages.assignedUserId,
-					userName: sql<string>`${users.firstName} || ' ' || ${users.lastName}`
+			const nextRels = await tspRepo.findBy({ predecessorStageId: stage.id })
+			const nextIds = nextRels.map((r) => r.stageId)
+			const nextStagesRaw = nextIds.length ? await tsRepo.findBy({ id: In(nextIds) }) : []
+			const nextStages = await Promise.all(
+				nextStagesRaw.map(async (ns) => {
+					let userName: string | null = null
+					if (ns.assignedUserId) {
+						const u = await userRepo.findOneBy({ id: ns.assignedUserId })
+						if (u) userName = `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim()
+					}
+					return { id: ns.id, name: ns.name, user: userName }
 				})
-				.from(traceabilityStages)
-				.leftJoin(users, eq(traceabilityStages.assignedUserId, users.id))
-				.where(inArray(traceabilityStages.id, successorStageIds))
-				.then((rows) =>
-					rows.map((s) => ({
-						id: s.id,
-						name: s.name,
-						user: s.userName ?? null
-					}))
-				)
+			)
 
-			// 4. Load agent info
-			const agentRows = await db.select().from(agents).where(eq(agents.id, stage.agentId))
-			if (!agentRows[0] || !agentRows[0].isActive) continue
+			const agentRow = await agentRepo.findOneBy({ id: stage.agentId })
+			if (!agentRow || !agentRow.isActive) continue
 
-			// 5. Build full stage object
-			const stageTasks = await db.select().from(traceabilityTasks).where(eq(traceabilityTasks.stageId, stage.id))
-			const stageLinks = await db.select().from(traceabilityLinks).where(eq(traceabilityLinks.stageId, stage.id))
+			const [stageTasks, stageLinks] = await Promise.all([
+				taskRepo.findBy({ stageId: stage.id }),
+				linkRepo.findBy({ stageId: stage.id })
+			])
 
 			result.push({
-				id: stage.id,
-				traceabilityId: stage.traceabilityId,
-				templateStageId: stage.templateStageId,
-				name: stage.name,
-				description: stage.description,
-				role: stage.role,
-				order: stage.order,
-				parallelGroup: stage.parallelGroup,
-				type: stage.type as 'agent',
-				agentId: stage.agentId,
-				status: stage.status as StageStatus,
-				effortScore: stage.effortScore ?? 5,
-				assignedUserId: stage.assignedUserId ?? null,
-				predecessors: predIds,
-				nextStages: successorStages,
-				tasks: stageTasks as TraceabilityTask[],
-				links: stageLinks as TraceabilityLink[],
-				documents: [],
-				createdAt: stage.createdAt,
-				updatedAt: stage.updatedAt,
-				agentSlug: agentRows[0].slug,
-				agentContent: agentRows[0].content
+				id: stage.id, traceabilityId: stage.traceabilityId, templateStageId: stage.templateStageId,
+				name: stage.name, description: stage.description, role: stage.role, order: stage.order,
+				parallelGroup: stage.parallelGroup, type: stage.type as 'agent', agentId: stage.agentId,
+				status: stage.status as StageStatus, effortScore: stage.effortScore ?? 5,
+				assignedUserId: stage.assignedUserId ?? null, predecessors: predIds,
+				nextStages: nextStages as any, tasks: stageTasks as TraceabilityTask[], links: stageLinks as TraceabilityLink[],
+				documents: [], createdAt: stage.createdAt, updatedAt: stage.updatedAt,
+				agentSlug: agentRow.slug, agentContent: agentRow.content
 			})
 		}
 
@@ -705,139 +649,118 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 	}
 
 	async updateStageStatus(stageId: string, status: StageStatus): Promise<void> {
-		await db.update(traceabilityStages).set({ status, updatedAt: new Date().toISOString() }).where(eq(traceabilityStages.id, stageId))
+		const tsRepo = AppDataSource.getRepository(TraceabilityStageEntity)
+		await tsRepo.update(stageId, { status, updatedAt: new Date().toISOString() })
 	}
 
 	// ─── Tasks ───────────────────────────────────────────────────────────────────
 
 	async createTask(data: CreateTaskDTO): Promise<TraceabilityTask> {
-		const id = uuidv4()
+		const taskRepo = AppDataSource.getRepository(TraceabilityTaskEntity)
 		const now = new Date().toISOString()
-		const row = {
-			id,
-			stageId: data.stageId,
-			title: data.title,
-			description: data.description ?? null,
-			type: data.type ?? 'task',
-			status: data.status ?? 'todo',
-			createdAt: now,
-			updatedAt: now
-		}
-		await db.insert(traceabilityTasks).values(row)
-		return row as TraceabilityTask
+		const entity = taskRepo.create({
+			id: uuidv4(), stageId: data.stageId, title: data.title,
+			description: data.description ?? null, type: data.type ?? 'task',
+			status: data.status ?? 'todo', createdAt: now, updatedAt: now
+		})
+		await taskRepo.save(entity)
+		return entity as TraceabilityTask
 	}
 
 	async updateTask(data: UpdateTaskDTO): Promise<TraceabilityTask | null> {
-		const now = new Date().toISOString()
+		const taskRepo = AppDataSource.getRepository(TraceabilityTaskEntity)
 		const { id, ...rest } = data
-		await db
-			.update(traceabilityTasks)
-			.set({ ...rest, updatedAt: now })
-			.where(eq(traceabilityTasks.id, id))
-		const rows = await db.select().from(traceabilityTasks).where(eq(traceabilityTasks.id, id))
-		return (rows[0] as TraceabilityTask) ?? null
+		await taskRepo.update(id, { ...rest, updatedAt: new Date().toISOString() })
+		const row = await taskRepo.findOneBy({ id })
+		return (row as TraceabilityTask) ?? null
 	}
 
 	async deleteTask(id: string): Promise<void> {
-		await db.delete(traceabilityTasks).where(eq(traceabilityTasks.id, id))
+		const taskRepo = AppDataSource.getRepository(TraceabilityTaskEntity)
+		await taskRepo.delete(id)
 	}
 
 	// ─── Links ───────────────────────────────────────────────────────────────────
 
 	async createLink(data: CreateLinkDTO): Promise<TraceabilityLink> {
-		const id = uuidv4()
+		const linkRepo = AppDataSource.getRepository(TraceabilityLinkEntity)
 		const now = new Date().toISOString()
-		const row = {
-			id,
-			stageId: data.stageId,
-			label: data.label,
-			url: data.url,
-			platform: data.platform ?? 'generic',
-			createdAt: now
-		}
-		await db.insert(traceabilityLinks).values(row)
-		return row as TraceabilityLink
+		const entity = linkRepo.create({
+			id: uuidv4(), stageId: data.stageId, label: data.label,
+			url: data.url, platform: data.platform ?? 'generic', createdAt: now
+		})
+		await linkRepo.save(entity)
+		return entity as TraceabilityLink
 	}
 
 	async deleteLink(id: string): Promise<void> {
-		await db.delete(traceabilityLinks).where(eq(traceabilityLinks.id, id))
+		const linkRepo = AppDataSource.getRepository(TraceabilityLinkEntity)
+		await linkRepo.delete(id)
 	}
 
 	// ─── Documents ───────────────────────────────────────────────────────────────
 
 	async createDocument(data: CreateDocumentDTO): Promise<TraceabilityDocument> {
-		const id = uuidv4()
+		const docRepo = AppDataSource.getRepository(TraceabilityDocumentEntity)
 		const now = new Date().toISOString()
-		const row = {
-			id,
-			stageId: data.stageId,
-			name: data.name,
-			content: data.content ?? '',
-			createdAt: now,
-			updatedAt: now
-		}
-		await db.insert(traceabilityDocuments).values(row)
-		return row as TraceabilityDocument
+		const entity = docRepo.create({
+			id: uuidv4(), stageId: data.stageId, name: data.name,
+			content: data.content ?? '', createdAt: now, updatedAt: now
+		})
+		await docRepo.save(entity)
+		return entity as TraceabilityDocument
 	}
 
 	async updateDocument(data: UpdateDocumentDTO): Promise<TraceabilityDocument | null> {
-		const now = new Date().toISOString()
+		const docRepo = AppDataSource.getRepository(TraceabilityDocumentEntity)
 		const { id, ...rest } = data
-		await db
-			.update(traceabilityDocuments)
-			.set({ ...rest, updatedAt: now })
-			.where(eq(traceabilityDocuments.id, id))
-		const rows = await db.select().from(traceabilityDocuments).where(eq(traceabilityDocuments.id, id))
-		return (rows[0] as TraceabilityDocument) ?? null
+		await docRepo.update(id, { ...rest, updatedAt: new Date().toISOString() })
+		const row = await docRepo.findOneBy({ id })
+		return (row as TraceabilityDocument) ?? null
 	}
 
 	async deleteDocument(id: string): Promise<void> {
-		await db.delete(traceabilityDocuments).where(eq(traceabilityDocuments.id, id))
+		const docRepo = AppDataSource.getRepository(TraceabilityDocumentEntity)
+		await docRepo.delete(id)
 	}
 
 	async getDocument(id: string): Promise<TraceabilityDocument | null> {
-		const rows = await db.select().from(traceabilityDocuments).where(eq(traceabilityDocuments.id, id))
-		return (rows[0] as TraceabilityDocument) ?? null
+		const docRepo = AppDataSource.getRepository(TraceabilityDocumentEntity)
+		const row = await docRepo.findOneBy({ id })
+		return (row as TraceabilityDocument) ?? null
 	}
 
 	async getDocumentByTraceabilityId(traceabilityId: string): Promise<TraceabilityDocument[]> {
-		const stageRows = await db.select().from(traceabilityStages).where(eq(traceabilityStages.traceabilityId, traceabilityId))
-		const stageIds = stageRows.map((s) => s.id)
+		const tsRepo = AppDataSource.getRepository(TraceabilityStageEntity)
+		const docRepo = AppDataSource.getRepository(TraceabilityDocumentEntity)
+		const stages = await tsRepo.findBy({ traceabilityId })
+		const stageIds = stages.map((s) => s.id)
 		if (!stageIds.length) return []
-		const docRows = await db.select().from(traceabilityDocuments).where(inArray(traceabilityDocuments.stageId, stageIds))
-		return docRows as TraceabilityDocument[]
+		const rows = await docRepo.findBy({ stageId: In(stageIds) })
+		return rows as TraceabilityDocument[]
 	}
 
 	// ─── Effort & Assignment ─────────────────────────────────────────────────────
 
 	async getUsersByRoleWithEffort(roleId: string): Promise<UserEffort[]> {
-		// Get all active users with the given role
-		const usersWithRole = await db
-			.select({
-				userId: userRoles.userId,
-				username: users.username,
-				firstName: users.firstName,
-				lastName: users.lastName,
-				email: users.email
-			})
-			.from(userRoles)
-			.innerJoin(users, eq(userRoles.userId, users.id))
-			.where(and(eq(userRoles.roleId, roleId), eq(users.active, true)))
+		const urRepo = AppDataSource.getRepository(UserRoleEntity)
+		const userRepo = AppDataSource.getRepository(UserEntity)
+		const tsRepo = AppDataSource.getRepository(TraceabilityStageEntity)
 
-		// For each user calculate total effort of active (non-completed) assigned stages
+		const usersWithRole = await urRepo.findBy({ roleId })
 		const result: UserEffort[] = []
-		for (const u of usersWithRole) {
-			const activeStages = await db
-				.select({ effortScore: traceabilityStages.effortScore })
-				.from(traceabilityStages)
-				.where(and(eq(traceabilityStages.assignedUserId, u.userId), ne(traceabilityStages.status, 'completed')))
+
+		for (const ur of usersWithRole) {
+			const user = await userRepo.findOneBy({ id: ur.userId, active: true })
+			if (!user) continue
+			const activeStages = await tsRepo.findBy({ assignedUserId: ur.userId, status: Not('completed') })
 			const effortScore = activeStages.reduce((sum, s) => sum + (s.effortScore ?? 5), 0)
 			result.push({
-				userId: u.userId,
-				username: u.username,
-				firstName: u.firstName ?? null,
-				lastName: u.lastName ?? null,
-				email: u.email,
+				userId: ur.userId,
+				username: user.username,
+				firstName: user.firstName ?? null,
+				lastName: user.lastName ?? null,
+				email: user.email,
 				effortScore
 			})
 		}
@@ -846,67 +769,60 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 	}
 
 	async assignUserToStage(stageId: string, userId: string | null): Promise<void> {
-		await db
-			.update(traceabilityStages)
-			.set({ assignedUserId: userId, updatedAt: new Date().toISOString() })
-			.where(eq(traceabilityStages.id, stageId))
+		const tsRepo = AppDataSource.getRepository(TraceabilityStageEntity)
+		await tsRepo.update(stageId, { assignedUserId: userId, updatedAt: new Date().toISOString() })
 	}
 
 	async findStagesByUserId(userId: string): Promise<MyStage[]> {
-		const stages = await db.select().from(traceabilityStages).where(eq(traceabilityStages.assignedUserId, userId))
+		const tsRepo = AppDataSource.getRepository(TraceabilityStageEntity)
+		const tracRepo = AppDataSource.getRepository(TraceabilityEntity)
+		const taskRepo = AppDataSource.getRepository(TraceabilityTaskEntity)
+		const linkRepo = AppDataSource.getRepository(TraceabilityLinkEntity)
+		const docRepo = AppDataSource.getRepository(TraceabilityDocumentEntity)
+		const predRepo = AppDataSource.getRepository(TraceabilityStagePredecessorEntity)
 
+		const stages = await tsRepo.findBy({ assignedUserId: userId })
 		if (!stages.length) return []
 
 		const tracIds = [...new Set(stages.map((s) => s.traceabilityId))]
-		const tracRows = await db
-			.select({ id: traceabilities.id, title: traceabilities.title, status: traceabilities.status })
-			.from(traceabilities)
-			.where(inArray(traceabilities.id, tracIds))
+		const tracRows = await tracRepo.findBy({ id: In(tracIds) })
 		const tracMap = new Map(tracRows.map((t) => [t.id, t]))
 
 		const result: MyStage[] = []
 		for (const stage of stages) {
 			const trac = tracMap.get(stage.traceabilityId)
 			if (!trac) continue
-			const tasks = await db.select().from(traceabilityTasks).where(eq(traceabilityTasks.stageId, stage.id))
-			const links = await db.select().from(traceabilityLinks).where(eq(traceabilityLinks.stageId, stage.id))
-			const docs = await db.select().from(traceabilityDocuments).where(eq(traceabilityDocuments.stageId, stage.id))
-			const preds = await db.select().from(traceabilityStagePredecessors).where(eq(traceabilityStagePredecessors.stageId, stage.id))
+
+			const [tasks, links, docs, preds] = await Promise.all([
+				taskRepo.findBy({ stageId: stage.id }),
+				linkRepo.findBy({ stageId: stage.id }),
+				docRepo.findBy({ stageId: stage.id }),
+				predRepo.findBy({ stageId: stage.id })
+			])
+
 			const predIds = preds.map((p) => p.predecessorStageId)
-			const predecessorsCompleted =
-				predIds.length === 0
-					? true
-					: (
-							await db
-								.select({ id: traceabilityStages.id, status: traceabilityStages.status })
-								.from(traceabilityStages)
-								.where(inArray(traceabilityStages.id, predIds))
-						).every((s) => s.status === 'completed')
+			let predecessorsCompleted = true
+			if (predIds.length > 0) {
+				const predStages = await tsRepo.findBy({ id: In(predIds) })
+				predecessorsCompleted = predStages.every((s) => s.status === 'completed')
+			}
+
 			result.push({
-				id: stage.id,
-				traceabilityId: stage.traceabilityId,
-				templateStageId: stage.templateStageId,
-				name: stage.name,
-				description: stage.description,
-				role: stage.role,
-				order: stage.order,
-				parallelGroup: stage.parallelGroup,
-				type: (stage.type ?? 'manual') as 'manual' | 'agent',
-				agentId: stage.agentId ?? null,
-				predecessors: preds.map((p) => p.predecessorStageId),
-				status: stage.status as StageStatus,
-				effortScore: stage.effortScore ?? 5,
+				id: stage.id, traceabilityId: stage.traceabilityId, templateStageId: stage.templateStageId,
+				name: stage.name, description: stage.description, role: stage.role, order: stage.order,
+				parallelGroup: stage.parallelGroup, type: (stage.type ?? 'manual') as 'manual' | 'agent',
+				agentId: stage.agentId ?? null, predecessors: predIds,
+				status: stage.status as StageStatus, effortScore: stage.effortScore ?? 5,
 				assignedUserId: stage.assignedUserId ?? null,
-				tasks: tasks as TraceabilityTask[],
-				links: links as TraceabilityLink[],
+				tasks: tasks as TraceabilityTask[], links: links as TraceabilityLink[],
 				documents: docs as TraceabilityDocument[],
-				createdAt: stage.createdAt,
-				updatedAt: stage.updatedAt,
+				createdAt: stage.createdAt, updatedAt: stage.updatedAt,
 				traceabilityTitle: trac.title,
 				traceabilityStatus: trac.status as TraceabilityStatus,
 				predecessorsCompleted
 			})
 		}
+
 		return result
 	}
 }

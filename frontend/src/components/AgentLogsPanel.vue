@@ -133,22 +133,16 @@ onUnmounted(() => abortController.value?.abort())
 
 <template>
   <div
-    class="shrink-0 flex flex-col rounded-lg bg-slate-900 border border-slate-800 transition-all duration-200 overflow-hidden"
-    :style="isOpen ? 'height: 260px' : 'height: 36px'"
-  >
+    class="shrink-0 flex flex-col rounded-lg bg-base-100 border border-slate-800 transition-all duration-200 overflow-hidden"
+    :style="isOpen ? 'height: 260px' : 'height: 36px'">
     <!-- Header (siempre visible) -->
-    <div
-      class="flex items-center justify-between px-3 h-9 shrink-0 cursor-pointer select-none"
-      :class="isOpen ? 'border-b border-slate-800' : ''"
-      @click="toggle"
-    >
+    <div class="flex items-center justify-between px-3 h-9 shrink-0 cursor-pointer select-none"
+      :class="isOpen ? 'border-b border-slate-800' : ''" @click="toggle">
       <div class="flex items-center gap-2">
         <i class="mdi mdi-text-box-search-outline text-slate-400 text-sm"></i>
         <span class="text-xs font-medium text-slate-300">Agent Logs</span>
-        <span
-          class="w-1.5 h-1.5 rounded-full"
-          :class="isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-slate-600'"
-        ></span>
+        <span class="w-1.5 h-1.5 rounded-full"
+          :class="isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-slate-600'"></span>
         <span v-if="logs.length > 0 && !isOpen" class="text-[10px] text-slate-600">
           {{ logs.length }} líneas
         </span>
@@ -157,76 +151,49 @@ onUnmounted(() => abortController.value?.abort())
       <div class="flex items-center gap-1" @click.stop>
         <template v-if="isOpen">
           <div class="relative mr-1">
-            <i class="mdi mdi-magnify absolute left-2 top-1/2 -translate-y-1/2 text-slate-500 text-xs pointer-events-none"></i>
-            <input
-              v-model="filter"
-              placeholder="Filtrar..."
+            <i
+              class="mdi mdi-magnify absolute left-2 top-1/2 -translate-y-1/2 text-slate-500 text-xs pointer-events-none"></i>
+            <input v-model="filter" placeholder="Filtrar..."
               class="bg-slate-800 border border-slate-700 rounded pl-6 pr-2 py-0.5 text-[11px] text-slate-300 placeholder-slate-600 focus:outline-none focus:border-indigo-500 w-32"
-              @click.stop
-            />
+              @click.stop />
           </div>
 
-          <button
-            @click="togglePause"
+          <button @click="togglePause"
             class="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
-            :title="isPaused ? 'Reanudar auto-scroll' : 'Pausar auto-scroll'"
-          >
+            :title="isPaused ? 'Reanudar auto-scroll' : 'Pausar auto-scroll'">
             <i class="mdi text-sm" :class="isPaused ? 'mdi-play' : 'mdi-pause'"></i>
           </button>
 
-          <button
-            @click="clearLogs"
-            class="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
-            title="Limpiar"
-          >
+          <button @click="clearLogs"
+            class="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-700 transition-colors" title="Limpiar">
             <i class="mdi mdi-trash-can-outline text-sm"></i>
           </button>
 
-          <button
-            @click="connect"
-            class="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
-            title="Reconectar"
-          >
+          <button @click="connect"
+            class="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-700 transition-colors" title="Reconectar">
             <i class="mdi mdi-refresh text-sm"></i>
           </button>
         </template>
 
-        <i
-          class="mdi text-slate-500 text-sm ml-1 cursor-pointer"
-          :class="isOpen ? 'mdi-chevron-down' : 'mdi-chevron-up'"
-          @click="toggle"
-        ></i>
+        <i class="mdi text-slate-500 text-sm ml-1 cursor-pointer"
+          :class="isOpen ? 'mdi-chevron-down' : 'mdi-chevron-up'" @click="toggle"></i>
       </div>
     </div>
 
     <!-- Terminal -->
-    <div
-      v-show="isOpen"
-      ref="terminalRef"
-      class="flex-1 overflow-y-auto font-mono text-[11px] px-3 py-2 space-y-px"
-    >
-      <div
-        v-if="filteredLogs.length === 0"
-        class="flex items-center justify-center h-full text-slate-700 gap-2"
-      >
+    <div v-show="isOpen" ref="terminalRef" class="flex-1 overflow-y-auto font-mono text-[11px] px-3 py-2 space-y-px">
+      <div v-if="filteredLogs.length === 0" class="flex items-center justify-center h-full text-slate-700 gap-2">
         <i class="mdi mdi-text-box-remove-outline"></i>
         <span>Sin logs disponibles</span>
       </div>
 
-      <div
-        v-for="log in filteredLogs"
-        :key="log.id"
-        class="flex gap-2 px-1 rounded leading-relaxed"
-        :class="rowClass(log.level)"
-      >
+      <div v-for="log in filteredLogs" :key="log.id" class="flex gap-2 px-1 rounded leading-relaxed"
+        :class="rowClass(log.level)">
         <span class="text-slate-700 shrink-0 tabular-nums select-none">{{ log.timestamp }}</span>
         <span class="shrink-0 w-12 text-right tabular-nums" :class="levelClass(log.level)">
           [{{ log.level }}]
         </span>
-        <span
-          class="text-slate-300 break-all"
-          v-html="highlightMessage(log.message || log.raw)"
-        ></span>
+        <span class="text-slate-300 break-all" v-html="highlightMessage(log.message || log.raw)"></span>
       </div>
     </div>
   </div>

@@ -94,7 +94,9 @@ import {
 	GetUsersByRoleWithEffortUseCase,
 	AssignStageUserUseCase,
 	GetMyStagesUseCase,
-	StreamAgentLogsUseCase
+	StreamAgentLogsUseCase,
+	ExportConfigUseCase,
+	ImportConfigUseCase
 } from './use-cases/index.js'
 import { GetSkillsAllowedForUserUseCase } from './use-cases/skill/get-skills-allowed-user.js'
 import { TraceabilityAgentTriggerService } from '@infra/service/traceability-agent-trigger.service.js'
@@ -210,6 +212,10 @@ export class Container {
 	private _assignStageUserUseCase?: AssignStageUserUseCase
 	private _getMyStagesUseCase?: GetMyStagesUseCase
 	private _streamAgentLogsUseCase?: StreamAgentLogsUseCase
+
+	// Config Use Cases
+	private _exportConfigUseCase?: ExportConfigUseCase
+	private _importConfigUseCase?: ImportConfigUseCase
 
 	constructor() {
 		// Initialize repositories with concrete implementations
@@ -681,6 +687,38 @@ export class Container {
 		if (!this._eventListenerExecutor)
 			this._eventListenerExecutor = new EventListenerExecutorService(this._eventListenerRepository)
 		return this._eventListenerExecutor
+	}
+
+	// ==========================================
+	// CONFIG USE CASES
+	// ==========================================
+
+	get exportConfigUseCase(): ExportConfigUseCase {
+		if (!this._exportConfigUseCase)
+			this._exportConfigUseCase = new ExportConfigUseCase(
+				this._agentRepository,
+				this._skillRepository,
+				this._mcpServerRepository,
+				this._traceabilityRepository,
+				this._roleRepository,
+				this._userRepository,
+				this._permissionRepository
+			)
+		return this._exportConfigUseCase
+	}
+
+	get importConfigUseCase(): ImportConfigUseCase {
+		if (!this._importConfigUseCase)
+			this._importConfigUseCase = new ImportConfigUseCase(
+				this._agentRepository,
+				this._skillRepository,
+				this._mcpServerRepository,
+				this._traceabilityRepository,
+				this._roleRepository,
+				this._userRepository,
+				this._permissionRepository
+			)
+		return this._importConfigUseCase
 	}
 }
 

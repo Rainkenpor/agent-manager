@@ -1,5 +1,13 @@
 {
   "scripts": {
     "db:seed": "tsx ./src/infra/db/seed-auth.ts"
+  },
+  "dependencies": {
+    "reflect-metadata": "^0.2.2",
+    "typeorm": "^0.3.28"
+  },
+  "devDependencies": {
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3"
   }
 }

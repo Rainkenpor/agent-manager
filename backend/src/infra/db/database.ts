@@ -1,22 +1,103 @@
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import * as schema from "./schema.js";
-import { existsSync, mkdirSync } from "node:fs";
-import { dirname } from "node:path";
-import { envs } from "../../envs.js";
+import 'reflect-metadata'
+import { DataSource } from 'typeorm'
+import { existsSync, mkdirSync } from 'node:fs'
+import { dirname } from 'node:path'
+import { envs } from '../../envs.js'
+import {
+	UserEntity,
+	RoleEntity,
+	PermissionEntity,
+	UserRoleEntity,
+	RolePermissionEntity,
+	AgentEntity,
+	AgentSubagentEntity,
+	McpServerEntity,
+	RoleMcpEntity,
+	RoleAgentEntity,
+	RoleMcpToolEntity,
+	OAuthClientEntity,
+	OAuthCodeEntity,
+	OAuthRefreshTokenEntity,
+	ConversationEntity,
+	MessageEntity,
+	McpUserCredentialEntity,
+	SkillEntity,
+	RoleSkillEntity,
+	TraceabilityTemplateEntity,
+	TemplateStageEntity,
+	TemplateStagePredecessorEntity,
+	TraceabilityEntity,
+	TraceabilityStageEntity,
+	TraceabilityStagePredecessorEntity,
+	TraceabilityTaskEntity,
+	TraceabilityLinkEntity,
+	TraceabilityDocumentEntity,
+	HookServerEntity,
+	HookAssignmentEntity,
+	EventListenerEntity
+} from './entities.js'
 
-const DB_PATH = envs.SERVER_DB_PATH;
-console.log("📁 Database path:", DB_PATH);
-// Crear directorio si no existe
-const dbDir = dirname(DB_PATH);
-if (!existsSync(dbDir)) {
-	mkdirSync(dbDir, { recursive: true });
+const entities = [
+	UserEntity,
+	RoleEntity,
+	PermissionEntity,
+	UserRoleEntity,
+	RolePermissionEntity,
+	AgentEntity,
+	AgentSubagentEntity,
+	McpServerEntity,
+	RoleMcpEntity,
+	RoleAgentEntity,
+	RoleMcpToolEntity,
+	OAuthClientEntity,
+	OAuthCodeEntity,
+	OAuthRefreshTokenEntity,
+	ConversationEntity,
+	MessageEntity,
+	McpUserCredentialEntity,
+	SkillEntity,
+	RoleSkillEntity,
+	TraceabilityTemplateEntity,
+	TemplateStageEntity,
+	TemplateStagePredecessorEntity,
+	TraceabilityEntity,
+	TraceabilityStageEntity,
+	TraceabilityStagePredecessorEntity,
+	TraceabilityTaskEntity,
+	TraceabilityLinkEntity,
+	TraceabilityDocumentEntity,
+	HookServerEntity,
+	HookAssignmentEntity,
+	EventListenerEntity
+]
+
+let AppDataSource: DataSource
+
+if (envs.SERVER_DB_DIALECT === 'sqlite') {
+	const dbDir = dirname(envs.SERVER_DB_PATH)
+	if (!existsSync(dbDir)) {
+		mkdirSync(dbDir, { recursive: true })
+	}
+
+	AppDataSource = new DataSource({
+		type: 'better-sqlite3',
+		database: envs.SERVER_DB_PATH,
+		synchronize: true,
+		logging: false,
+		entities,
+		prepareDatabase: (db) => {
+			db.pragma('journal_mode = WAL')
+			db.pragma('foreign_keys = ON')
+		}
+	})
+} else {
+	AppDataSource = new DataSource({
+		type: 'postgres',
+		url: envs.SERVER_DB_URL,
+		synchronize: true,
+		logging: false,
+		entities
+	})
 }
 
-// Crear conexión SQLite
-const sqlite = new Database(DB_PATH);
-sqlite.pragma("journal_mode = WAL");
-sqlite.pragma("foreign_keys = ON");
-
-// Crear instancia de Drizzle
-export const db = drizzle(sqlite, { schema });
+export { AppDataSource }

@@ -277,6 +277,21 @@ export const deleteEventListener = (id: string) =>
 export const triggerEventListener = (id: string) =>
 	request<{ success: boolean; data: any }>(`/event-listeners/${id}/trigger`, { method: 'POST' })
 
+// Config - Export / Import
+export type ExportResource = 'agents' | 'skills' | 'mcps' | 'traceabilities' | 'roles' | 'users'
+
+export const exportConfig = (resources: ExportResource[]) =>
+	request<{ success: boolean; data: Record<string, unknown> }>('/config/export', {
+		method: 'POST',
+		body: JSON.stringify({ resources })
+	})
+
+export const importConfig = (payload: Record<string, unknown>) =>
+	request<{ success: boolean; data: Record<string, unknown> }>('/config/import', {
+		method: 'POST',
+		body: JSON.stringify({ payload })
+	})
+
 export function streamMessage(conversationId: string, content: string, signal?: AbortSignal): Promise<Response> {
 	const token = localStorage.getItem('token')
 	return fetch(`${BASE}/chat/conversations/${conversationId}/messages`, {

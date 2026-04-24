@@ -1,171 +1,145 @@
-import { db } from '@infra/db/database.js'
-import { mcpServers, roleMcps, roleAgents, roleMcpTools, agents } from '@infra/db/schema.js'
-import { and, eq } from 'drizzle-orm'
+import { AppDataSource } from '@infra/db/database.js'
+import { McpServerEntity, RoleMcpEntity, RoleAgentEntity, RoleMcpToolEntity, AgentEntity } from '@infra/db/entities.js'
 import { v4 as uuidv4 } from 'uuid'
 import type { IMcpServerRepository } from '@domain/repositories/mcp-server.repository.js'
-import type { McpServerEntity, CreateMcpServer, UpdateMcpServer } from '@domain/entities/mcp-server.entity.js'
+import type { McpServerEntity as McpServerDomain, CreateMcpServer, UpdateMcpServer } from '@domain/entities/mcp-server.entity.js'
 
 export class McpServerRepository implements IMcpServerRepository {
-	private mapToEntity(row: typeof mcpServers.$inferSelect): McpServerEntity {
+	private get repo() {
+		return AppDataSource.getRepository(McpServerEntity)
+	}
+
+	private mapToEntity(e: McpServerEntity): McpServerDomain {
 		return {
-			id: row.id,
-			name: row.name,
-			displayName: row.displayName,
-			description: row.description,
-			type: row.type,
-			url: row.url,
-			command: row.command,
-			args: row.args ?? [],
-			headers: row.headers ?? {},
-			credentialFields: row.credentialFields ?? [],
-			active: row.active,
-			createdAt: row.createdAt,
-			updatedAt: row.updatedAt
+			id: e.id,
+			name: e.name,
+			displayName: e.displayName,
+			description: e.description,
+			type: e.type as 'http' | 'stdio' | 'local',
+			url: e.url,
+			command: e.command,
+			args: e.args ?? [],
+			headers: e.headers ?? {},
+			credentialFields: e.credentialFields ?? [],
+			active: e.active,
+			createdAt: e.createdAt,
+			updatedAt: e.updatedAt
 		}
 	}
 
-	async create(data: CreateMcpServer): Promise<McpServerEntity> {
-		const id = uuidv4()
+	async create(data: CreateMcpServer): Promise<McpServerDomain> {
 		const now = new Date().toISOString()
-		await db.insert(mcpServers).values({
-			id,
+		const entity = this.repo.create({
+			id: uuidv4(),
 			name: data.name,
 			displayName: data.displayName ?? null,
 			description: data.description ?? null,
 			type: data.type ?? 'http',
 			url: data.url ?? null,
 			command: data.command ?? null,
-			args: data.args ?? [],
-			headers: data.headers ?? {},
-			credentialFields: data.credentialFields ?? [],
+			args: data.args ?? null,
+			headers: data.headers ?? null,
+			credentialFields: data.credentialFields ?? null,
 			active: data.active ?? true,
 			createdAt: now,
 			updatedAt: now
 		})
-		return this.mapToEntity((await db.select().from(mcpServers).where(eq(mcpServers.id, id)))[0])
+		await this.repo.save(entity)
+		return this.mapToEntity((await this.repo.findOneByOrFail({ id: entity.id })))
 	}
 
-	async findAll(): Promise<McpServerEntity[]> {
-		const rows = await db.select().from(mcpServers)
-
-		// Ordenar primero local y luego por nombre
+	async findAll(): Promise<McpServerDomain[]> {
+		const rows = await this.repo.find()
 		rows.sort((a, b) => {
 			if (a.type === 'local') return -1
 			if (b.type === 'local') return 1
 			return a.name.localeCompare(b.name)
 		})
-
-		return rows.map(this.mapToEntity)
+		return rows.map((r) => this.mapToEntity(r))
 	}
 
-	async findById(id: string): Promise<McpServerEntity | null> {
-		const rows = await db.select().from(mcpServers).where(eq(mcpServers.id, id))
-		return rows[0] ? this.mapToEntity(rows[0]) : null
+	async findById(id: string): Promise<McpServerDomain | null> {
+		const row = await this.repo.findOneBy({ id })
+		return row ? this.mapToEntity(row) : null
 	}
 
-	async findByName(name: string): Promise<McpServerEntity | null> {
-		const rows = await db.select().from(mcpServers).where(eq(mcpServers.name, name))
-		return rows[0] ? this.mapToEntity(rows[0]) : null
+	async findByName(name: string): Promise<McpServerDomain | null> {
+		const row = await this.repo.findOneBy({ name })
+		return row ? this.mapToEntity(row) : null
 	}
 
-	async update(id: string, data: UpdateMcpServer): Promise<McpServerEntity> {
-		await db
-			.update(mcpServers)
-			.set({ ...data, updatedAt: new Date().toISOString() })
-			.where(eq(mcpServers.id, id))
-		return this.mapToEntity((await db.select().from(mcpServers).where(eq(mcpServers.id, id)))[0])
+	async update(id: string, data: UpdateMcpServer): Promise<McpServerDomain> {
+		await this.repo.update(id, { ...data, updatedAt: new Date().toISOString() })
+		return this.mapToEntity(await this.repo.findOneByOrFail({ id }))
 	}
 
 	async delete(id: string): Promise<void> {
-		await db.delete(mcpServers).where(eq(mcpServers.id, id))
+		await this.repo.delete(id)
 	}
 
 	async assignToRole(roleId: string, mcpServerId: string): Promise<void> {
-		const existing = await db.select().from(roleMcps).where(eq(roleMcps.roleId, roleId))
-		const alreadyAssigned = existing.some((r) => r.mcpServerId === mcpServerId)
-		if (alreadyAssigned) return
-		await db.insert(roleMcps).values({
-			id: uuidv4(),
-			roleId,
-			mcpServerId,
-			assignedAt: new Date().toISOString()
-		})
+		const repo = AppDataSource.getRepository(RoleMcpEntity)
+		const existing = await repo.findOneBy({ roleId, mcpServerId })
+		if (existing) return
+		await repo.save(repo.create({ id: uuidv4(), roleId, mcpServerId, assignedAt: new Date().toISOString() }))
 	}
 
 	async removeFromRole(roleId: string, mcpServerId: string): Promise<void> {
-		const allForRole = await db.select().from(roleMcps).where(eq(roleMcps.roleId, roleId))
-		const entry = allForRole.find((r) => r.mcpServerId === mcpServerId)
-		if (entry) {
-			await db.delete(roleMcps).where(eq(roleMcps.id, entry.id))
-		}
+		const repo = AppDataSource.getRepository(RoleMcpEntity)
+		await repo.delete({ roleId, mcpServerId })
 	}
 
-	async getByRole(roleId: string): Promise<McpServerEntity[]> {
-		const relations = await db.select().from(roleMcps).where(eq(roleMcps.roleId, roleId))
+	async getByRole(roleId: string): Promise<McpServerDomain[]> {
+		const repo = AppDataSource.getRepository(RoleMcpEntity)
+		const relations = await repo.findBy({ roleId })
 		if (!relations.length) return []
-		const results: McpServerEntity[] = []
+		const results: McpServerDomain[] = []
 		for (const rel of relations) {
-			const rows = await db.select().from(mcpServers).where(eq(mcpServers.id, rel.mcpServerId))
-			if (rows[0]) results.push(this.mapToEntity(rows[0]))
+			const row = await this.repo.findOneBy({ id: rel.mcpServerId })
+			if (row) results.push(this.mapToEntity(row))
 		}
 		return results
 	}
 
 	async assignAgentToRole(roleId: string, agentId: string): Promise<void> {
-		const existing = await db.select().from(roleAgents).where(eq(roleAgents.roleId, roleId))
-		const alreadyAssigned = existing.some((r) => r.agentId === agentId)
-		if (alreadyAssigned) return
-		await db.insert(roleAgents).values({
-			id: uuidv4(),
-			roleId,
-			agentId,
-			assignedAt: new Date().toISOString()
-		})
+		const repo = AppDataSource.getRepository(RoleAgentEntity)
+		const existing = await repo.findOneBy({ roleId, agentId })
+		if (existing) return
+		await repo.save(repo.create({ id: uuidv4(), roleId, agentId, assignedAt: new Date().toISOString() }))
 	}
 
 	async removeAgentFromRole(roleId: string, agentId: string): Promise<void> {
-		const allForRole = await db.select().from(roleAgents).where(eq(roleAgents.roleId, roleId))
-		const entry = allForRole.find((r) => r.agentId === agentId)
-		if (entry) {
-			await db.delete(roleAgents).where(eq(roleAgents.id, entry.id))
-		}
+		const repo = AppDataSource.getRepository(RoleAgentEntity)
+		await repo.delete({ roleId, agentId })
 	}
 
 	async getAgentsByRole(roleId: string): Promise<Array<{ id: string; name: string; slug: string; mode: string }>> {
-		const relations = await db.select().from(roleAgents).where(eq(roleAgents.roleId, roleId))
+		const repo = AppDataSource.getRepository(RoleAgentEntity)
+		const relations = await repo.findBy({ roleId })
 		if (!relations.length) return []
+		const agentRepo = AppDataSource.getRepository(AgentEntity)
 		const results: Array<{ id: string; name: string; slug: string; mode: string }> = []
 		for (const rel of relations) {
-			const rows = await db.select().from(agents).where(eq(agents.id, rel.agentId))
-			if (rows[0]) {
-				results.push({ id: rows[0].id, name: rows[0].name, slug: rows[0].slug, mode: rows[0].mode })
-			}
+			const agent = await agentRepo.findOneBy({ id: rel.agentId })
+			if (agent) results.push({ id: agent.id, name: agent.name, slug: agent.slug, mode: agent.mode })
 		}
 		return results
 	}
 
 	async getRoleMcpTools(roleId: string, mcpServerId: string): Promise<string[]> {
-		const rows = await db
-			.select()
-			.from(roleMcpTools)
-			.where(and(eq(roleMcpTools.roleId, roleId), eq(roleMcpTools.mcpServerId, mcpServerId)))
+		const repo = AppDataSource.getRepository(RoleMcpToolEntity)
+		const rows = await repo.findBy({ roleId, mcpServerId })
 		return rows.map((r) => r.toolName)
 	}
 
 	async setRoleMcpTools(roleId: string, mcpServerId: string, toolNames: string[]): Promise<void> {
-		// Delete existing selections for this role+server
-		await db.delete(roleMcpTools).where(and(eq(roleMcpTools.roleId, roleId), eq(roleMcpTools.mcpServerId, mcpServerId)))
-		// Insert new selections
+		const repo = AppDataSource.getRepository(RoleMcpToolEntity)
+		await repo.delete({ roleId, mcpServerId })
 		if (toolNames.length > 0) {
-			await db.insert(roleMcpTools).values(
-				toolNames.map((toolName) => ({
-					id: uuidv4(),
-					roleId,
-					mcpServerId,
-					toolName,
-					assignedAt: new Date().toISOString()
-				}))
+			const entries = toolNames.map((toolName) =>
+				repo.create({ id: uuidv4(), roleId, mcpServerId, toolName, assignedAt: new Date().toISOString() })
 			)
+			await repo.save(entries)
 		}
 	}
 }

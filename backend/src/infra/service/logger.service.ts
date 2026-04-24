@@ -1,13 +1,9 @@
 import * as winston from 'winston'
-import { join, dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { join } from 'node:path'
 import { existsSync, mkdirSync } from 'node:fs'
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
-
 // Crear directorio de logs si no existe
-export const LOG_PATH = join(__dirname, '../../../logs')
+export const LOG_PATH = join(process.cwd(), 'logs')
 if (!existsSync(LOG_PATH)) {
 	mkdirSync(LOG_PATH, { recursive: true })
 }
@@ -51,20 +47,23 @@ export const logger = winston.createLogger({
 		new winston.transports.File({
 			filename: join(LOG_PATH, 'combined.log'),
 			maxsize: 5242880, // 5MB
-			maxFiles: 5
+			maxFiles: 5,
+			tailable: true
 		}),
 		// File transport solo para errores
 		new winston.transports.File({
 			filename: join(LOG_PATH, 'error.log'),
 			level: 'error',
 			maxsize: 5242880, // 5MB
-			maxFiles: 5
+			maxFiles: 5,
+			tailable: true
 		}),
 		// File transport para requests HTTP
 		new winston.transports.File({
 			filename: join(LOG_PATH, 'requests.log'),
 			maxsize: 5242880, // 5MB
-			maxFiles: 5
+			maxFiles: 5,
+			tailable: true
 		})
 	]
 })
@@ -77,7 +76,8 @@ export const requestLogger = winston.createLogger({
 		new winston.transports.File({
 			filename: join(LOG_PATH, 'requests.log'),
 			maxsize: 5242880, // 5MB
-			maxFiles: 5
+			maxFiles: 5,
+			tailable: true
 		})
 	]
 })
@@ -90,7 +90,8 @@ export const agentLogger = winston.createLogger({
 		new winston.transports.File({
 			filename: join(LOG_PATH, 'agents.log'),
 			maxsize: 5242880, // 5MB
-			maxFiles: 5
+			maxFiles: 5,
+			tailable: true
 		})
 	]
 })

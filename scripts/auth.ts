@@ -344,7 +344,7 @@ async function loginOpenAIBrowser(): Promise<TokenResponse> {
 	console.log('\n  Autorización OpenAI (Browser)')
 	console.log('  Abriendo el navegador...')
 	console.log(`  Si no se abre, visita:\n  ${authUrl}\n`)
-	openBrowser(authUrl)
+	// openBrowser(authUrl)
 
 	const code = await serverPromise
 
