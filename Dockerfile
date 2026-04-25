@@ -24,6 +24,8 @@ COPY --chown=nodejs:nodejs node_modules ./node_modules
 COPY --chown=nodejs:nodejs backend/dist ./backend/dist
 COPY --chown=nodejs:nodejs frontend/dist ./frontend/dist
 
+RUN npm ci
+
 # Poda devDependencies. --ignore-scripts
 RUN npm prune --omit=dev --ignore-scripts \
  && npm cache clean --force
