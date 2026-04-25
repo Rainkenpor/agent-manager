@@ -28,6 +28,9 @@ COPY --chown=nodejs:nodejs frontend/dist ./frontend/dist
 RUN npm prune --omit=dev --ignore-scripts \
  && npm cache clean --force
 
+# Cambiar permisos
+RUN chown -R nodejs:nodejs /app
+
 # Directorio persistente
 RUN mkdir -p /app/data && chown -R nodejs:nodejs /app/data
 VOLUME ["/app/data"]
