@@ -4,8 +4,8 @@ FROM node:${NODE_VERSION}-bookworm-slim AS runtime
 WORKDIR /app
 
 ENV NODE_ENV=production \
-    SERVER_PORT=3001 \
-    MCP_PORT=3002 \
+    SERVER_PORT=8080 \
+    MCP_PORT=8081 \
     SERVER_DATA_PATH=/app/data
 
 # Usuario no-root
@@ -34,6 +34,6 @@ VOLUME ["/app/data"]
 
 USER nodejs
 
-EXPOSE 3001 3002
+EXPOSE 8080 8081
 
 CMD ["node", "./backend/dist/src/index.js", "--ui", "--api"]
