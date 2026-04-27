@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/store/useAuth'
+import { AZURE_LOGIN_URL } from '@/constants'
 
 const router = useRouter()
 const route = useRoute()
@@ -54,7 +55,7 @@ async function handleLogin() {
 }
 
 function loginWithAzure() {
-  window.location.href = '/api/auth/azure'
+  window.location.href = AZURE_LOGIN_URL
 }
 </script>
 
