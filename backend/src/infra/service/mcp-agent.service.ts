@@ -86,7 +86,7 @@ export class MCPAgentService {
 	}
 
 	static async *asyncCall(
-		agent: { id: string; name: string; slug: string },
+		agent: { id: string; name: string; slug: string; addContext?: string },
 		args: {
 			instruction: string
 			history?: Array<{ role: 'user' | 'assistant'; content: string }>
@@ -107,7 +107,7 @@ export class MCPAgentService {
 			const { skills, promptSection } = await fetchActiveSkills(args.userId)
 
 			const params: IAgentServiceExecute = {
-				systemPrompt: `${systemPrompt}\n${agentEntity.data.content}${promptSection}`,
+				systemPrompt: `${systemPrompt}\n${agentEntity.data.content}${agent.addContext || ''}${promptSection}`,
 				agentSlug: agentEntity.data.slug,
 				query: args.instruction,
 				allowedTools: new Set(

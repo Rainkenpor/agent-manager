@@ -68,13 +68,15 @@ export class StreamMessageUseCase {
 					const server = await this.mcpServerRepository.findByName(mcpServerId)
 					if (server) mcpServerId = server.id
 
-          const serverValid = await this.mcpServerRepository.findById(mcpServerId)
-          if (!serverValid) {
-            throw new Error(`MCP Server not found: ${mcpServerId}`)
-          }
-          if (serverValid.credentialFields?.find((f) => f.key === key) === undefined) {
-            throw new Error(`Credential key not valid for this MCP Server: ${key}, valid keys are: ${serverValid.credentialFields?.map((f) => f.key).join(', ')}`)
-          }
+					const serverValid = await this.mcpServerRepository.findById(mcpServerId)
+					if (!serverValid) {
+						throw new Error(`MCP Server not found: ${mcpServerId}`)
+					}
+					if (serverValid.credentialFields?.find((f) => f.key === key) === undefined) {
+						throw new Error(
+							`Credential key not valid for this MCP Server: ${key}, valid keys are: ${serverValid.credentialFields?.map((f) => f.key).join(', ')}`
+						)
+					}
 
 					await this.credentialRepository.upsert({ userId, mcpServerId, key, value })
 				},
@@ -99,13 +101,16 @@ export class StreamMessageUseCase {
 
 		const allChunks: string[] = []
 
-		for await (const chunk of MCPAgentService.asyncCall(agent, {
-			instruction: userContent,
-			history,
-			toolsCallbacks,
-			userId,
-			signal
-		})) {
+		for await (const chunk of MCPAgentService.asyncCall(
+			{ ...agent, addContext: `\n\nChatId: ${conversationId}` },
+			{
+				instruction: userContent,
+				history,
+				toolsCallbacks,
+				userId,
+				signal
+			}
+		)) {
 			allChunks.push(chunk)
 			if (chunk.startsWith('<<')) {
 				// Tool invocation marker: <<id::toolName>>{args}<<\id>>

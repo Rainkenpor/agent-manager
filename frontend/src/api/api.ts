@@ -210,9 +210,11 @@ export const deleteTemplateStage = (id: string) =>
 // Traceabilities
 export const getTraceabilities = () => request<{ success: boolean; data: any[] }>('/traceability')
 export const getTraceabilityById = (id: string) => request<{ success: boolean; data: any }>(`/traceability/${id}`)
-export const createTraceability = (data: { title: string; description?: string; templateId: string }) =>
+export const getTraceabilityByConversation = (conversationId: string) =>
+	request<{ success: boolean; data: any[] }>(`/traceability/by-conversation/${conversationId}`)
+export const createTraceability = (data: { title: string; description?: string; templateId: string; chatId?: string }) =>
 	request<{ success: boolean; data: any }>('/traceability', { method: 'POST', body: JSON.stringify(data) })
-export const updateTraceability = (id: string, data: { title?: string; description?: string | null; status?: string }) =>
+export const updateTraceability = (id: string, data: { title?: string; description?: string | null; status?: string; chatId?: string | null }) =>
 	request<{ success: boolean; data: any }>(`/traceability/${id}`, { method: 'PUT', body: JSON.stringify({ id, ...data }) })
 export const deleteTraceability = (id: string) => request<{ success: boolean }>(`/traceability/${id}`, { method: 'DELETE' })
 
