@@ -25,8 +25,8 @@ COPY --chown=nodejs:nodejs backend/dist ./backend/dist
 COPY --chown=nodejs:nodejs frontend/dist ./frontend/dist
 
 # Poda devDependencies. --ignore-scripts
-RUN npm prune --omit=dev --ignore-scripts \
- && npm cache clean --force
+#RUN npm prune --omit=dev --ignore-scripts \
+# && npm cache clean --force
 
 # Cambiar permisos
 RUN chown -R nodejs:nodejs /app

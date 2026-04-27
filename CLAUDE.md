@@ -1,3 +1,7 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 # Agent Manager — Developer Guide
 
 ## Project Overview
@@ -40,7 +44,7 @@ Then register the entity in `backend/src/infra/db/database.ts` inside the `entit
 To generate and run explicit migrations:
 
 ```bash
-npm run db:generate   # generates a new TypeORM migration
+npm run db:generate   # generates a new TypeORM migration from entity changes
 npm run db:migrate    # applies pending migrations
 ```
 
@@ -78,32 +82,32 @@ export * from "@domain/repositories/my-resource.repository.js";
 `backend/src/infra/repository/my-resource.repository.ts`:
 
 ```typescript
-import { db } from '../db/database.js'
-import { myTable } from '../db/schema.js'
-import { eq } from 'drizzle-orm'
+import { AppDataSource } from '../db/database.js'
+import { MyTableEntity } from '../db/entities.js'
 import { v4 as uuidv4 } from 'uuid'
 import type { IMyRepository } from '../../domain/repositories/my-resource.repository.js'
 import type { MyRecord, CreateMyDTO } from '../../domain/entities/my-resource.entity.js'
 
 export class MyRepository implements IMyRepository {
+  private get repo() {
+    return AppDataSource.getRepository(MyTableEntity)
+  }
+
   async findAll(): Promise<MyRecord[]> {
-    return db.select().from(myTable) as Promise<MyRecord[]>
+    return this.repo.find() as Promise<MyRecord[]>
   }
 
   async findById(id: string): Promise<MyRecord | null> {
-    const rows = await db.select().from(myTable).where(eq(myTable.id, id))
-    return rows[0] ?? null
+    return this.repo.findOneBy({ id }) as Promise<MyRecord | null>
   }
 
   async create(data: CreateMyDTO): Promise<MyRecord> {
-    const id = uuidv4()
-    const createdAt = new Date().toISOString()
-    await db.insert(myTable).values({ id, ...data, createdAt })
-    return { id, ...data, createdAt }
+    const entity = this.repo.create({ id: uuidv4(), ...data, createdAt: new Date().toISOString() })
+    return this.repo.save(entity) as Promise<MyRecord>
   }
 
   async delete(id: string): Promise<void> {
-    await db.delete(myTable).where(eq(myTable.id, id))
+    await this.repo.delete(id)
   }
 }
 ```
@@ -369,7 +373,7 @@ const auth = useAuthStore()
 backend/src/
 ├── domain/           # Entities + repository interfaces (no framework deps)
 ├── infra/
-│   ├── db/           # Drizzle schema, migrations, seed
+│   ├── db/           # TypeORM entities, migrations, seed
 │   └── repository/   # Concrete repository implementations
 └── application/
     ├── use-cases/    # Business logic, one class per operation
@@ -550,18 +554,26 @@ The registry middleware maps `success: false` responses to HTTP 400 automaticall
 | `AGENT_BASE_URL` | LLM API base URL (OpenAI-compatible, e.g. `https://api.openai.com/v1`) |
 | `AGENT_KEY` | LLM API key |
 | `AGENT_MODEL` | Default model identifier |
-| `SERVER_PORT` | API server port (default: 3001) |
-| `MCP_PORT` | MCP server port (default: 3002) |
+| `SERVER_PORT` | API server port (default: 3200 dev / 8080 prod) |
+| `MCP_PORT` | MCP server port (default: 3201 dev / 8081 prod) |
 | `JWT_SECRET` | Secret for signing JWT tokens |
+| `SERVER_DB_DIALECT` | `sqlite` (default) or `postgres` |
+| `NODE_ENV` | `development` or `production` |
 
 ---
 
 ## Common Commands
 
 ```bash
-npm run dev           # Start backend + frontend in watch mode
-npm run db:generate   # Generate Drizzle migration from schema changes
+npm run start         # Start backend + frontend in watch mode (dev)
+npm run server        # Backend only in watch mode (tsx watch)
+npm run ui            # Frontend Vite dev server only
+npm run build         # Compile backend (tsc) + build frontend (vite)
+npm run db:generate   # Generate TypeORM migration from entity changes
 npm run db:migrate    # Apply pending migrations
 npm run db:seed       # Seed default permissions, roles, and admin user
-npm run build         # Build backend + frontend for production
+npx biome check .     # Lint + format check (Biome, not ESLint/Prettier)
+npx biome check --write .  # Auto-fix lint and formatting issues
 ```
+
+**Biome style rules** (biome.json): tabs (width 2), single quotes, 140-char line width, no trailing commas.
