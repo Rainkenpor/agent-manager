@@ -294,6 +294,35 @@ export const importConfig = (payload: Record<string, unknown>) =>
 		body: JSON.stringify({ payload })
 	})
 
+export interface ProviderConfigSummary {
+	provider: 'openai' | 'copilot'
+	configured: boolean
+	hasRefreshToken: boolean
+	lastValidatedAt: string | null
+	expiresAt: string | null
+	updatedAt: string | null
+	needsRefresh: boolean
+}
+
+export const getOpenAIProviderConfig = () =>
+	request<{ success: boolean; data: ProviderConfigSummary }>('/config/providers/openai')
+
+export const startOpenAIProviderAuth = (returnTo: string) =>
+	request<{ success: boolean; data: { authUrl: string } }>('/config/providers/openai/start-auth', {
+		method: 'POST',
+		body: JSON.stringify({ returnTo })
+	})
+
+export const refreshOpenAIProviderToken = () =>
+	request<{ success: boolean; data: ProviderConfigSummary }>('/config/providers/openai/refresh', {
+		method: 'POST'
+	})
+
+export const deleteOpenAIProviderConfig = () =>
+	request<{ success: boolean }>('/config/providers/openai', {
+		method: 'DELETE'
+	})
+
 export function streamMessage(conversationId: string, content: string, signal?: AbortSignal): Promise<Response> {
 	const token = localStorage.getItem('token')
 	return fetch(`${BASE}/chat/conversations/${conversationId}/messages`, {

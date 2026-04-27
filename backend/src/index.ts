@@ -17,6 +17,7 @@ import { container } from './application/container.js'
 import { configurePassport } from './infra/service/passport.service.js'
 import { registerServerRoutes } from '@application/routes/server.router.js'
 import { mcpExternalManager } from '@infra/service/mcp-external.js'
+import { providerAuthService } from '@infra/service/provider-auth.service.js'
 
 const API_PORT = envs.SERVER_PORT
 const MCP_PORT = envs.MCP_PORT
@@ -228,24 +229,18 @@ async function startServers() {
 	// 9. Setup Scheduled Services
 	// ==========================================
 	console.log('⏰ Setting up scheduled services...')
+	serviceScheduler.chain({
+		name: 'openai-provider-token-validation',
+		handler: async () => {
+			await providerAuthService.validateScheduledProviders()
+		},
+		interval: 2 * 60 * 60 * 1000,
+		runOnStart: true,
+		delay: 10 * 1000,
+		enabled: true
+	})
 
-	// Create embedding processor service
-
-	// Register services using chain pattern
-	// serviceScheduler
-	// 	.chain({
-	// 		name: "embedding-processor",
-	// 		handler: async () => {
-	// 			await embeddingProcessorService.processAllSections();
-	// 		},
-	// 		delay: 30 * 1000, // 30 segundos - dar tiempo a que embeddings se inicialice
-	// 		interval: 60 * 60 * 1000, // 1 hora
-	// 		runOnStart: true, // Ejecutar al iniciar (después del delay)
-	// 		enabled: true,
-	// 	});
-
-	// Start all enabled services (non-blocking)
-	// serviceScheduler.startAll();
+	serviceScheduler.startAll()
 
 	// Graceful shutdown
 	process.on('SIGINT', () => {
