@@ -2,8 +2,8 @@ import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
 import { fileURLToPath, URL } from 'node:url'
-
 import { env } from 'node:process'
+import { BASE_URL } from './src/constants'
 
 export default defineConfig((env) => {
 	const envars = loadEnv(env.mode, '../')
@@ -14,7 +14,7 @@ export default defineConfig((env) => {
 				'@': fileURLToPath(new URL('./src', import.meta.url))
 			}
 		},
-		base: '/agent-manager/',
+		base: BASE_URL,
 		server: {
 			proxy: {
 				'/api': {
