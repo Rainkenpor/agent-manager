@@ -6,7 +6,8 @@ WORKDIR /app
 ENV NODE_ENV=production \
     SERVER_PORT=8080 \
     MCP_PORT=8081 \
-    SERVER_DATA_PATH=/app/data
+    SERVER_DATA_PATH=/app/data \
+    UI_BASE_PATH=/agent-manager
 
 # Usuario no-root
 RUN groupadd --system --gid 1001 nodejs \

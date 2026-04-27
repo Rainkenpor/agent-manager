@@ -3,7 +3,7 @@ import { useAuthStore } from '@/store/useAuth'
 import AppLayout from '@/components/AppLayout.vue'
 
 const router = createRouter({
-  history: createWebHistory('/'),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/login',

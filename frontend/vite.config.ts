@@ -14,7 +14,7 @@ export default defineConfig((env) => {
 				'@': fileURLToPath(new URL('./src', import.meta.url))
 			}
 		},
-		base: '/',
+		base: '/agent-manager/',
 		server: {
 			proxy: {
 				'/api': {

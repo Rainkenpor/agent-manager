@@ -1,4 +1,4 @@
-const BASE = '/api'
+const BASE = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/api`
 
 function getHeaders(extra: Record<string, string> = {}): Record<string, string> {
 	const token = localStorage.getItem('token')
