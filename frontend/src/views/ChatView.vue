@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import * as api from '@/api/api'
+import TraceabilitySidebarPanel from '@/components/TraceabilitySidebarPanel.vue'
 
 interface Agent {
   id: string
@@ -63,6 +64,9 @@ const error = ref('')
 const messagesContainer = ref<HTMLElement | null>(null)
 let abortController: AbortController | null = null
 
+const showTraceabilitySidebar = ref(false)
+const hasLinkedTraceability = ref(false)
+
 // Form state keyed by message id
 const formAnswers = ref<Record<string, Record<string, { textValue: string; selectedOptions: string[] }>>>({})
 const submittedForms = ref<string[]>([])
@@ -103,6 +107,7 @@ async function openConversation(conv: Conversation) {
     draft.value = res.data.draft ?? null
     initFormAnswersFromMessages()
     await scrollToBottom()
+    fetchHasLinkedTraceability(conv.id)
   } catch (e: any) {
     error.value = e.message
   } finally {
@@ -472,11 +477,23 @@ async function submitRequestForm(msgId: string, questions: RequestQuestion[]) {
 
 watch(messages, initFormAnswersFromMessages, { deep: true })
 
+async function fetchHasLinkedTraceability(conversationId: string) {
+  hasLinkedTraceability.value = false
+  showTraceabilitySidebar.value = false
+  try {
+    const res = await api.getTraceabilityByConversation(conversationId)
+    hasLinkedTraceability.value = Array.isArray(res.data) && res.data.length > 0
+    if (hasLinkedTraceability.value) showTraceabilitySidebar.value = true
+  } catch {
+    hasLinkedTraceability.value = false
+  }
+}
+
 onMounted(fetchInitialData)
 </script>
 
 <template>
-  <div class="flex h-full  overflow-hidden">
+  <div class="flex h-full overflow-hidden">
 
     <!-- Sidebar: conversation list -->
     <div class="w-52 shrink-0 flex flex-col border-r border-slate-800 bg-base-100">
@@ -532,10 +549,22 @@ onMounted(fetchInitialData)
                 d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2h-2" />
             </svg>
           </div>
-          <div>
+          <div class="flex-1 min-w-0">
             <p class="text-sm font-semibold text-white">{{ activeConversation.title }}</p>
             <p class="text-xs text-slate-400">Agente: {{ activeAgent?.name ?? activeConversation.agentId }}</p>
           </div>
+          <!-- Traceability sidebar toggle -->
+          <button v-if="hasLinkedTraceability"
+            @click="showTraceabilitySidebar = !showTraceabilitySidebar"
+            class="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+            :class="showTraceabilitySidebar ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'"
+            title="Ver trazabilidad vinculada">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+            </svg>
+            Trazabilidad
+          </button>
         </template>
         <template v-else>
           <div class="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center shrink-0">
@@ -760,6 +789,16 @@ onMounted(fetchInitialData)
       </div>
     </div>
 
+    <!-- Traceability sidebar -->
+    <transition name="sidebar">
+      <TraceabilitySidebarPanel
+        v-if="showTraceabilitySidebar && activeConversation"
+        :conversation-id="activeConversation.id"
+        @close="showTraceabilitySidebar = false"
+        @error="error = $event"
+      />
+    </transition>
+
   </div>
 
   <!-- New conversation modal -->
@@ -819,4 +858,25 @@ onMounted(fetchInitialData)
     </div>
   </div>
 
+
 </template>
+
+<style scoped>
+.sidebar-enter-active,
+.sidebar-leave-active {
+  transition: width 0.2s ease, opacity 0.2s ease;
+  overflow: hidden;
+}
+
+.sidebar-enter-from,
+.sidebar-leave-to {
+  width: 0;
+  opacity: 0;
+}
+
+.sidebar-enter-to,
+.sidebar-leave-from {
+  width: 18rem;
+  opacity: 1;
+}
+</style>

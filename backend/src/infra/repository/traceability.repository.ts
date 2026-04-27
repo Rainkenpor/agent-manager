@@ -361,6 +361,7 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 				templateId: t.templateId,
 				templateName: t.templateName,
 				createdBy: t.createdBy,
+				chatId: t.chatId ?? null,
 				stageCount: stages.length,
 				completedStages: stages.filter((s) => s.status === 'completed').length,
 				createdAt: t.createdAt,
@@ -422,10 +423,18 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 			templateId: t.templateId,
 			templateName: t.templateName,
 			createdBy: t.createdBy,
+			chatId: t.chatId ?? null,
 			stages: stageList,
 			createdAt: t.createdAt,
 			updatedAt: t.updatedAt
 		}
+	}
+
+	async findByConversationId(chatId: string): Promise<Traceability[]> {
+		const tracRepo = AppDataSource.getRepository(TraceabilityEntity)
+		const tracs = await tracRepo.findBy({ chatId })
+		const results = await Promise.all(tracs.map((t) => this.findById(t.id)))
+		return results.filter((t): t is Traceability => t !== null)
 	}
 
 	async create(data: CreateTraceabilityDTO): Promise<Traceability> {
@@ -446,6 +455,7 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 			templateId: data.templateId,
 			templateName: template.name,
 			createdBy: data.createdBy ?? null,
+			chatId: data.chatId ?? null,
 			createdAt: now,
 			updatedAt: now
 		}))

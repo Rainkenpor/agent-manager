@@ -44,6 +44,7 @@ export interface ITraceabilityRepository {
 	// ─── Traceabilities ─────────────────────────────────────────────────────────
 	findAll(): Promise<TraceabilitySummary[]>
 	findById(id: string): Promise<Traceability | null>
+	findByConversationId(chatId: string): Promise<Traceability[]>
 	create(data: CreateTraceabilityDTO): Promise<Traceability>
 	update(data: UpdateTraceabilityDTO): Promise<Traceability | null>
 	delete(id: string): Promise<void>

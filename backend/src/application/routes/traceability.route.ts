@@ -50,14 +50,16 @@ const updateTemplateStageSchema = z.object({
 const createTraceabilitySchema = z.object({
 	title: z.string().min(1),
 	description: z.string().optional(),
-	templateId: z.string()
+	templateId: z.string(),
+	chatId: z.string().optional().describe('ID de conversación a vincular (opcional)')
 })
 
 const updateTraceabilitySchema = z.object({
 	id: z.string(),
 	title: z.string().min(1).optional(),
 	description: z.string().nullable().optional(),
-	status: z.enum(['active', 'completed', 'archived']).optional()
+	status: z.enum(['active', 'completed', 'archived']).optional(),
+	chatId: z.string().nullable().optional().describe('ID de conversación a vincular/desvincular')
 })
 
 const createTaskSchema = z.object({
@@ -233,6 +235,16 @@ export function registerTraceabilityRoutes(): void {
 	})
 
 	// ─── Traceabilities (HTTP + MCP) ─────────────────────────────────────────────
+
+	registry.register({
+		useBy: ['server'],
+		method: 'GET',
+		path: '/api/traceability/by-conversation/:conversationId',
+		inputSchema: z.object({ conversationId: z.string() }).shape,
+		requiresAuth: true,
+		requiredPermission: { resource: 'traceability', action: 'read' },
+		handler: async ({ input }) => container.getTraceabilityByConversationUseCase.execute(input.conversationId)
+	})
 
 	registry.register({
 		useBy: ['server', 'mcp'],

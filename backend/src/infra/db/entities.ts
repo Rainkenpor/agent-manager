@@ -531,6 +531,9 @@ export class TraceabilityEntity {
 	@Column({ name: 'created_by', type: 'text', nullable: true })
 	createdBy!: string | null
 
+	@Column({ name: 'chat_id', type: 'text', nullable: true })
+	chatId!: string | null
+
 	@Column({ name: 'created_at', type: 'text' })
 	createdAt!: string
 

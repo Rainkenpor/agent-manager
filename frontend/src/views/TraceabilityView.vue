@@ -80,7 +80,7 @@ async function fetchAll() {
 
 const showCreateTrac = ref(false)
 const deleteTracTarget = ref<any>(null)
-const tracForm = ref({ title: '', description: '', templateId: '' })
+const tracForm = ref({ title: '', description: '', templateId: '', chatId: '' })
 
 // ── Active traceability (detail panel) ────────────────────────────────────────
 const activeTrac = ref<any>(null)
@@ -132,10 +132,11 @@ async function selectTrac(summary: any) {
 async function createTraceability() {
   if (!tracForm.value.title || !tracForm.value.templateId) return
   try {
-    const res = await api.createTraceability(tracForm.value)
+    const payload = { ...tracForm.value, chatId: tracForm.value.chatId.trim() || undefined }
+    const res = await api.createTraceability(payload)
     toast.success('Trazabilidad creada')
     showCreateTrac.value = false
-    tracForm.value = { title: '', description: '', templateId: '' }
+    tracForm.value = { title: '', description: '', templateId: '', chatId: '' }
     await fetchAll()
     await selectTrac(res.data)
   } catch (e: any) {
@@ -1382,6 +1383,12 @@ onMounted(fetchAll)
           <label class="block text-sm text-slate-400 mb-1">Descripción</label>
           <textarea v-model="tracForm.description" rows="3" placeholder="Descripción opcional..."
             class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none" />
+        </div>
+        <div>
+          <label class="block text-sm text-slate-400 mb-1">ID de Chat (opcional)</label>
+          <input v-model="tracForm.chatId" type="text" placeholder="ID de conversación a vincular..."
+            class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          <p class="text-xs text-slate-600 mt-1">Vincula esta trazabilidad a una conversación de chat.</p>
         </div>
       </div>
       <template #footer>

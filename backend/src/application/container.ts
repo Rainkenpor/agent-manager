@@ -94,6 +94,7 @@ import {
 	GetUsersByRoleWithEffortUseCase,
 	AssignStageUserUseCase,
 	GetMyStagesUseCase,
+	GetTraceabilityByConversationUseCase,
 	StreamAgentLogsUseCase,
 	ExportConfigUseCase,
 	ImportConfigUseCase
@@ -211,6 +212,7 @@ export class Container {
 	private _getUsersByRoleWithEffortUseCase?: GetUsersByRoleWithEffortUseCase
 	private _assignStageUserUseCase?: AssignStageUserUseCase
 	private _getMyStagesUseCase?: GetMyStagesUseCase
+	private _getTraceabilityByConversationUseCase?: GetTraceabilityByConversationUseCase
 	private _streamAgentLogsUseCase?: StreamAgentLogsUseCase
 
 	// Config Use Cases
@@ -623,6 +625,12 @@ export class Container {
 	get getMyStagesUseCase(): GetMyStagesUseCase {
 		if (!this._getMyStagesUseCase) this._getMyStagesUseCase = new GetMyStagesUseCase(this._traceabilityRepository)
 		return this._getMyStagesUseCase
+	}
+
+	get getTraceabilityByConversationUseCase(): GetTraceabilityByConversationUseCase {
+		if (!this._getTraceabilityByConversationUseCase)
+			this._getTraceabilityByConversationUseCase = new GetTraceabilityByConversationUseCase(this._traceabilityRepository)
+		return this._getTraceabilityByConversationUseCase
 	}
 
 	// ==========================================
