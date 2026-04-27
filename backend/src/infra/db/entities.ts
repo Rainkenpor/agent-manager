@@ -394,6 +394,30 @@ export class McpUserCredentialEntity {
 	updatedAt!: string
 }
 
+@Entity('provider_configs')
+export class ProviderConfigEntity {
+	@PrimaryColumn({ type: 'text' })
+	id!: string
+
+	@Column({ type: 'text', unique: true })
+	provider!: string
+
+	@Column({ type: 'text' })
+	payload!: string
+
+	@Column({ name: 'expires_at', type: 'text', nullable: true })
+	expiresAt!: string | null
+
+	@Column({ name: 'last_validated_at', type: 'text', nullable: true })
+	lastValidatedAt!: string | null
+
+	@Column({ name: 'created_at', type: 'text' })
+	createdAt!: string
+
+	@Column({ name: 'updated_at', type: 'text' })
+	updatedAt!: string
+}
+
 @Entity('skills')
 export class SkillEntity {
 	@PrimaryColumn({ type: 'text' })

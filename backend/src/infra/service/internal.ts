@@ -23,6 +23,7 @@ import { envs } from '../../envs.js'
 import { agentLogger } from './logger.service.js'
 import { buildToolDefinitions, executeToolCall } from '../utils/tools.js'
 import { mcpExternalManager } from './mcp-external.js'
+import { providerAuthService } from './provider-auth.service.js'
 
 // ── Local types ───────────────────────────────────────────────────────────────
 
@@ -142,32 +143,6 @@ function extractAccountId(tokens: TokenResponse): string | undefined {
 	return undefined
 }
 
-function readStoredToken(provider: 'copilot' | 'openai'): string {
-	const tokenPath = nodePath.join(envs.SERVER_AUTH_PATH, `${provider}-token.json`)
-	if (!fs.existsSync(tokenPath)) {
-		throw new Error(`Token for '${provider}' not found at ${tokenPath}. Run 'npm run login' first.`)
-	}
-	const raw = fs.readFileSync(tokenPath, 'utf-8')
-	const data = JSON.parse(raw) as { accessToken?: string }
-	if (!data.accessToken?.trim()) {
-		throw new Error(`Invalid stored token for '${provider}'`)
-	}
-	return data.accessToken
-}
-
-function readStoredTokenResponse(provider: 'copilot' | 'openai'): TokenResponse {
-	const tokenPath = nodePath.join(envs.SERVER_AUTH_PATH, `${provider}-token.json`)
-	if (!fs.existsSync(tokenPath)) {
-		throw new Error(`Token for '${provider}' not found at ${tokenPath}. Run 'npm run login' first.`)
-	}
-	const raw = fs.readFileSync(tokenPath, 'utf-8')
-	const data = JSON.parse(raw) as TokenResponse
-	if (!data.access_token?.trim()) {
-		throw new Error(`Invalid stored token for '${provider}'`)
-	}
-	return data
-}
-
 /** Extract body after YAML frontmatter (`---`) */
 function stripFrontmatter(content: string): string {
 	return content.replace(/^---[\s\S]*?---\s*\n/, '').trim()
@@ -219,9 +194,9 @@ export class InternalAgentService implements IAgentService {
 	}
 
 	/** Build fetch request config based on the parsed provider */
-	private buildRequestConfig(parsed: ParsedModel): RequestConfig {
+	private async buildRequestConfig(parsed: ParsedModel): Promise<RequestConfig> {
 		if (parsed.provider === 'copilot') {
-			const token = readStoredToken('copilot')
+			const token = await providerAuthService.getProviderAccessToken('copilot')
 			return {
 				baseURL: 'https://api.githubcopilot.com',
 				headers: {
@@ -238,7 +213,7 @@ export class InternalAgentService implements IAgentService {
 		}
 
 		if (parsed.provider === 'openai') {
-			const token = readStoredTokenResponse('openai')
+			const token = (await providerAuthService.getOpenAITokenResponse()) as TokenResponse
 			const accountId = extractAccountId(token)
 			const sessionId = `ses_${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`.slice(0, 32)
 			const headers: Record<string, string> = {
@@ -937,7 +912,7 @@ export class InternalAgentService implements IAgentService {
 		agentLogger.info(`[${this.agentType}] query=${query.slice(0, 120)}`)
 
 		const parsed = this.parseModel(envs.AGENT_MODEL)
-		const config = this.buildRequestConfig(parsed)
+		const config = await this.buildRequestConfig(parsed)
 
 		const tools = buildToolDefinitions(mcpExternalManager, allowedTools ?? undefined, toolsCallbacks)
 
@@ -966,7 +941,7 @@ export class InternalAgentService implements IAgentService {
 		// agentLogger.info(`[${this.agentType}] query=${query.slice(0, 120)}`)
 
 		const parsed = this.parseModel(envs.AGENT_MODEL)
-		const config = this.buildRequestConfig(parsed)
+		const config = await this.buildRequestConfig(parsed)
 
 		const tools = buildToolDefinitions(mcpExternalManager, allowedTools ?? undefined, toolsCallbacks)
 
