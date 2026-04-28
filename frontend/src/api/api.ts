@@ -1,5 +1,3 @@
-import { API_BASE as BASE } from '@/constants'
-
 function getHeaders(extra: Record<string, string> = {}): Record<string, string> {
 	const token = localStorage.getItem('token')
 	return {
@@ -10,7 +8,7 @@ function getHeaders(extra: Record<string, string> = {}): Record<string, string> 
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-	const res = await fetch(`${BASE}${path}`, {
+	const res = await fetch(`${__API_BASE__}${path}`, {
 		...options,
 		headers: getHeaders(options.headers as Record<string, string>)
 	})
@@ -23,7 +21,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 
 function requestAsync(path: string, options: RequestInit = {}, signal?: AbortSignal) {
-	return fetch(`${BASE}${path}`, {
+	return fetch(`${__API_BASE__}${path}`, {
 		...options,
 		headers: getHeaders(options.headers as Record<string, string>),
 		signal
@@ -325,7 +323,7 @@ export const deleteOpenAIProviderConfig = () =>
 
 export function streamMessage(conversationId: string, content: string, signal?: AbortSignal): Promise<Response> {
 	const token = localStorage.getItem('token')
-	return fetch(`${BASE}/chat/conversations/${conversationId}/messages`, {
+	return fetch(`${__API_BASE__}/chat/conversations/${conversationId}/messages`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
