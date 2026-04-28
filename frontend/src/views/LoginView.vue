@@ -2,7 +2,6 @@
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/store/useAuth'
-import { AZURE_LOGIN_URL } from '@/constants'
 
 const router = useRouter()
 const route = useRoute()
