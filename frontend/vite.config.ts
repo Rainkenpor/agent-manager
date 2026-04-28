@@ -6,7 +6,8 @@ import { fileURLToPath, URL } from 'node:url'
 export default defineConfig((env) => {
 	const envars = loadEnv(env.mode, '../')
 
-	const baseUrl = envars.VITE_BASE_URL + (envars.VITE_BASE_URL.endsWith('/') ? '' : '/')
+	const base = envars.VITE_BASE_URL || '/agent-manager/'
+	const baseUrl = base + (base.endsWith('/') ? '' : '/')
 
 	return {
 		plugins: [tailwindcss(), vue()],
