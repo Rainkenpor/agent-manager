@@ -7,6 +7,7 @@ import { useToastStore } from '@/store/useToast'
 import * as api from '@/api/api'
 import type { Agent, AgentTool } from '@/types/types'
 import Card from '@/components/Card.vue'
+import TextAreaComplete from '@/components/TextAreaComplete.vue'
 
 const toast = useToastStore()
 
@@ -37,7 +38,7 @@ const defaultForm = (): AgentFormData => ({
   slug: '',
   description: '',
   mode: 'primary',
-  model: 'gpt-4o',
+  model: '',
   temperature: '0.7',
   content: '',
   isActive: true,
@@ -395,7 +396,7 @@ const selectedToolSource = ref<string>('')
 
   <!-- Agent Create / Edit Modal -->
   <AppModal v-if="showModal" size="5xl" :full-height="true" :scroll-body="false"
-    :title="editingAgent ? 'Edit Agent' : 'Create Agent'" @close="closeModal">
+    :title="editingAgent ? 'Editar Agente' : 'Crear Agente'" @close="closeModal">
     <div class="flex flex-1 overflow-auto min-h-0">
       <!-- Left: Form -->
       <div class="flex-1 flex flex-col overflow-auto px-6 py-5">
@@ -445,26 +446,12 @@ const selectedToolSource = ref<string>('')
               </div>
             </div>
 
-            <!-- Model + Temperature -->
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-white mb-1.5">Model <span
-                    class="text-red-500">*</span></label>
-                <input v-model="agentForm.model" type="text" placeholder="gpt-4o" required
-                  class="w-full px-3 py-2.5 rounded-lg border border-slate-600 bg-slate-800 text-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-white mb-1.5">Temperature</label>
-                <input v-model="agentForm.temperature" type="text" placeholder="0.7"
-                  class="w-full px-3 py-2.5 rounded-lg border border-slate-600 bg-slate-800 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-              </div>
-            </div>
+
 
             <!-- Content (system prompt) -->
             <div>
               <label class="block text-sm font-medium text-white mb-1.5">System Prompt / Content</label>
-              <textarea v-model="agentForm.content" placeholder="Write the agent system prompt here..." rows="6"
-                class="w-full px-3 py-2.5 rounded-lg border border-slate-600 bg-slate-800 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-y font-mono" />
+              <TextAreaComplete v-model="agentForm.content" placeholder="Write the agent system prompt here..." />
             </div>
           </form>
         </div>
@@ -541,14 +528,11 @@ const selectedToolSource = ref<string>('')
 
     <template #footer>
       <div class="flex justify-between gap-3">
-        <button type="button"
-          class="px-4 py-2.5 rounded-lg border border-slate-600 text-slate-300 text-sm font-medium hover:bg-slate-800 transition-colors"
-          @click="closeModal">
-          Cancel
+        <button type="button" class="btn btn-ghost" @click="closeModal">
+          Cancelar
         </button>
-        <button type="submit" form="agent-form" :disabled="saving"
-          class="px-4 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-sm font-semibold transition-colors">
-          {{ saving ? 'Saving...' : editingAgent ? 'Save Changes' : 'Create Agent' }}
+        <button type="submit" form="agent-form" :disabled="saving" class="btn btn-ghost btn-success">
+          {{ saving ? 'Guardando...' : editingAgent ? 'Guardar Cambios' : 'Crear Agente' }}
         </button>
       </div>
     </template>
@@ -622,16 +606,14 @@ const selectedToolSource = ref<string>('')
       </div>
     </div>
     <template #footer>
-      <button
-        class="flex-1 px-4 py-2.5 rounded-lg border border-slate-300 text-white text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
-        @click="detailAgent = null">
-        Close
-      </button>
-      <button
-        class="flex-1 px-4 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors"
-        @click="() => { openEdit(detailAgent!); detailAgent = null }">
-        Edit Agent
-      </button>
+      <div class="flex justify-between">
+        <button class="btn btn-ghost" @click="detailAgent = null">
+          Cerrar
+        </button>
+        <button class="btn btn-ghost btn-info" @click="() => { openEdit(detailAgent!); detailAgent = null }">
+          Editar Agente
+        </button>
+      </div>
     </template>
   </AppModal>
 

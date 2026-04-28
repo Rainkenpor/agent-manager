@@ -97,7 +97,8 @@ import {
 	GetTraceabilityByConversationUseCase,
 	StreamAgentLogsUseCase,
 	ExportConfigUseCase,
-	ImportConfigUseCase
+	ImportConfigUseCase,
+	StreamAiAssistUseCase
 } from './use-cases/index.js'
 import { GetSkillsAllowedForUserUseCase } from './use-cases/skill/get-skills-allowed-user.js'
 import { TraceabilityAgentTriggerService } from '@infra/service/traceability-agent-trigger.service.js'
@@ -214,6 +215,7 @@ export class Container {
 	private _getMyStagesUseCase?: GetMyStagesUseCase
 	private _getTraceabilityByConversationUseCase?: GetTraceabilityByConversationUseCase
 	private _streamAgentLogsUseCase?: StreamAgentLogsUseCase
+	private _streamAiAssistUseCase?: StreamAiAssistUseCase
 
 	// Config Use Cases
 	private _exportConfigUseCase?: ExportConfigUseCase
@@ -655,6 +657,11 @@ export class Container {
 	get streamAgentLogsUseCase(): StreamAgentLogsUseCase {
 		if (!this._streamAgentLogsUseCase) this._streamAgentLogsUseCase = new StreamAgentLogsUseCase()
 		return this._streamAgentLogsUseCase
+	}
+
+	get streamAiAssistUseCase(): StreamAiAssistUseCase {
+		if (!this._streamAiAssistUseCase) this._streamAiAssistUseCase = new StreamAiAssistUseCase()
+		return this._streamAiAssistUseCase
 	}
 
 	// ==========================================

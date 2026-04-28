@@ -321,6 +321,19 @@ export const deleteOpenAIProviderConfig = () =>
 		method: 'DELETE'
 	})
 
+export function streamAiAssist(content: string, request: string, systemPrompt?: string, signal?: AbortSignal): Promise<Response> {
+	const token = localStorage.getItem('token')
+	return fetch(`${__API_BASE__}/ai-assist/stream`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			...(token ? { Authorization: `Bearer ${token}` } : {})
+		},
+		body: JSON.stringify({ content, request, systemPrompt }),
+		signal
+	})
+}
+
 export function streamMessage(conversationId: string, content: string, signal?: AbortSignal): Promise<Response> {
 	const token = localStorage.getItem('token')
 	return fetch(`${__API_BASE__}/chat/conversations/${conversationId}/messages`, {

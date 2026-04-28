@@ -35,6 +35,7 @@
 </template>
 
 <script setup lang="ts">
+import { blurOn, focusOn } from '@/utils/focus';
 import { onMounted, onUnmounted, ref } from 'vue'
 defineProps<{
   header?: {
@@ -46,17 +47,10 @@ defineProps<{
 const showOption = ref<boolean>(false)
 const containerRef = ref<HTMLElement | null>(null);
 
-
-const handleClickOutside = (event: any) => {
-  if (containerRef.value && !containerRef.value.contains(event.target)) {
-    showOption.value = false;
-  }
-};
-
 onMounted(() => {
-  document.addEventListener('click', handleClickOutside);
+  focusOn(containerRef, showOption);
 });
 onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside);
+  blurOn(containerRef, showOption);
 });
 </script>

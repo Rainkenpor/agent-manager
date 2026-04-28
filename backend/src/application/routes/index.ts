@@ -12,6 +12,7 @@ import { registerLogsRoutes } from './logs.route.js'
 import { registerHookServerRoutes } from './hook-server.route.js'
 import { registerEventListenerRoutes } from './event-listener.route.js'
 import { registerConfigRoutes } from './config.route.js'
+import { registerAiAssistRoutes } from './ai-assist.route.js'
 
 /**
  * Initializes the registry by calling all registration functions.
@@ -32,4 +33,5 @@ export function initializeRegistry(): void {
 	registerHookServerRoutes()
 	registerEventListenerRoutes()
 	registerConfigRoutes()
+	registerAiAssistRoutes()
 }
