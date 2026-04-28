@@ -19,7 +19,7 @@ const allNavLinks = [
 ]
 
 const navLinks = computed(() =>
-  allNavLinks.filter((l) => l.resources === null || l.resources.some((r) => auth.hasResourceAccess(r)))
+  allNavLinks.filter((l) => l.resources === null || auth.hasAnyResourceManageAccess(l.resources))
 )
 
 function logout() {

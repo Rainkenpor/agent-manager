@@ -11,7 +11,7 @@ const allTabs = [
   { key: 'roles', label: 'Roles', icon: 'mdi-shield-account', resource: 'roles', component: RolesView },
 ]
 
-const tabs = computed(() => allTabs.filter((t) => auth.hasResourceAccess(t.resource)))
+const tabs = computed(() => allTabs.filter((t) => auth.hasResourceManageAccess(t.resource)))
 const activeTab = ref(tabs.value[0]?.key ?? allTabs[0].key)
 const activeComponent = computed(() => allTabs.find((t) => t.key === activeTab.value)?.component)
 </script>
