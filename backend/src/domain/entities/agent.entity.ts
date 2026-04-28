@@ -1,8 +1,21 @@
+/** @deprecated Use GovernanceData instead */
 export interface SkillData {
 	name: string
 	slug: string
 	description: string | null
 	content: string
+}
+
+export interface GovernanceData {
+	id: string
+	name: string
+	type: string
+	description: string | null
+	content: string
+	sections: Array<{
+		title: string
+		content: string
+	}>
 }
 
 export interface ToolCallbacks {
@@ -24,9 +37,9 @@ export interface ToolCallbacks {
 			}[]
 		>
 	}
-	skillCallbacks?: {
-		getBySlug: (slug: string) => Promise<SkillData | null>
-		listSkills: () => Promise<Pick<SkillData, 'name' | 'slug' | 'description'>[]>
+	governanceCallbacks?: {
+		getByType: (type: string) => Promise<GovernanceData[]>
+		listTypes: () => Promise<string[]>
 	}
 }
 

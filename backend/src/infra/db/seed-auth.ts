@@ -42,11 +42,16 @@ async function seedDefaultPermissions() {
 		{ resource: 'chat', action: 'create', description: 'Crear conversaciones y enviar mensajes' },
 		{ resource: 'chat', action: 'read', description: 'Ver conversaciones y mensajes' },
 		{ resource: 'chat', action: 'delete', description: 'Eliminar conversaciones' },
-		// Skills
+		// Skills (legacy)
 		{ resource: 'skills', action: 'create', description: 'Crear skills' },
 		{ resource: 'skills', action: 'read', description: 'Ver skills' },
 		{ resource: 'skills', action: 'update', description: 'Actualizar skills' },
 		{ resource: 'skills', action: 'delete', description: 'Eliminar skills' },
+		// Gobernanza
+		{ resource: 'governance', action: 'create', description: 'Crear gobernanza' },
+		{ resource: 'governance', action: 'read', description: 'Ver gobernanza' },
+		{ resource: 'governance', action: 'update', description: 'Actualizar gobernanza' },
+		{ resource: 'governance', action: 'delete', description: 'Eliminar gobernanza' },
 		// Hook Servers
 		{ resource: 'hook_servers', action: 'create', description: 'Crear servidores de hooks' },
 		{ resource: 'hook_servers', action: 'read', description: 'Ver servidores de hooks' },

@@ -1,31 +1,23 @@
 import { systemPrompt } from '../../const'
 import { AgentService } from './agent.service'
-import type { IAgentServiceExecute, SkillData, ToolCallbacks } from '@domain/entities/agent.entity.js'
+import type { GovernanceData, IAgentServiceExecute, ToolCallbacks } from '@domain/entities/agent.entity.js'
 
-/** Fetches skills allowed for the given user (role-filtered) and builds the system prompt section */
-async function fetchActiveSkills(userId?: string): Promise<{ skills: SkillData[]; promptSection: string }> {
+async function fetchActiveGovernance(): Promise<{ governance: GovernanceData[]; promptSection: string }> {
 	try {
 		const { container } = await import('@application/container.js')
+		const result = await container.listGovernanceUseCase.execute()
+		if (!result.success) return { governance: [], promptSection: '' }
+		const active: GovernanceData[] = result.data.filter((g) => g.isActive)
 
-		let active: SkillData[]
-		if (userId) {
-			const result = await container.getSkillsAllowedForUserUseCase.execute(userId)
-			if (!result.success) return { skills: [], promptSection: '' }
-			active = result.data
-		} else {
-			const result = await container.listSkillsUseCase.execute()
-			if (!result.success) return { skills: [], promptSection: '' }
-			active = result.data.filter((s) => s.isActive)
-		}
+		if (active.length === 0) return { governance: [], promptSection: '' }
 
-		if (active.length === 0) return { skills: [], promptSection: '' }
+		const types = [...new Set(active.map((g) => g.type))]
+		const lines = types.map((t) => `- \`${t}\``)
+		const promptSection = `\n\n## Gobernanza disponible\n\nUsa la herramienta \`get_governance\` con el tipo correspondiente para cargar las instrucciones de gobernanza antes de proceder. Tipos disponibles:\n\n${lines.join('\n')}`
 
-		const lines = active.map((s) => `- \`${s.slug}\`${s.description ? `: ${s.description}` : ''}`)
-		const promptSection = `\n\n## Skills disponibles\n\nUsa la herramienta \`get_skill\` para cargar el contenido completo de cualquiera de estos skills antes de aplicar sus instrucciones:\n\n${lines.join('\n')}`
-
-		return { skills: active, promptSection }
+		return { governance: active, promptSection }
 	} catch {
-		return { skills: [], promptSection: '' }
+		return { governance: [], promptSection: '' }
 	}
 }
 
@@ -43,7 +35,7 @@ export class MCPAgentService {
 				throw new Error(`Agent not found: ${agent.id}`)
 			}
 
-			const { skills, promptSection } = await fetchActiveSkills()
+			const { governance, promptSection } = await fetchActiveGovernance()
 
 			const params: IAgentServiceExecute = {
 				systemPrompt: `${systemPrompt}\n${agentEntity.data.content}${promptSection}`,
@@ -64,9 +56,9 @@ export class MCPAgentService {
 						deleteCredential: async () => {},
 						getListCredentials: async () => []
 					},
-					skillCallbacks: {
-						getBySlug: async (slug: string) => skills.find((s) => s.slug === slug) ?? null,
-						listSkills: async () => skills.map(({ name, slug, description }) => ({ name, slug, description }))
+					governanceCallbacks: {
+						getByType: async (type: string) => governance.filter((g) => g.type === type),
+						listTypes: async () => [...new Set(governance.map((g) => g.type))]
 					}
 				}
 			}
@@ -104,7 +96,7 @@ export class MCPAgentService {
 				throw new Error(`Agent not found: ${agent.id}`)
 			}
 
-			const { skills, promptSection } = await fetchActiveSkills(args.userId)
+			const { governance, promptSection } = await fetchActiveGovernance()
 
 			const params: IAgentServiceExecute = {
 				systemPrompt: `${systemPrompt}\n${agentEntity.data.content}${agent.addContext || ''}${promptSection}`,
@@ -128,9 +120,9 @@ export class MCPAgentService {
 						deleteCredential: async () => {},
 						getListCredentials: async () => []
 					},
-					skillCallbacks: {
-						getBySlug: async (slug: string) => skills.find((s) => s.slug === slug) ?? null,
-						listSkills: async () => skills.map(({ name, slug, description }) => ({ name, slug, description }))
+					governanceCallbacks: {
+						getByType: async (type: string) => governance.filter((g) => g.type === type),
+						listTypes: async () => [...new Set(governance.map((g) => g.type))]
 					}
 				}
 			}

@@ -28,7 +28,7 @@
     </div>
 
     <!-- Textarea -->
-    <textarea v-model="model" :placeholder="placeholder" rows="10" class="textarea w-full" />
+    <textarea v-model="model" :placeholder="placeholder" :rows="$props.rows ?? 10" class="textarea w-full" />
 
     <!-- Loading state -->
     <div v-if="loading" class="mt-2 bg-neutral-900 border border-neutral-700 rounded-lg p-4">
@@ -142,6 +142,7 @@ let abortController: AbortController | null = null
 const props = defineProps<{
   placeholder: string
   systemPrompt?: string
+  rows?: number
 }>()
 
 const model = defineModel<string>()

@@ -26,6 +26,9 @@ export interface RouteToolConfig<T extends ZodRawShape | z.ZodObject<any>> {
 	// MCP Tool config
 	toolName?: string
 	toolDescription?: string
+	toolSource?: string
+  // Siempre disponible sin necesidad de rol
+  toolAlwaysAvailable?: boolean
 
 	// Shared validation schema (Zod)
 	inputSchema?: T
@@ -61,7 +64,9 @@ export interface RegisteredRoute {
 	path: string
 	toolName?: string
 	toolDescription?: string
+  toolSource?: string
 	inputSchema: ZodRawShape
+  toolAlwaysAvailable?: boolean
 	handler: ({ input, context, oauthService }: { input: unknown; context?: HttpContext; oauthService?: McpOAuthService }) => Promise<unknown>
 	requiresAuth?: boolean
 	requiredPermission?: { resource: string; action: string }

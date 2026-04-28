@@ -26,6 +26,8 @@ export class RouteToolRegistry {
 			path: config.path,
 			toolName: config.toolName,
 			toolDescription: config.toolDescription,
+      toolSource: config.toolSource,
+      toolAlwaysAvailable: config.toolAlwaysAvailable,
 			inputSchema: config.inputSchema as any, // Cast to any to avoid complex Zod generic issues
 			handler: config.handler as (input: unknown, context?: any, oauthService?: McpOAuthService) => Promise<unknown>,
 			requiresAuth: config.requiresAuth,

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import * as api from '@/api/api'
+import TextAreaComplete from '@/components/TextAreaComplete.vue'
 
 interface TraceabilityTask {
   id: string
@@ -256,12 +257,11 @@ function closeDocViewer() {
       <div v-for="trac in linkedTraceabilities" :key="trac.id">
 
         <!-- Traceability header (collapsible) -->
-        <button
-          class="w-full px-4 py-2.5 flex items-center gap-2 hover:bg-slate-800/40 transition-colors text-left"
+        <button class="w-full px-4 py-2.5 flex items-center gap-2 hover:bg-slate-800/40 transition-colors text-left"
           @click="toggleTraceability(trac.id)">
           <svg class="w-3 h-3 text-indigo-400 shrink-0 transition-transform"
-            :class="expandedTraceabilities.has(trac.id) ? 'rotate-90' : ''"
-            fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            :class="expandedTraceabilities.has(trac.id) ? 'rotate-90' : ''" fill="none" stroke="currentColor"
+            viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
           </svg>
           <span class="flex-1 text-xs font-semibold text-slate-200 truncate">{{ trac.title }}</span>
@@ -284,8 +284,8 @@ function closeDocViewer() {
               class="w-full pl-6 pr-4 py-2 flex items-center gap-2 hover:bg-slate-800/40 transition-colors text-left"
               @click="toggleStage(stage.id)">
               <svg class="w-3 h-3 text-slate-500 shrink-0 transition-transform"
-                :class="expandedStages.has(stage.id) ? 'rotate-90' : ''"
-                fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                :class="expandedStages.has(stage.id) ? 'rotate-90' : ''" fill="none" stroke="currentColor"
+                viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
               </svg>
               <span class="flex-1 text-xs font-medium text-slate-300 truncate">{{ stage.name }}</span>
@@ -423,13 +423,13 @@ function closeDocViewer() {
           </div>
           <div v-else-if="!editingDocument">
             <pre v-if="activeDocument.content"
-              class="whitespace-pre-wrap text-sm text-slate-300 font-mono leading-relaxed">{{ activeDocument.content }}</pre>
+              class="whitespace-pre-wrap text-sm text-slate-300 font-mono leading-relaxed">{{
+                activeDocument.content }}</pre>
             <p v-else class="text-slate-500 text-sm italic">Sin contenido. Haz clic en Editar para añadir.</p>
           </div>
           <div v-else>
             <label class="block text-xs text-slate-400 mb-1.5">Contenido (markdown)</label>
-            <textarea v-model="editDocForm.content" rows="20"
-              class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none leading-relaxed"
+            <TextAreaComplete v-model="editDocForm.content" :rows="20"
               placeholder="Escribe el contenido en markdown..." />
           </div>
         </div>

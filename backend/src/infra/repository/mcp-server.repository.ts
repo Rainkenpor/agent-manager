@@ -113,15 +113,15 @@ export class McpServerRepository implements IMcpServerRepository {
 		await repo.delete({ roleId, agentId })
 	}
 
-	async getAgentsByRole(roleId: string): Promise<Array<{ id: string; name: string; slug: string; mode: string }>> {
+	async getAgentsByRole(roleId: string): Promise<Array<{ id: string; name: string; slug: string; mode: string, description:string }>> {
 		const repo = AppDataSource.getRepository(RoleAgentEntity)
 		const relations = await repo.findBy({ roleId })
 		if (!relations.length) return []
 		const agentRepo = AppDataSource.getRepository(AgentEntity)
-		const results: Array<{ id: string; name: string; slug: string; mode: string }> = []
+		const results: Array<{ id: string; name: string; slug: string; mode: string, description:string }> = []
 		for (const rel of relations) {
 			const agent = await agentRepo.findOneBy({ id: rel.agentId })
-			if (agent) results.push({ id: agent.id, name: agent.name, slug: agent.slug, mode: agent.mode })
+			if (agent) results.push({ id: agent.id, name: agent.name, slug: agent.slug, mode: agent.mode, description:agent.description })
 		}
 		return results
 	}

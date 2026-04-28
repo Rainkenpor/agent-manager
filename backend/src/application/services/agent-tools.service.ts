@@ -4,43 +4,13 @@ import { mcpExternalManager } from '@infra/service/mcp-external.js'
 export interface AvailableTool {
 	name: string
 	description: string
-	source: 'builtin' | 'registry' | 'external'
+	source: string
 }
 
 const BASE_TOOLS: AvailableTool[] = [
 	{
 		name: 'spawn_subagent',
 		description: 'Lanza un sub-agente especializado para completar una tarea de documentación enfocada.',
-		source: 'builtin'
-	},
-	{
-		name: 'get_user_mcp_credentials',
-		description:
-			'Obtiene las credenciales de un usuario para un servicio específico (ej: GitHub, Jira, etc). Devuelve un objeto con las credenciales o null si no existen.',
-		source: 'registry'
-	},
-	{
-		name: 'set_user_mcp_credential',
-		description:
-			'Permite guardar o actualizar las credenciales de un usuario para un servicio específico (ej: GitHub, Jira, etc). Recibe el nombre del servicio y un objeto con las credenciales a guardar.',
-		source: 'registry'
-	},
-	{
-		name: 'list_mcp_credential_fields',
-		description:
-			'Lista los campos de credenciales requeridos para cada servidor MCP activo. Devuelve un array con el id, nombre, displayName y campos de credenciales (key y descripción) de cada servidor MCP activo.',
-		source: 'registry'
-	},
-	{
-		name: 'get_skill',
-		description:
-			'Recupera el contenido markdown completo de un skill por su slug. Los skills son bloques de instrucciones reutilizables que proveen conocimiento especializado. El system prompt lista los slugs disponibles.',
-		source: 'builtin'
-	},
-	{
-		name: 'list_skills',
-		description:
-			'Lista todos los skills activos con su nombre, slug y descripción. Úsala para descubrir qué skills están disponibles antes de llamar a get_skill.',
 		source: 'builtin'
 	}
 ]
@@ -87,7 +57,7 @@ export async function listAvailableAgentTools(): Promise<AvailableTool[]> {
 		.map((r) => ({
 			name: `agent-manager_${r.toolName}`,
 			description: r.toolDescription as string,
-			source: 'registry' as const
+			source: String(r.toolSource || 'registry') 
 		}))
 
 	const externalTools = await getExternalTools()

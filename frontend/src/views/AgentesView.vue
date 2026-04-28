@@ -2,13 +2,13 @@
 import { ref, computed } from 'vue'
 import { useAuthStore } from '@/store/useAuth'
 import AgentsView from './AgentsView.vue'
-import SkillsView from './SkillsView.vue'
+import GovernanceView from './GovernanceView.vue'
 
 const auth = useAuthStore()
 
 const allTabs = [
   { key: 'agents', label: 'Agents', icon: 'mdi-robot', resource: 'agents', component: AgentsView },
-  { key: 'skills', label: 'Skills', icon: 'mdi-lightning-bolt', resource: 'skills', component: SkillsView },
+  { key: 'governance', label: 'Gobernanza', icon: 'mdi-shield-check', resource: 'governance', component: GovernanceView },
 ]
 
 const tabs = computed(() => allTabs.filter((t) => auth.hasResourceManageAccess(t.resource)))

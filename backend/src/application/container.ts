@@ -10,7 +10,8 @@ import type {
 	ISkillRepository,
 	ITraceabilityRepository,
 	IHookServerRepository,
-	IEventListenerRepository
+	IEventListenerRepository,
+	IGovernanceRepository
 } from '@domain/repositories/index.js'
 import { mcpExternalManager } from '@infra/service/mcp-external.js'
 
@@ -23,6 +24,7 @@ import {
 	ChatRepository,
 	McpUserCredentialRepository,
 	SkillRepository,
+	GovernanceRepository,
 	TraceabilityRepository,
 	HookServerRepository,
 	EventListenerRepository
@@ -98,7 +100,12 @@ import {
 	StreamAgentLogsUseCase,
 	ExportConfigUseCase,
 	ImportConfigUseCase,
-	StreamAiAssistUseCase
+	StreamAiAssistUseCase,
+	ListGovernanceUseCase,
+	GetGovernanceUseCase,
+	CreateGovernanceUseCase,
+	UpdateGovernanceUseCase,
+	DeleteGovernanceUseCase
 } from './use-cases/index.js'
 import { GetSkillsAllowedForUserUseCase } from './use-cases/skill/get-skills-allowed-user.js'
 import { TraceabilityAgentTriggerService } from '@infra/service/traceability-agent-trigger.service.js'
@@ -160,6 +167,14 @@ export class Container {
 	private _getMcpCredentialsUseCase?: GetMcpCredentialsUseCase
 	private _upsertMcpCredentialUseCase?: UpsertMcpCredentialUseCase
 	private _deleteMcpCredentialUseCase?: DeleteMcpCredentialUseCase
+
+	// Governance Repository & Use Cases
+	private _governanceRepository: IGovernanceRepository
+	private _listGovernanceUseCase?: ListGovernanceUseCase
+	private _getGovernanceUseCase?: GetGovernanceUseCase
+	private _createGovernanceUseCase?: CreateGovernanceUseCase
+	private _updateGovernanceUseCase?: UpdateGovernanceUseCase
+	private _deleteGovernanceUseCase?: DeleteGovernanceUseCase
 
 	// Skill Repository & Use Cases
 	private _skillRepository: ISkillRepository
@@ -231,6 +246,7 @@ export class Container {
 		this._chatRepository = new ChatRepository()
 		this._mcpUserCredentialRepository = new McpUserCredentialRepository()
 		this._skillRepository = new SkillRepository()
+		this._governanceRepository = new GovernanceRepository()
 		this._traceabilityRepository = new TraceabilityRepository()
 		this._hookServerRepository = new HookServerRepository()
 		this._eventListenerRepository = new EventListenerRepository()
@@ -427,6 +443,14 @@ export class Container {
 
 	get skillRepository(): ISkillRepository {
 		return this._skillRepository
+	}
+
+	// ==========================================
+	// GOVERNANCE REPOSITORY (direct access)
+	// ==========================================
+
+	get governanceRepository(): IGovernanceRepository {
+		return this._governanceRepository
 	}
 
 	// ==========================================
@@ -662,6 +686,35 @@ export class Container {
 	get streamAiAssistUseCase(): StreamAiAssistUseCase {
 		if (!this._streamAiAssistUseCase) this._streamAiAssistUseCase = new StreamAiAssistUseCase()
 		return this._streamAiAssistUseCase
+	}
+
+	// ==========================================
+	// GOVERNANCE USE CASES
+	// ==========================================
+
+	get listGovernanceUseCase(): ListGovernanceUseCase {
+		if (!this._listGovernanceUseCase) this._listGovernanceUseCase = new ListGovernanceUseCase(this._governanceRepository)
+		return this._listGovernanceUseCase
+	}
+
+	get getGovernanceUseCase(): GetGovernanceUseCase {
+		if (!this._getGovernanceUseCase) this._getGovernanceUseCase = new GetGovernanceUseCase(this._governanceRepository)
+		return this._getGovernanceUseCase
+	}
+
+	get createGovernanceUseCase(): CreateGovernanceUseCase {
+		if (!this._createGovernanceUseCase) this._createGovernanceUseCase = new CreateGovernanceUseCase(this._governanceRepository)
+		return this._createGovernanceUseCase
+	}
+
+	get updateGovernanceUseCase(): UpdateGovernanceUseCase {
+		if (!this._updateGovernanceUseCase) this._updateGovernanceUseCase = new UpdateGovernanceUseCase(this._governanceRepository)
+		return this._updateGovernanceUseCase
+	}
+
+	get deleteGovernanceUseCase(): DeleteGovernanceUseCase {
+		if (!this._deleteGovernanceUseCase) this._deleteGovernanceUseCase = new DeleteGovernanceUseCase(this._governanceRepository)
+		return this._deleteGovernanceUseCase
 	}
 
 	// ==========================================
