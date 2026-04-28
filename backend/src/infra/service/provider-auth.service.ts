@@ -226,7 +226,7 @@ export class ProviderAuthService {
 		const params = new URLSearchParams({
 			response_type: 'code',
 			client_id: OPENAI_CLIENT_ID,
-			redirect_uri: `${envs.SERVER_URL}/api/config/providers/openai/callback`,
+			redirect_uri: `http://localhost:1455/auth/callback`,
 			scope: 'openid profile email offline_access',
 			code_challenge: challenge,
 			code_challenge_method: 'S256',

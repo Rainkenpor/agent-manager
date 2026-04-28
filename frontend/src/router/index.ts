@@ -38,16 +38,19 @@ const router = createRouter({
           path: 'agentes',
           name: 'agentes',
           component: () => import('@/views/AgentesView.vue'),
+          meta: { resources: ['agents', 'skills'] },
         },
         {
           path: 'mcp',
           name: 'mcp',
           component: () => import('@/views/McpHubView.vue'),
+          meta: { resources: ['mcp_servers', 'mcp_credentials'] },
         },
         {
           path: 'automatizacion',
           name: 'automatizacion',
           component: () => import('@/views/AutomatizacionView.vue'),
+          meta: { resources: ['hook_servers', 'event_listeners'] },
         },
         {
           path: 'traceability',
@@ -59,6 +62,7 @@ const router = createRouter({
           path: 'admin',
           name: 'admin',
           component: () => import('@/views/AdminView.vue'),
+          meta: { resources: ['users', 'roles'] },
         },
         {
           path: 'config',
@@ -101,7 +105,12 @@ router.beforeEach(async (to) => {
   }
 
   const resource = to.meta.resource as string | undefined
-  if (resource && auth.isAuthenticated && !auth.hasResourceAccess(resource)) {
+  if (resource && auth.isAuthenticated && !auth.hasResourceManageAccess(resource)) {
+    return { name: 'home' }
+  }
+
+  const resources = to.meta.resources as string[] | undefined
+  if (resources && auth.isAuthenticated && !auth.hasAnyResourceManageAccess(resources)) {
     return { name: 'home' }
   }
 })

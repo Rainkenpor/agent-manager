@@ -214,8 +214,10 @@ export const getTraceabilityByConversation = (conversationId: string) =>
 	request<{ success: boolean; data: any[] }>(`/traceability/by-conversation/${conversationId}`)
 export const createTraceability = (data: { title: string; description?: string; templateId: string; chatId?: string }) =>
 	request<{ success: boolean; data: any }>('/traceability', { method: 'POST', body: JSON.stringify(data) })
-export const updateTraceability = (id: string, data: { title?: string; description?: string | null; status?: string; chatId?: string | null }) =>
-	request<{ success: boolean; data: any }>(`/traceability/${id}`, { method: 'PUT', body: JSON.stringify({ id, ...data }) })
+export const updateTraceability = (
+	id: string,
+	data: { title?: string; description?: string | null; status?: string; chatId?: string | null }
+) => request<{ success: boolean; data: any }>(`/traceability/${id}`, { method: 'PUT', body: JSON.stringify({ id, ...data }) })
 export const deleteTraceability = (id: string) => request<{ success: boolean }>(`/traceability/${id}`, { method: 'DELETE' })
 
 // Tasks
@@ -274,8 +276,7 @@ export const createEventListener = (data: any) =>
 	request<{ success: boolean; data: any }>('/event-listeners', { method: 'POST', body: JSON.stringify(data) })
 export const updateEventListener = (id: string, data: any) =>
 	request<{ success: boolean; data: any }>(`/event-listeners/${id}`, { method: 'PUT', body: JSON.stringify({ id, ...data }) })
-export const deleteEventListener = (id: string) =>
-	request<{ success: boolean }>(`/event-listeners/${id}`, { method: 'DELETE' })
+export const deleteEventListener = (id: string) => request<{ success: boolean }>(`/event-listeners/${id}`, { method: 'DELETE' })
 export const triggerEventListener = (id: string) =>
 	request<{ success: boolean; data: any }>(`/event-listeners/${id}/trigger`, { method: 'POST' })
 
@@ -304,8 +305,7 @@ export interface ProviderConfigSummary {
 	needsRefresh: boolean
 }
 
-export const getOpenAIProviderConfig = () =>
-	request<{ success: boolean; data: ProviderConfigSummary }>('/config/providers/openai')
+export const getOpenAIProviderConfig = () => request<{ success: boolean; data: ProviderConfigSummary }>('/config/providers/openai')
 
 export const startOpenAIProviderAuth = (returnTo: string) =>
 	request<{ success: boolean; data: { authUrl: string } }>('/config/providers/openai/start-auth', {
