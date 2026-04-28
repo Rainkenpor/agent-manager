@@ -54,7 +54,7 @@ async function handleLogin() {
 }
 
 function loginWithAzure() {
-  window.location.href = '/api/auth/azure'
+  window.location.href = __AZURE_LOGIN_URL__
 }
 </script>
 
