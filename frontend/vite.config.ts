@@ -16,7 +16,7 @@ export default defineConfig((env) => {
 				'@': fileURLToPath(new URL('./src', import.meta.url))
 			}
 		},
-		base: envars.VITE_BASE_URL,
+		base,
 		define: {
 			__BASE_URL__: JSON.stringify(baseUrl),
 			__API_BASE__: JSON.stringify(`${baseUrl}api`),
