@@ -22,6 +22,7 @@ import { providerAuthService } from '@infra/service/provider-auth.service.js'
 const API_PORT = envs.SERVER_PORT
 const MCP_PORT = envs.MCP_PORT
 const UI_PATH = join(process.cwd(), '/frontend/dist')
+const UI_BASE_PATH = process.env.UI_BASE_PATH || '/'
 
 // extraer parametros
 const isUI = process.argv.includes('--ui')
@@ -89,7 +90,7 @@ async function startServers() {
 	console.log('🤖 Setting up servers...')
 
 	// API Routes (Normal Server)
-	apiApp.use(registerServerRoutes(mcpOAuthService))
+	apiApp.use(UI_BASE_PATH, registerServerRoutes(mcpOAuthService))
 
 	// MCP Routes (MCP Server con OAuth)
 	mcpApp.use('/mcp', registerMCPRoutes(mcpOAuthService))
@@ -109,13 +110,13 @@ async function startServers() {
 	// 6. Serve Static UI (Only on API Server)
 	// ==========================================
 	if (isUI && existsSync(UI_PATH)) {
-		console.log(`📁 Serving UI from: ${UI_PATH}`)
+		console.log(`📁 Serving UI from: ${UI_PATH} at base path: ${UI_BASE_PATH}`)
 		const uiStatic = express.static(UI_PATH)
-		apiApp.use(uiStatic)
+		apiApp.use(UI_BASE_PATH, uiStatic)
 
-		apiApp.use(history())
+		apiApp.use(UI_BASE_PATH, history())
 
-		apiApp.use(uiStatic)
+		apiApp.use(UI_BASE_PATH, uiStatic)
 	} else if (isUI) {
 		console.log('⚠️  UI build not found. Run "npm run build" in UI directory.')
 	}
@@ -156,9 +157,9 @@ async function startServers() {
 		console.log('')
 		console.log('Endpoints:')
 		if (isUI) {
-			console.log(`  📄 UI:        http://localhost:${API_PORT}/`)
+			console.log(`  📄 UI:        http://localhost:${API_PORT}${UI_BASE_PATH}`)
 		}
-		console.log(`  🔌 API:       http://localhost:${API_PORT}/api/projects`)
+		console.log(`  🔌 API:       http://localhost:${API_PORT}${UI_BASE_PATH === '/' ? '' : UI_BASE_PATH}/api/projects`)
 		console.log(`  🔌 Socket.IO: http://localhost:${API_PORT} (authenticated)`)
 		logger.info(`API Server started on port ${API_PORT}`)
 	})

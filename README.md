@@ -1,4 +1,5 @@
 # Agent Manager
+# Test build
 
 A full-stack web application for managing AI agents and Model Context Protocol (MCP) servers, with built-in user management, role-based access control (RBAC), and a self-hosted MCP server endpoint.
 

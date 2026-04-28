@@ -1,9 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/store/useAuth'
 import AppLayout from '@/components/AppLayout.vue'
+import { BASE_URL } from '@/constants'
 
 const router = createRouter({
-  history: createWebHistory('/'),
+  history: createWebHistory(BASE_URL),
   routes: [
     {
       path: '/login',

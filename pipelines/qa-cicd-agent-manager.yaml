@@ -1,0 +1,51 @@
+# Pipeline generado por Agent Azure DevOps MCP
+# Archivo: pipelines/qa-cicd-agent-manager.yaml
+
+resources:
+  repositories:
+  - repository: plantillas
+    type: git
+    name: self-service-devops/cicd-blueprints
+    ref: refs/heads/QA
+
+trigger:
+  branches:
+    include:
+    - QA
+  paths:
+    exclude:
+    - pipelines/*
+
+variables:
+- name: sonarQubeProjectKey
+  value: "no_sonnar"
+- name: sonarQubeProjectName
+  value: "agent-manager"
+- name: repositorioK8s
+  value: "$(System.CollectionUri)$(System.TeamProject)/_git/self-service-devops"
+- name: ramaK8s
+  value: 'QA'
+- name: repositorioOrigen
+  value: $(Build.Repository.Name)
+- group: self-service-devops
+- group: azure-devops-access
+# - group: login-aws  # Descomentar si el ambiente es cloud
+
+stages:
+# 1. Integracion Continua
+- template: onpremise/hermes/nodejs/ci/ci.yaml@plantillas
+  parameters:
+    sonarQubeProjectKey: ${{ variables.sonarQubeProjectKey }}
+    sonarQubeProjectName: ${{ variables.sonarQubeProjectName }}
+
+# 2. Despliegue Continuo (GitOps / K8s)
+- template: common/cd/cd.yaml@plantillas
+  parameters:
+    repositorioK8s: ${{ variables.repositorioK8s }}
+    ramaK8s: ${{ variables.ramaK8s }}
+    repositorioOrigen: ${{ variables.repositorioOrigen }}
+
+# Requisitos previos:
+# 1. SonarQube: solicitar ProjectKey al area de QA
+# 2. Repo k8s: configurar self-service-devops segun guia de Valores de Despliegue
+# 3. Variable Groups: self-service-devops, azure-devops-access

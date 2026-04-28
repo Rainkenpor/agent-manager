@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import * as api from '@/api/api'
+import { AZURE_LOGIN_URL } from '@/constants'
 
 const route = useRoute()
 
@@ -69,7 +70,7 @@ function loginWithAzure() {
   const clientNameVal = route.query.client_name as string | undefined
   if (clientNameVal) oauthParams.set('client_name', clientNameVal)
   const returnTo = `${window.location.origin}/oauth/authorize/mcp?${oauthParams.toString()}`
-  window.location.href = `/api/auth/azure?return_to=${encodeURIComponent(returnTo)}`
+  window.location.href = `${AZURE_LOGIN_URL}?return_to=${encodeURIComponent(returnTo)}`
 }
 
 async function authorize(approved: boolean) {
