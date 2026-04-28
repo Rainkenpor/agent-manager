@@ -16,7 +16,7 @@ export interface IMcpServerRepository {
   // Agent associations on roles
   assignAgentToRole(roleId: string, agentId: string): Promise<void>
   removeAgentFromRole(roleId: string, agentId: string): Promise<void>
-  getAgentsByRole(roleId: string): Promise<Array<{ id: string; name: string; slug: string; mode: string }>>
+  getAgentsByRole(roleId: string): Promise<Array<{ id: string; name: string; slug: string; mode: string, description:string }>>
 
   // Granular tool selection per role+mcpServer
   getRoleMcpTools(roleId: string, mcpServerId: string): Promise<string[]>

@@ -135,8 +135,9 @@ async function callRegisteredTool(toolName: string, params: Record<string, unkno
 	const routes = registry.getRoutes()
 	const route = routes.find(
 		(r) =>
-			r.useBy?.includes('mcp') &&
-			(r.toolName === toolName || r.toolName === `agent-manager_${toolName}` || toolName === `agent-manager_${r.toolName}`) || toolName === `mcp__agent-manager__${r.toolName}`
+			(r.useBy?.includes('mcp') &&
+				(r.toolName === toolName || r.toolName === `agent-manager_${toolName}` || toolName === `agent-manager_${r.toolName}`)) ||
+			toolName === `mcp__agent-manager__${r.toolName}`
 	)
 
 	if (!route?.handler) {
@@ -207,119 +208,6 @@ export function buildToolDefinitions(
 					required: ['agent_type', 'query']
 				}
 			}
-		},
-		{
-			type: 'function',
-			function: {
-				name: 'get_user_mcp_credentials',
-				description:
-					'Retrieve the stored credentials (key-value pairs) for the authenticated user and a specific MCP server. Use this tool to obtain authentication data (emails, tokens, API keys, etc.) that the user has previously configured for the given MCP server.',
-				parameters: {
-					type: 'object',
-					properties: {
-						mcp_server_id: {
-							type: 'string',
-							description: 'The MCP server ID whose credentials to retrieve.'
-						}
-					},
-					required: ['mcp_server_id']
-				}
-			}
-		},
-		{
-			type: 'function',
-			function: {
-				name: 'set_user_mcp_credential',
-				description:
-					'Store or update a single credential (key-value pair) for the authenticated user and a specific MCP server. Use this to persist authentication data provided by the user during the conversation.',
-				parameters: {
-					type: 'object',
-					properties: {
-						mcp_server_id: {
-							type: 'string',
-							description:
-								'The MCP server ID to associate the credential with. Use list_mcp_credential_fields tool to discover active MCP servers and their required credential fields.'
-						},
-						key: {
-							type: 'string',
-							description: 'Credential key, e.g. "email", "token", "api_key".'
-						},
-						value: {
-							type: 'string',
-							description: 'Credential value to store.'
-						}
-					},
-					required: ['mcp_server_id', 'key', 'value']
-				}
-			}
-		},
-		{
-			type: 'function',
-			function: {
-				name: 'delete_user_mcp_credential',
-				description: 'Delete a stored credential for the authenticated user and a specific MCP server.',
-				parameters: {
-					type: 'object',
-					properties: {
-						mcp_server_id: {
-							type: 'string',
-							description: 'The MCP server ID.'
-						},
-						key: {
-							type: 'string',
-							description: 'Credential key to delete.'
-						}
-					},
-					required: ['mcp_server_id', 'key']
-				}
-			}
-		},
-		{
-			type: 'function',
-			function: {
-				name: 'list_mcp_credential_fields',
-				description:
-					'List all configured MCP servers and the credential fields each one requires (e.g. email, token). Use this tool to discover what credentials the user needs to provide before calling a specific MCP server.',
-				parameters: {
-					type: 'object',
-					properties: {
-						mcp_server_id: {
-							type: 'string',
-							description: 'Optional. Filter to a single MCP server by ID. Omit to return all active servers.'
-						}
-					}
-				}
-			}
-		},
-		{
-			type: 'function',
-			function: {
-				name: 'get_skill',
-				description:
-					'Retrieve the full markdown content of a skill by its slug. Skills are reusable instruction blocks that provide specialized knowledge or behavior. The system prompt lists available skill slugs — call this tool to load one before applying its instructions.',
-				parameters: {
-					type: 'object',
-					properties: {
-						slug: {
-							type: 'string',
-							description: 'The slug identifier of the skill to retrieve (e.g. "analysis-framework", "code-review-checklist").'
-						}
-					},
-					required: ['slug']
-				}
-			}
-		},
-		{
-			type: 'function',
-			function: {
-				name: 'list_skills',
-				description:
-					'List all active skills with their name, slug and description. Use this tool to discover available skills before calling get_skill to load a specific one.',
-				parameters: {
-					type: 'object',
-					properties: {}
-				}
-			}
 		}
 	]
 
@@ -366,51 +254,6 @@ export async function executeToolCall(
 	try {
 		originalParams.toolsCallbacks?.onToolCall(toolName, args) // Notificar a callbacks de herramienta invocada, si existe
 		switch (toolName) {
-			case 'get_user_mcp_credentials': {
-				const credCb = originalParams.toolsCallbacks?.credentialCallbacks
-				if (!credCb) return 'Error: credential callbacks not available in this context'
-				const credentials = await credCb.getCredentials(args.mcp_server_id as string)
-				if (Object.keys(credentials).length === 0) return 'No credentials stored for this MCP server.'
-				return JSON.stringify(credentials, null, 2)
-			}
-
-			case 'set_user_mcp_credential': {
-				const credCb = originalParams.toolsCallbacks?.credentialCallbacks
-				if (!credCb) return 'Error: credential callbacks not available in this context'
-				await credCb.setCredential(args.mcp_server_id as string, args.key as string, args.value as string)
-				return `Credential '${args.key}' stored successfully.`
-			}
-
-			case 'delete_user_mcp_credential': {
-				const credCb = originalParams.toolsCallbacks?.credentialCallbacks
-				if (!credCb) return 'Error: credential callbacks not available in this context'
-				await credCb.deleteCredential(args.mcp_server_id as string, args.key as string)
-				return `Credential '${args.key}' deleted successfully.`
-			}
-
-			case 'list_mcp_credential_fields': {
-				const credFields = await originalParams.toolsCallbacks?.credentialCallbacks
-				if (!credFields) return 'No active MCP servers found.'
-				const list = await credFields.getListCredentials()
-				return JSON.stringify(list, null, 2)
-			}
-
-			case 'get_skill': {
-				const skillCb = originalParams.toolsCallbacks?.skillCallbacks
-				if (!skillCb) return 'Error: skill callbacks not available in this context.'
-				const skill = await skillCb.getBySlug(args.slug as string)
-				if (!skill) return `Skill '${args.slug}' not found or is inactive.`
-				return `# ${skill.name}\n\n${skill.content}`
-			}
-
-			case 'list_skills': {
-				const skillCb = originalParams.toolsCallbacks?.skillCallbacks
-				if (!skillCb) return 'Error: skill callbacks not available in this context.'
-				const skills = await skillCb.listSkills()
-				if (skills.length === 0) return 'No active skills available.'
-				return JSON.stringify(skills, null, 2)
-			}
-
 			case 'spawn_subagent': {
 				const subType = args.agent_type as string
 				agentLogger.info(`[InternalAgent] Spawning sub-agent: ${subType}`)

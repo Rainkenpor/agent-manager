@@ -165,6 +165,14 @@ export const assignSkillToRole = (roleId: string, skillId: string) =>
 export const removeSkillFromRole = (roleId: string, skillId: string) =>
 	request<{ success: boolean }>(`/roles/${roleId}/skills/${skillId}`, { method: 'DELETE' })
 
+// Governance
+export const getGovernance = () => request<{ success: boolean; data: any[] }>('/governance')
+export const getGovernanceById = (id: string) => request<{ success: boolean; data: any }>(`/governance/${id}`)
+export const createGovernance = (data: any) => request<{ success: boolean; data: any }>('/governance', { method: 'POST', body: JSON.stringify(data) })
+export const updateGovernance = (id: string, data: any) =>
+	request<{ success: boolean; data: any }>(`/governance/${id}`, { method: 'PUT', body: JSON.stringify({ id, ...data }) })
+export const deleteGovernance = (id: string) => request<{ success: boolean }>(`/governance/${id}`, { method: 'DELETE' })
+
 export const getSkills = () => request<{ success: boolean; data: any[] }>('/skills')
 export const getSkillById = (id: string) => request<{ success: boolean; data: any }>(`/skills/${id}`)
 export const createSkill = (data: any) =>

@@ -10,3 +10,4 @@ export * from "./logs/index.js";
 export * from "./event-listener/index.js";
 export * from "./config/index.js";
 export * from "./ai-assist/index.js";
+export * from "./governance/index.js";

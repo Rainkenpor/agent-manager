@@ -2,7 +2,7 @@
   <div class="card bg-base-100 flex flex-col">
     <div class="card-body">
       <div class="card-title flex items-start">
-        <div class="flex-1 flex justify-between">
+        <div class="flex-1 flex justify-between w-full pr-2">
           <slot name="header"></slot>
           <template v-if="!$slots.header">
             <div>
@@ -12,8 +12,8 @@
           </template>
         </div>
 
-        <div v-if="$slots.options" ref="containerRef" class="relative z-10" @click.prevent.stop="">
-          <div class=" text-xl text-white cursor-pointer hover:bg-neutral-800 rounded-2xl px-2 -mt-1"
+        <div v-if="$slots.options" ref="containerRef" class="absolute z-10 -right-0" @click.prevent.stop="">
+          <div class=" text-xl text-white cursor-pointer hover:bg-neutral-800 rounded-2xl px-1 -mt-1"
             @click.prevent.stop="showOption = !showOption">
             <span class="mdi mdi-dots-vertical"></span>
           </div>

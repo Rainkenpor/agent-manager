@@ -460,6 +460,51 @@ export class RoleSkillEntity {
 	assignedAt!: string
 }
 
+@Entity('governance')
+export class GovernanceEntity {
+	@PrimaryColumn({ type: 'text' })
+	id!: string
+
+	@Column({ type: 'text' })
+	name!: string
+
+	@Column({ type: 'text' })
+	type!: string
+
+	@Column({ type: 'text', nullable: true })
+	description!: string | null
+
+	@Column({ type: 'text', default: '' })
+	content!: string
+
+	@Column({ type: 'simple-json', nullable: true })
+	sections!: Array<{ title: string; content: string }> | null
+
+	@Column({ name: 'is_active', type: 'boolean', default: true })
+	isActive!: boolean
+
+	@Column({ name: 'created_at', type: 'text' })
+	createdAt!: string
+
+	@Column({ name: 'updated_at', type: 'text' })
+	updatedAt!: string
+}
+
+@Entity('role_governance')
+export class RoleGovernanceEntity {
+	@PrimaryColumn({ type: 'text' })
+	id!: string
+
+	@Column({ name: 'role_id', type: 'text' })
+	roleId!: string
+
+	@Column({ name: 'governance_id', type: 'text' })
+	governanceId!: string
+
+	@Column({ name: 'assigned_at', type: 'text' })
+	assignedAt!: string
+}
+
 @Entity('traceability_templates')
 export class TraceabilityTemplateEntity {
 	@PrimaryColumn({ type: 'text' })

@@ -54,7 +54,7 @@ const updateSchema = z.object({
 export function registerEventListenerRoutes(): void {
 	// List all
 	registry.register({
-		useBy: ['server', 'mcp'],
+		useBy: ['server'],
 		method: 'GET',
 		path: '/api/event-listeners',
 		toolName: 'list_event_listeners',
@@ -68,7 +68,7 @@ export function registerEventListenerRoutes(): void {
 
 	// Get by ID
 	registry.register({
-		useBy: ['server', 'mcp'],
+		useBy: ['server'],
 		method: 'GET',
 		path: '/api/event-listeners/:id',
 		toolName: 'get_event_listener',
@@ -81,7 +81,7 @@ export function registerEventListenerRoutes(): void {
 
 	// Create
 	registry.register({
-		useBy: ['server', 'mcp'],
+		useBy: ['server'],
 		method: 'POST',
 		path: '/api/event-listeners',
 		toolName: 'create_event_listener',
@@ -113,7 +113,7 @@ Ejemplo:
 
 	// Update
 	registry.register({
-		useBy: ['server', 'mcp'],
+		useBy: ['server'],
 		method: 'PUT',
 		path: '/api/event-listeners/:id',
 		toolName: 'update_event_listener',
@@ -136,7 +136,7 @@ Ejemplo:
 
 	// Delete
 	registry.register({
-		useBy: ['server', 'mcp'],
+		useBy: ['server'],
 		method: 'DELETE',
 		path: '/api/event-listeners/:id',
 		toolName: 'delete_event_listener',
@@ -153,7 +153,7 @@ Ejemplo:
 
 	// Trigger manually
 	registry.register({
-		useBy: ['server', 'mcp'],
+		useBy: ['server'],
 		method: 'POST',
 		path: '/api/event-listeners/:id/trigger',
 		toolName: 'trigger_event_listener',

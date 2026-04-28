@@ -217,6 +217,24 @@ function toolDisplayName(toolName: string): string {
   return toolName
 }
 
+function selectGroup(group: string) {
+  if (selectedToolSource.value === group) {
+    selectedToolSource.value = ''
+    return
+  }
+  selectedToolSource.value = group
+}
+
+function checkGroup(group: { key: string, label: string, tools: AgentTool[] }) {
+  if (group.tools.filter(t => agentForm.value.tools[t.name]).length === group.tools.length) {
+    group.tools.forEach(t => agentForm.value.tools[t.name] = false)
+  } else {
+    group.tools.forEach(t => agentForm.value.tools[t.name] = true)
+  }
+
+}
+
+
 const toolGroups = computed(() => {
   const byKey: Record<string, AgentTool[]> = {}
   for (const tool of availableTools.value) {
@@ -277,32 +295,23 @@ const selectedToolSource = ref<string>('')
         <div v-else class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
           <Card v-for="agent in primaryAgents" :key="agent.id" @click="openDetail(agent)">
             <template #header>
-              <div class="flex-1 min-w-0">
-                <h3 class="font-semibold text-white truncate">{{ agent.name }}</h3>
-                <p class="text-xs text-slate-400 font-mono mt-0.5 truncate">{{ agent.slug }}</p>
-              </div>
-              <div class="flex items-start gap-1.5  ">
-                <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">primary</span>
-                <span class="px-2 py-0.5 rounded-full text-xs font-medium"
-                  :class="agent.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'">
-                  {{ agent.isActive ? 'active' : 'inactive' }}
-                </span>
+              <div class="flex w-full">
+                <div class="flex-1 overflow-auto ">
+                  <h3 class="font-semibold text-white truncate">{{ agent.name }}</h3>
+                  <p class="text-xs text-slate-400 font-mono mt-0.5 truncate">{{ agent.slug }}</p>
+                </div>
+                <div class="flex items-start gap-1.5  ">
+                  <span class="px-2 py-0.5 rounded-full text-xs font-medium"
+                    :class="agent.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'">
+                    {{ agent.isActive ? 'active' : 'inactive' }}
+                  </span>
+                </div>
               </div>
             </template>
 
             <p v-if="agent.description" class="text-sm text-slate-500 mb-3 line-clamp-2">{{ agent.description }}</p>
 
             <div class="flex items-center gap-2 text-xs text-slate-500 mb-4 flex-wrap">
-              <span class="flex items-center gap-1 bg-slate-100 rounded-md px-2 py-1">
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18" />
-                </svg>
-                {{ agent.model }}
-              </span>
-              <span class="flex items-center gap-1 bg-slate-100 rounded-md px-2 py-1">
-                T: {{ agent.temperature }}
-              </span>
               <span v-if="(agent.subagents ?? []).length"
                 class="flex items-center gap-1 bg-violet-50 text-violet-600 rounded-md px-2 py-1">
                 {{ (agent.subagents ?? []).length }} subagent{{ (agent.subagents ?? []).length !== 1 ? 's' : '' }}
@@ -361,11 +370,7 @@ const selectedToolSource = ref<string>('')
 
             <p v-if="agent.description" class="text-sm text-slate-500 mb-3 line-clamp-2">{{ agent.description }}</p>
 
-            <div class="flex items-center gap-2 text-xs text-slate-500 mb-4 flex-wrap">
-              <span class="flex items-center gap-1 bg-slate-100 rounded-md px-2 py-1">{{ agent.model }}</span>
-              <span class="flex items-center gap-1 bg-slate-100 rounded-md px-2 py-1">T: {{ agent.temperature
-              }}</span>
-            </div>
+
 
 
             <template #options>
@@ -459,9 +464,6 @@ const selectedToolSource = ref<string>('')
 
       <!-- Right: Tool selection panel -->
       <div class="w-80 border-l border-slate-700/60 flex flex-col overflow-auto shrink-0">
-        <div class="px-4 py-4 border-b border-slate-700/60 shrink-0">
-          <p class="text-sm font-semibold text-white">Select Tools</p>
-        </div>
 
         <div class="flex-1 flex flex-col overflow-auto p-2">
           <!-- Tools -->
@@ -475,8 +477,14 @@ const selectedToolSource = ref<string>('')
                     :class="selectedToolSource === group.key
                       ? 'bg-indigo-600/20 border-indigo-500 text-white'
                       : 'border-transparent text-slate-400 hover:bg-slate-700 hover:text-white'"
-                    @click="selectedToolSource = group.key">
-                    <span class="text-xs font-semibold uppercase tracking-wider truncate">{{ group.label }}</span>
+                    @click="selectGroup(group.key)">
+                    <span class="text-xs font-semibold uppercase tracking-wider truncate">
+                      <input type="checkbox" class="checkbox checkbox-sm mr-2"
+                        :checked="group.tools.filter(t => agentForm.tools[t.name]).length === group.tools.length"
+                        :indeterminate="group.tools.filter(t => agentForm.tools[t.name]).length > 0 && group.tools.filter(t => agentForm.tools[t.name]).length < group.tools.length"
+                        @click.stop="" @change="checkGroup(group)" />
+                      {{ group.label }}
+                    </span>
                     <span class="text-xs shrink-0"
                       :class="selectedToolSource === group.key ? 'text-indigo-400' : 'text-slate-600'">
                       {{group.tools.filter(t => agentForm.tools[t.name]).length}}/{{ group.tools.length }}

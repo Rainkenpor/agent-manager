@@ -37,7 +37,7 @@ const router = createRouter({
 					path: 'agentes',
 					name: 'agentes',
 					component: () => import('@/views/AgentesView.vue'),
-					meta: { resources: ['agents', 'skills'] }
+					meta: { resources: ['agents', 'governance'] }
 				},
 				{
 					path: 'mcp',

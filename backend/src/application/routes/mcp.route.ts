@@ -7,7 +7,7 @@ import { z, type ZodRawShape, type ZodTypeAny } from 'zod'
 import { registry } from '@applicationService/registry.service.js'
 import type { McpOAuthService } from '@infra/service/mcp-oauth.service.js'
 import { mcpTokenAuthMiddleware } from './middlewares/mcp-token-auth.middleware.js'
-import type { HttpContext } from '@application/interfaces/route.interface.js'
+import type { HttpContext, RegisteredRoute } from '@application/interfaces/route.interface.js'
 import { mcpExternalManager } from '@infra/service/mcp-external.js'
 import { AgentService } from '@infra/service/agent.service.js'
 import { systemPrompt } from '../../const.js'
@@ -100,7 +100,7 @@ async function applyRoleBasedTools(server: McpServer, user: Record<string, unkno
 		}
 	>()
 	const seenAgents = new Set<string>()
-	const agentList: Array<{ id: string; name: string; slug: string }> = []
+	const agentList: Array<{ id: string; name: string; slug: string; description: string }> = []
 
 	for (const roleId of roleIds) {
 		const [mcpServers, roleAgents] = await Promise.all([
@@ -139,34 +139,17 @@ async function applyRoleBasedTools(server: McpServer, user: Record<string, unkno
 				for (const route of localRoutes) {
 					// Empty allowedTools means "all tools allowed"
 					if (allowedTools.size > 0 && !allowedTools.has(route.toolName!)) continue
-
-					const inputSchemaObj = route.inputSchema instanceof z.ZodObject ? route.inputSchema : z.object(route.inputSchema as ZodRawShape)
-
-					server.tool(route.toolName!, route.toolDescription!, route.inputSchema as ZodRawShape, async (args: Record<string, unknown>) => {
-						try {
-							const parseResult = inputSchemaObj.safeParse(args)
-							if (!parseResult.success) {
-								return {
-									content: [
-										{ type: 'text' as const, text: JSON.stringify({ error: 'Validation error', details: parseResult.error.flatten() }) }
-									],
-									isError: true
-								}
-							}
-							const sessionContext: HttpContext =
-								globalThis.__mcpSessionContexts?.[sessionId] ||
-								({ req: {}, res: {}, next: () => {}, signal: new AbortController().signal } as unknown as HttpContext)
-							const result = await route.handler({ input: parseResult.data as never, context: sessionContext })
-							return { content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }] }
-						} catch (err) {
-							return {
-								content: [{ type: 'text' as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }],
-								isError: true
-							}
-						}
-					})
+					registerLocalTool(server, route, sessionId)
 				}
 				continue
+			}
+
+			// Local filtrando por toolAlwaysAvailable
+			const localRoutes = registry
+				.getRoutes()
+				.filter((r) => r.useBy?.includes('mcp') && r.toolName && r.toolDescription && r.inputSchema && r.toolAlwaysAvailable)
+			for (const route of localRoutes) {
+				registerLocalTool(server, route, sessionId)
 			}
 
 			// MCPs externos: inicializar y registrar tools via mcpExternalManager
@@ -189,11 +172,13 @@ async function applyRoleBasedTools(server: McpServer, user: Record<string, unkno
 		}
 	}
 
+	// Registrar
+
 	// Register platform agents as tools
 	for (const agent of agentList) {
 		server.tool(
 			`agent_${agent.slug}`,
-			`Platform agent: ${agent.name}. Send it instructions to get assistance.`,
+			`Platform agent: ${agent.name}. ${agent.description}`,
 			{
 				instruction: z.string().describe('The instruction or task for the agent')
 			},
@@ -202,30 +187,35 @@ async function applyRoleBasedTools(server: McpServer, user: Record<string, unkno
 			}
 		)
 	}
+}
 
-	// Register skill tools (role-filtered)
-	const allowedSkills = await container.skillRepository.getSkillsAllowedForUser(userId)
+/**
+ * Register a local tool (MCP server)
+ */
+function registerLocalTool(server: McpServer, route: RegisteredRoute, sessionId: string) {
+	const inputSchemaObj = route.inputSchema instanceof z.ZodObject ? route.inputSchema : z.object(route.inputSchema as ZodRawShape)
 
-	server.tool(
-		'list_skills',
-		'List all skills accessible to the current user. Skills are reusable instruction blocks with specialized knowledge or behavior.',
-		{},
-		async () => {
-			const data = allowedSkills.map((s) => ({ name: s.name, slug: s.slug, description: s.description }))
-			return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] }
+	server.tool(route.toolName!, route.toolDescription!, route.inputSchema as ZodRawShape, async (args: Record<string, unknown>) => {
+		try {
+			const parseResult = inputSchemaObj.safeParse(args)
+			if (!parseResult.success) {
+				return {
+					content: [{ type: 'text' as const, text: JSON.stringify({ error: 'Validation error', details: parseResult.error.flatten() }) }],
+					isError: true
+				}
+			}
+			const sessionContext: HttpContext =
+				globalThis.__mcpSessionContexts?.[sessionId] ||
+				({ req: {}, res: {}, next: () => {}, signal: new AbortController().signal } as unknown as HttpContext)
+			const result = await route.handler({ input: parseResult.data as never, context: sessionContext })
+			return { content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }] }
+		} catch (err) {
+			return {
+				content: [{ type: 'text' as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }],
+				isError: true
+			}
 		}
-	)
-
-	server.tool(
-		'get_skill',
-		'Retrieve the full markdown content of a skill by its slug. Call list_skills first to discover available slugs.',
-		{ slug: z.string().describe('The slug identifier of the skill to retrieve') },
-		async (args: { slug: string }) => {
-			const skill = allowedSkills.find((s) => s.slug === args.slug)
-			if (!skill) return { content: [{ type: 'text' as const, text: `Skill '${args.slug}' not found or not accessible.` }] }
-			return { content: [{ type: 'text' as const, text: `# ${skill.name}\n\n${skill.content}` }] }
-		}
-	)
+	})
 }
 
 export async function callMCPAgent(
