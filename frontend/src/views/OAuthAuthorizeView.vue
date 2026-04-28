@@ -2,7 +2,6 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import * as api from '@/api/api'
-import { AZURE_LOGIN_URL } from '@/constants'
 
 const route = useRoute()
 
@@ -70,7 +69,7 @@ function loginWithAzure() {
   const clientNameVal = route.query.client_name as string | undefined
   if (clientNameVal) oauthParams.set('client_name', clientNameVal)
   const returnTo = `${window.location.origin}/oauth/authorize/mcp?${oauthParams.toString()}`
-  window.location.href = `${AZURE_LOGIN_URL}?return_to=${encodeURIComponent(returnTo)}`
+  window.location.href = `${__AZURE_LOGIN_URL__}?return_to=${encodeURIComponent(returnTo)}`
 }
 
 async function authorize(approved: boolean) {
@@ -114,13 +113,15 @@ async function authorize(approved: boolean) {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 flex items-center justify-center p-4">
+  <div
+    class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 flex items-center justify-center p-4">
     <div class="w-full max-w-md">
 
       <!-- Logo / Brand -->
       <div class="flex justify-center mb-8">
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold text-base shadow-lg">
+          <div
+            class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold text-base shadow-lg">
             AM
           </div>
           <span class="text-white text-lg font-semibold tracking-wide">Agent Manager</span>
@@ -145,7 +146,8 @@ async function authorize(approved: boolean) {
           <div class="flex items-center justify-between mb-4">
             <!-- App badge -->
             <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-lg bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center">
+              <div
+                class="w-10 h-10 rounded-lg bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center">
                 <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18" />
@@ -166,7 +168,8 @@ async function authorize(approved: boolean) {
                 <p class="text-white font-semibold text-sm text-right">Agent Manager</p>
                 <p class="text-slate-400 text-xs text-right">MCP Server</p>
               </div>
-              <div class="w-10 h-10 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
+              <div
+                class="w-10 h-10 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
                 <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2h-2" />
@@ -185,12 +188,9 @@ async function authorize(approved: boolean) {
         <div class="px-8 py-5 border-b border-white/10">
           <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Requested Permissions</p>
           <ul class="space-y-2">
-            <li
-              v-for="s in scopes"
-              :key="s.key"
-              class="flex items-start gap-2.5"
-            >
-              <svg class="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <li v-for="s in scopes" :key="s.key" class="flex items-start gap-2.5">
+              <svg class="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" fill="none" stroke="currentColor"
+                viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
               </svg>
               <span class="text-slate-300 text-sm">{{ s.label }}</span>
@@ -211,96 +211,82 @@ async function authorize(approved: boolean) {
           </div>
 
           <template v-else>
-          <!-- Sign in with Microsoft -->
-          <button
-            type="button"
-            @click="loginWithAzure"
-            class="w-full flex items-center justify-center gap-3 border border-white/10 hover:bg-white/5 text-slate-300 hover:text-white font-medium py-2.5 rounded-lg transition-colors text-sm mb-4"
-          >
-            <svg width="18" height="18" viewBox="0 0 21 21" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="1" y="1" width="9" height="9" fill="#F25022"/>
-              <rect x="11" y="1" width="9" height="9" fill="#7FBA00"/>
-              <rect x="1" y="11" width="9" height="9" fill="#00A4EF"/>
-              <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
-            </svg>
-            Sign in with Microsoft
-          </button>
-
-          <!-- Divider -->
-          <div class="flex items-center gap-3 mb-4">
-            <div class="flex-1 h-px bg-white/10"></div>
-            <span class="text-xs text-slate-500">or continue with username</span>
-            <div class="flex-1 h-px bg-white/10"></div>
-          </div>
-
-          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">Your Credentials</p>
-
-          <div class="space-y-3">
-            <div>
-              <label class="block text-xs font-medium text-slate-400 mb-1.5">Username or Email</label>
-              <input
-                v-model="username"
-                type="text"
-                autocomplete="username"
-                placeholder="Enter your username"
-                class="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              />
-            </div>
-            <div>
-              <label class="block text-xs font-medium text-slate-400 mb-1.5">Password</label>
-              <input
-                v-model="password"
-                type="password"
-                autocomplete="current-password"
-                placeholder="Enter your password"
-                class="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              />
-            </div>
-          </div>
-
-          <!-- Error -->
-          <div v-if="error" class="mt-4 flex items-center gap-2 text-red-400 text-sm bg-red-900/20 border border-red-700/30 rounded-lg px-3 py-2.5">
-            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            {{ error }}
-          </div>
-
-          <!-- Actions -->
-          <div class="flex gap-3 mt-6">
-            <button
-              :disabled="loading"
-              class="flex-1 px-4 py-2.5 rounded-lg border border-white/10 text-sm font-medium text-slate-300 hover:bg-white/5 hover:text-white transition-colors disabled:opacity-50"
-              @click="authorize(false)"
-            >
-              <span v-if="loading && denied" class="flex items-center justify-center gap-2">
-                <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
-                </svg>
-                Denying...
-              </span>
-              <span v-else>Deny</span>
+            <!-- Sign in with Microsoft -->
+            <button type="button" @click="loginWithAzure"
+              class="w-full flex items-center justify-center gap-3 border border-white/10 hover:bg-white/5 text-slate-300 hover:text-white font-medium py-2.5 rounded-lg transition-colors text-sm mb-4">
+              <svg width="18" height="18" viewBox="0 0 21 21" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="1" y="1" width="9" height="9" fill="#F25022" />
+                <rect x="11" y="1" width="9" height="9" fill="#7FBA00" />
+                <rect x="1" y="11" width="9" height="9" fill="#00A4EF" />
+                <rect x="11" y="11" width="9" height="9" fill="#FFB900" />
+              </svg>
+              Sign in with Microsoft
             </button>
-            <button
-              :disabled="loading || (!azureToken && (!username || !password))"
-              class="flex-1 px-4 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-semibold transition-colors shadow-lg shadow-indigo-500/20"
-              @click="authorize(true)"
-            >
-              <span v-if="loading && !denied" class="flex items-center justify-center gap-2">
-                <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
-                </svg>
-                Authorizing...
-              </span>
-              <span v-else>Authorize</span>
-            </button>
-          </div>
 
-          <p class="text-center text-xs text-slate-500 mt-5">
-            Your credentials are verified directly with Agent Manager<br/>and never shared with the requesting app.
-          </p>
+            <!-- Divider -->
+            <div class="flex items-center gap-3 mb-4">
+              <div class="flex-1 h-px bg-white/10"></div>
+              <span class="text-xs text-slate-500">or continue with username</span>
+              <div class="flex-1 h-px bg-white/10"></div>
+            </div>
+
+            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">Your Credentials</p>
+
+            <div class="space-y-3">
+              <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1.5">Username or Email</label>
+                <input v-model="username" type="text" autocomplete="username" placeholder="Enter your username"
+                  class="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1.5">Password</label>
+                <input v-model="password" type="password" autocomplete="current-password"
+                  placeholder="Enter your password"
+                  class="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+              </div>
+            </div>
+
+            <!-- Error -->
+            <div v-if="error"
+              class="mt-4 flex items-center gap-2 text-red-400 text-sm bg-red-900/20 border border-red-700/30 rounded-lg px-3 py-2.5">
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {{ error }}
+            </div>
+
+            <!-- Actions -->
+            <div class="flex gap-3 mt-6">
+              <button :disabled="loading"
+                class="flex-1 px-4 py-2.5 rounded-lg border border-white/10 text-sm font-medium text-slate-300 hover:bg-white/5 hover:text-white transition-colors disabled:opacity-50"
+                @click="authorize(false)">
+                <span v-if="loading && denied" class="flex items-center justify-center gap-2">
+                  <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                  Denying...
+                </span>
+                <span v-else>Deny</span>
+              </button>
+              <button :disabled="loading || (!azureToken && (!username || !password))"
+                class="flex-1 px-4 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-semibold transition-colors shadow-lg shadow-indigo-500/20"
+                @click="authorize(true)">
+                <span v-if="loading && !denied" class="flex items-center justify-center gap-2">
+                  <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                  Authorizing...
+                </span>
+                <span v-else>Authorize</span>
+              </button>
+            </div>
+
+            <p class="text-center text-xs text-slate-500 mt-5">
+              Your credentials are verified directly with Agent Manager<br />and never shared with the requesting app.
+            </p>
           </template>
         </div>
       </div>
