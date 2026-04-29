@@ -18,7 +18,7 @@ export function registerOAuthRoutes(): void {
 		path: '/.well-known/oauth-authorization-server',
 		handler: async ({ context: { req, res }, oauthService }) => {
 			if (!oauthService) return res.status(503).json({ error: 'OAuth not configured' })
-			const serverPortAuth = process.env.SERVER_PORT_AUTH || ''
+			const serverPortAuth = process.env.SERVER_PORT_AUTH ? `:${process.env.SERVER_PORT_AUTH}` : ''
 			const UI_BASE_PATH = process.env.UI_BASE_PATH
 				? process.env.UI_BASE_PATH.endsWith('/')
 					? process.env.UI_BASE_PATH
@@ -36,15 +36,14 @@ export function registerOAuthRoutes(): void {
 		path: '/.well-known/oauth-protected-resource',
 		handler: async ({ context: { req, res }, oauthService }) => {
 			if (!oauthService) return res.status(503).json({ error: 'OAuth not configured' })
-			const serverPortAuth = process.env.SERVER_PORT_AUTH || ''
+			const serverPortAuth = process.env.SERVER_PORT_AUTH ? `:${process.env.SERVER_PORT_AUTH}` : ''
 			const UI_BASE_PATH = process.env.UI_BASE_PATH
 				? process.env.UI_BASE_PATH.endsWith('/')
 					? process.env.UI_BASE_PATH
 					: `${process.env.UI_BASE_PATH}/`
 				: '/'
-			const apiBase = `${req.protocol}://${req.get('host')}${serverPortAuth}${UI_BASE_PATH}`
-			const mcpBase = `${req.protocol}://${req.hostname}${serverPortAuth}${UI_BASE_PATH}`
-			return oauthService.getProtectedResourceMetadata(mcpBase, apiBase)
+			const apiBase = `${req.protocol}://${req.hostname}${serverPortAuth}${UI_BASE_PATH}`
+			return oauthService.getProtectedResourceMetadata(apiBase)
 		}
 	})
 

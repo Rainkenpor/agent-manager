@@ -337,7 +337,7 @@ const mcpAuthMiddleware = async (req: express.Request, res: express.Response, ne
 	// The MCP Inspector handles 401 on initialize to trigger OAuth discovery.
 	const authHeader = req.headers.authorization
 	if (!authHeader?.startsWith('Bearer ')) {
-		const serverPortAuth = process.env.SERVER_PORT_AUTH || ''
+		const serverPortAuth = process.env.SERVER_PORT_AUTH ? `:${process.env.SERVER_PORT_AUTH}` : ''
 		const basePath = (process.env.UI_BASE_PATH || '/').replace(/\/$/, '')
 		const mcpServerBase = `${req.protocol}://${req.get('host')}${serverPortAuth}${basePath}`
 		res.setHeader(
