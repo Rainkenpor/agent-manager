@@ -98,7 +98,7 @@ export function registerConfigRoutes(): void {
 			const state = String(req.query.state ?? '')
 
 			if (!code || !state) {
-				return res.redirect(`${envs.FRONTEND_URL}/config?provider=openai&auth=error`)
+				return res.redirect(`${envs.SERVER_URL}/config?provider=openai&auth=error`)
 			}
 
 			try {
@@ -107,7 +107,7 @@ export function registerConfigRoutes(): void {
 				return res.redirect(`${returnTo}${separator}provider=openai&auth=success`)
 			} catch (error) {
 				const message = error instanceof Error ? error.message : 'openai_auth_failed'
-				return res.redirect(`${envs.FRONTEND_URL}/config?provider=openai&auth=error&message=${encodeURIComponent(message)}`)
+				return res.redirect(`${envs.SERVER_URL}/config?provider=openai&auth=error&message=${encodeURIComponent(message)}`)
 			}
 		}
 	})

@@ -18,14 +18,7 @@ export function registerOAuthRoutes(): void {
 		path: '/.well-known/oauth-authorization-server',
 		handler: async ({ context: { req, res }, oauthService }) => {
 			if (!oauthService) return res.status(503).json({ error: 'OAuth not configured' })
-			const serverPortAuth = process.env.SERVER_PORT_AUTH ? `:${process.env.SERVER_PORT_AUTH}` : ''
-			const UI_BASE_PATH = process.env.UI_BASE_PATH
-				? process.env.UI_BASE_PATH.endsWith('/')
-					? process.env.UI_BASE_PATH
-					: `${process.env.UI_BASE_PATH}/`
-				: '/'
-			const baseUrl = `${req.protocol}://${req.hostname}${serverPortAuth}${UI_BASE_PATH}`
-			return oauthService.getAuthorizationServerMetadata(baseUrl)
+			return oauthService.getAuthorizationServerMetadata(envs.SERVER_URL)
 		}
 	})
 
@@ -36,14 +29,7 @@ export function registerOAuthRoutes(): void {
 		path: '/.well-known/oauth-protected-resource',
 		handler: async ({ context: { req, res }, oauthService }) => {
 			if (!oauthService) return res.status(503).json({ error: 'OAuth not configured' })
-			const serverPortAuth = process.env.SERVER_PORT_AUTH ? `:${process.env.SERVER_PORT_AUTH}` : ''
-			const UI_BASE_PATH = process.env.UI_BASE_PATH
-				? process.env.UI_BASE_PATH.endsWith('/')
-					? process.env.UI_BASE_PATH
-					: `${process.env.UI_BASE_PATH}/`
-				: '/'
-			const apiBase = `${req.protocol}://${req.hostname}${serverPortAuth}${UI_BASE_PATH}`
-			return oauthService.getProtectedResourceMetadata(apiBase)
+			return oauthService.getProtectedResourceMetadata(envs.SERVER_URL)
 		}
 	})
 
@@ -83,7 +69,7 @@ export function registerOAuthRoutes(): void {
 			// Forward all query params to the frontend consent page
 			const params = new URLSearchParams(req.query as Record<string, string>)
 			params.set('client_name', client.client_name)
-			return res.redirect(`${envs.FRONTEND_URL}/oauth/authorize/mcp?${params.toString()}`)
+			return res.redirect(`${envs.SERVER_URL}/oauth/authorize/mcp?${params.toString()}`)
 		}
 	})
 
