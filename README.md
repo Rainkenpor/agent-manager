@@ -1,4 +1,5 @@
 # Agent Manager
+
 # Test build
 
 A full-stack web application for managing AI agents and Model Context Protocol (MCP) servers, with built-in user management, role-based access control (RBAC), and a self-hosted MCP server endpoint.
@@ -110,8 +111,6 @@ SERVER_URL=http://localhost:3200
 SERVER_API_PATH=/api
 SERVER_DATA_PATH=./data
 
-# MCP Server
-MCP_PORT=3201
 
 # Frontend (Vite)
 VITE_SERVER_URL=http://localhost:3200
