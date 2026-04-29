@@ -6,3 +6,4 @@ data
 .env
 settings.local.json
 backend/drizzle
+coverage/
