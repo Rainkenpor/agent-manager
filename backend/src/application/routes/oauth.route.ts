@@ -69,7 +69,7 @@ export function registerOAuthRoutes(): void {
 			// Forward all query params to the frontend consent page
 			const params = new URLSearchParams(req.query as Record<string, string>)
 			params.set('client_name', client.client_name)
-			return res.redirect(`${envs.SERVER_URL}/oauth/authorize/mcp?${params.toString()}`)
+			return res.redirect(`${envs.SERVER_URL}oauth/authorize/mcp?${params.toString()}`)
 		}
 	})
 
