@@ -24,7 +24,7 @@ export function registerOAuthRoutes(): void {
 					? process.env.UI_BASE_PATH
 					: `${process.env.UI_BASE_PATH}/`
 				: '/'
-			const baseUrl = `${req.protocol}://${req.get('host')}${serverPortAuth}${UI_BASE_PATH}`
+			const baseUrl = `${req.protocol}://${req.hostname}${serverPortAuth}${UI_BASE_PATH}`
 			return oauthService.getAuthorizationServerMetadata(baseUrl)
 		}
 	})
