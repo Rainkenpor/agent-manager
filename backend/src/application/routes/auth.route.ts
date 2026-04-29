@@ -222,11 +222,11 @@ export function registerAuthRoutes() {
 				const tokenParam = `azureToken=${encodeURIComponent(token)}`
 				const destination = returnTo
 					? `${returnTo}${returnTo.includes('?') ? '&' : '?'}${tokenParam}`
-					: `${SERVER_URL}/login?${tokenParam}`
+					: `${SERVER_URL}login?${tokenParam}`
 				res.redirect(destination)
 			} catch (err: any) {
 				console.error('Azure callback error:', err)
-				res.redirect(`${SERVER_URL}/login?error=server_error`)
+				res.redirect(`${SERVER_URL}login?error=server_error`)
 			}
 		}
 	})
