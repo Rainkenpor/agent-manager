@@ -86,18 +86,6 @@ async function startServers() {
 	// MCP Routes
 	apiApp.use(`${UI_BASE_PATH}/mcp`, mcpCors, registerMCPRoutes(mcpOAuthService))
 
-	// Well-known discovery so MCP clients can find the auth server
-	apiApp.get(`${UI_BASE_PATH}/.well-known/oauth-protected-resource`, mcpCors, (req, res) => {
-		const baseUrl = UI_BASE_PATH || '/agent-manager/'
-		const base = `${req.protocol}://${req.hostname}${baseUrl}`
-		res.json(mcpOAuthService.getProtectedResourceMetadata(base, base))
-	})
-	apiApp.get(`${UI_BASE_PATH}/.well-known/oauth-authorization-server`, mcpCors, (req, res) => {
-		const baseUrl = UI_BASE_PATH || '/agent-manager/'
-		const base = `${req.protocol}://${req.hostname}${baseUrl}`
-		res.json(mcpOAuthService.getAuthorizationServerMetadata(base))
-	})
-
 	// ==========================================
 	// 6. Serve Static UI (Only on API Server)
 	// ==========================================
