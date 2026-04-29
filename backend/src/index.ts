@@ -21,7 +21,11 @@ import { providerAuthService } from '@infra/service/provider-auth.service.js'
 
 const API_PORT = envs.SERVER_PORT
 const UI_PATH = join(process.cwd(), '/frontend/dist')
-const UI_BASE_PATH = process.env.UI_BASE_PATH || '/'
+const UI_BASE_PATH = process.env.UI_BASE_PATH
+	? process.env.UI_BASE_PATH.endsWith('/')
+		? process.env.UI_BASE_PATH
+		: `${process.env.UI_BASE_PATH}/`
+	: '/'
 
 // extraer parametros
 const isUI = process.argv.includes('--ui')
@@ -84,7 +88,7 @@ async function startServers() {
 	apiApp.use(UI_BASE_PATH, registerServerRoutes(mcpOAuthService))
 
 	// MCP Routes
-	apiApp.use(`${UI_BASE_PATH}/mcp`, mcpCors, registerMCPRoutes(mcpOAuthService))
+	apiApp.use(`${UI_BASE_PATH}mcp`, mcpCors, registerMCPRoutes(mcpOAuthService))
 
 	// ==========================================
 	// 6. Serve Static UI (Only on API Server)

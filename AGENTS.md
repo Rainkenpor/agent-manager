@@ -6,6 +6,9 @@
 con el tipo `typescript` para cargar las reglas de gobernanza activas del proyecto.
 Aplica todas esas reglas durante toda la sesión antes de proponer o generar código.
 
+- Si la llamada a la herramienta **se realiza correctamente**: aplica todas las reglas activas devueltas durante toda la sesión.
+- Si la llamada a la herramienta **falla** o no está disponible: notifica al usuario inmediatamente con el mensaje _"No es posible continuar: no se pudo obtener la gobernanza del proyecto. Verifica que el servidor MCP esté disponible."_ y no procede con ninguna tarea.
+
 ## Comandos principales
 
 ```bash
