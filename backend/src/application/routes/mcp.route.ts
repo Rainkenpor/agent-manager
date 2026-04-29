@@ -337,7 +337,8 @@ const mcpAuthMiddleware = async (req: express.Request, res: express.Response, ne
 	// The MCP Inspector handles 401 on initialize to trigger OAuth discovery.
 	const authHeader = req.headers.authorization
 	if (!authHeader?.startsWith('Bearer ')) {
-		const mcpServerBase = `${req.protocol}://${req.get('host')}`
+		const basePath = (process.env.UI_BASE_PATH || '/').replace(/\/$/, '')
+		const mcpServerBase = `${req.protocol}://${req.get('host')}${basePath}`
 		res.setHeader(
 			'WWW-Authenticate',
 			`Bearer realm="MCP Server", resource_metadata="${mcpServerBase}/.well-known/oauth-protected-resource"`
