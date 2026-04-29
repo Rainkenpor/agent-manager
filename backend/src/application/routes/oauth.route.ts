@@ -31,7 +31,7 @@ export function registerOAuthRoutes(): void {
 		handler: async ({ context: { req, res }, oauthService }) => {
 			if (!oauthService) return res.status(503).json({ error: 'OAuth not configured' })
 			const apiBase = `${req.protocol}://${req.get('host')}`
-			const mcpBase = `${req.protocol}://${req.hostname}:${envs.MCP_PORT}`
+			const mcpBase = `${req.protocol}://${req.hostname}:${envs.SERVER_PORT}`
 			return oauthService.getProtectedResourceMetadata(mcpBase, apiBase)
 		}
 	})

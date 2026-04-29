@@ -21,9 +21,6 @@ const AGENT_MODEL = process.env.AGENT_MODEL || ''
 const AGENT_BASE_URL = process.env.AGENT_BASE_URL || null
 const AGENT_KEY = process.env.AGENT_KEY || ''
 
-// MCP
-const MCP_PORT = process.env.MCP_PORT || 3002
-
 // Azure AD OAuth
 const AZURE_CLIENT_ID = process.env.AZURE_CLIENT_ID || ''
 const AZURE_CLIENT_SECRET = process.env.AZURE_CLIENT_SECRET || ''
@@ -59,8 +56,6 @@ export const envs = {
 	SERVER_DB_URL,
 
 	SERVER_AUTH_PATH,
-
-	MCP_PORT,
 
 	AGENT_BASE_URL,
 	AGENT_KEY,

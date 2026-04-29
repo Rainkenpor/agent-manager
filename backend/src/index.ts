@@ -20,7 +20,6 @@ import { mcpExternalManager } from '@infra/service/mcp-external.js'
 import { providerAuthService } from '@infra/service/provider-auth.service.js'
 
 const API_PORT = envs.SERVER_PORT
-const MCP_PORT = envs.MCP_PORT
 const UI_PATH = join(process.cwd(), '/frontend/dist')
 const UI_BASE_PATH = process.env.UI_BASE_PATH || '/'
 
@@ -58,31 +57,23 @@ async function startServers() {
 	const mcpOAuthService = new McpOAuthService(container.userRepository)
 
 	// ==========================================
-	// 4. Create Express Apps
+	// 4. Create Express App
 	// ==========================================
 	const apiApp = express()
-	const mcpApp = express()
+
+	const mcpCors = cors({
+		origin: '*',
+		allowedHeaders: ['Content-Type', 'mcp-session-id'],
+		exposedHeaders: ['mcp-session-id']
+	})
 
 	// Middleware
 	apiApp.use(cors())
-	mcpApp.use(cors())
 	// max upload size - debe ir ANTES de otros parsers
 	apiApp.use(express.json({ limit: '50mb' }))
-	mcpApp.use(express.json({ limit: '50mb' }))
 	apiApp.use(express.urlencoded({ limit: '50mb', extended: true }))
-	mcpApp.use(express.urlencoded({ limit: '50mb', extended: true }))
 	// Initialize Passport
 	apiApp.use(passport.initialize())
-
-	mcpApp.use(
-		cors({
-			origin: '*', // Or your specific domain
-			allowedHeaders: ['Content-Type', 'mcp-session-id'],
-			exposedHeaders: ['mcp-session-id'] // Crucial for the client to see the ID
-		})
-	)
-	mcpApp.use(express.json())
-	// Logging middleware
 
 	// ==========================================
 	// 5. Setup Servers Routes
@@ -92,18 +83,17 @@ async function startServers() {
 	// API Routes (Normal Server)
 	apiApp.use(UI_BASE_PATH, registerServerRoutes(mcpOAuthService))
 
-	// MCP Routes (MCP Server con OAuth)
-	mcpApp.use('/mcp', registerMCPRoutes(mcpOAuthService))
+	// MCP Routes
+	apiApp.use('/mcp', mcpCors, registerMCPRoutes(mcpOAuthService))
 
-	// Well-known discovery on MCP server so clients can find the auth server
-	mcpApp.get('/.well-known/oauth-protected-resource', (req, res) => {
-		const apiBase = `${req.protocol}://${req.hostname}:${API_PORT}`
-		const mcpBase = `${req.protocol}://${req.hostname}:${MCP_PORT}`
-		res.json(mcpOAuthService.getProtectedResourceMetadata(mcpBase, apiBase))
+	// Well-known discovery so MCP clients can find the auth server
+	apiApp.get('/.well-known/oauth-protected-resource', mcpCors, (req, res) => {
+		const base = `${req.protocol}://${req.hostname}:${API_PORT}`
+		res.json(mcpOAuthService.getProtectedResourceMetadata(base, base))
 	})
-	mcpApp.get('/.well-known/oauth-authorization-server', (req, res) => {
-		const apiBase = `${req.protocol}://${req.hostname}:${API_PORT}`
-		res.json(mcpOAuthService.getAuthorizationServerMetadata(apiBase))
+	apiApp.get('/.well-known/oauth-authorization-server', mcpCors, (req, res) => {
+		const base = `${req.protocol}://${req.hostname}:${API_PORT}`
+		res.json(mcpOAuthService.getAuthorizationServerMetadata(base))
 	})
 
 	// ==========================================
@@ -138,21 +128,17 @@ async function startServers() {
 	}
 
 	apiApp.use(errorHandler)
-	mcpApp.use(errorHandler)
 
 	// ==========================================
-	// 8. Start Servers
+	// 8. Start Server
 	// ==========================================
 
-	// Create HTTP servers
 	const apiHttpServer = createServer(apiApp)
-	const mcpHttpServer = createServer(mcpApp)
 
-	// Start API Server
 	apiHttpServer.listen(API_PORT, () => {
 		console.log('')
 		console.log('═════════════════════════════════════════════════════════════════════')
-		console.log(`✅ Agent-Manager API Server running on http://localhost:${API_PORT}`)
+		console.log(`✅ Agent-Manager Server running on http://localhost:${API_PORT}`)
 		console.log('═════════════════════════════════════════════════════════════════════')
 		console.log('')
 		console.log('Endpoints:')
@@ -161,23 +147,12 @@ async function startServers() {
 		}
 		console.log(`  🔌 API:       http://localhost:${API_PORT}${UI_BASE_PATH === '/' ? '' : UI_BASE_PATH}/api/projects`)
 		console.log(`  🔌 Socket.IO: http://localhost:${API_PORT} (authenticated)`)
-		logger.info(`API Server started on port ${API_PORT}`)
-	})
-
-	// Start MCP Server
-	mcpHttpServer.listen(MCP_PORT, () => {
+		console.log(`  🤖 MCP:       http://localhost:${API_PORT}/mcp (Streamable HTTP)`)
+		console.log(`  📋 MCP Tools: http://localhost:${API_PORT}/mcp/tools`)
+		console.log(`  📝 Prompts:   http://localhost:${API_PORT}/mcp/prompts`)
+		console.log(`  🔐 OAuth:     http://localhost:${API_PORT}/.well-known/oauth-authorization-server`)
 		console.log('')
-		console.log('═════════════════════════════════════════════════════════════════════')
-		console.log(`✅ Agent-Manager MCP Server running on http://localhost:${MCP_PORT}`)
-		console.log('═════════════════════════════════════════════════════════════════════')
-		console.log('')
-		console.log('Endpoints:')
-		console.log(`  🤖 MCP:       http://localhost:${MCP_PORT}/mcp (Streamable HTTP)`)
-		console.log(`  📋 MCP Tools: http://localhost:${MCP_PORT}/mcp/tools`)
-		console.log(`  📝 Prompts:   http://localhost:${MCP_PORT}/mcp/prompts`)
-		console.log(`  🔐 OAuth:     http://localhost:${MCP_PORT}/.well-known/oauth-authorization-server`)
-		console.log('')
-		logger.info(`MCP Server started on port ${MCP_PORT}`)
+		logger.info(`Server started on port ${API_PORT}`)
 	})
 
 	// ==========================================
