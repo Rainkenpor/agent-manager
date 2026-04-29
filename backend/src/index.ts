@@ -21,7 +21,11 @@ import { providerAuthService } from '@infra/service/provider-auth.service.js'
 
 const API_PORT = envs.SERVER_PORT
 const UI_PATH = join(process.cwd(), '/frontend/dist')
-const UI_BASE_PATH = process.env.UI_BASE_PATH || '/'
+const UI_BASE_PATH = process.env.UI_BASE_PATH
+	? process.env.UI_BASE_PATH.endsWith('/')
+		? process.env.UI_BASE_PATH
+		: `${process.env.UI_BASE_PATH}/`
+	: '/'
 
 // extraer parametros
 const isUI = process.argv.includes('--ui')
@@ -84,17 +88,7 @@ async function startServers() {
 	apiApp.use(UI_BASE_PATH, registerServerRoutes(mcpOAuthService))
 
 	// MCP Routes
-	apiApp.use('/mcp', mcpCors, registerMCPRoutes(mcpOAuthService))
-
-	// Well-known discovery so MCP clients can find the auth server
-	apiApp.get('/.well-known/oauth-protected-resource', mcpCors, (req, res) => {
-		const base = `${req.protocol}://${req.hostname}:${API_PORT}`
-		res.json(mcpOAuthService.getProtectedResourceMetadata(base, base))
-	})
-	apiApp.get('/.well-known/oauth-authorization-server', mcpCors, (req, res) => {
-		const base = `${req.protocol}://${req.hostname}:${API_PORT}`
-		res.json(mcpOAuthService.getAuthorizationServerMetadata(base))
-	})
+	apiApp.use(`${UI_BASE_PATH}mcp`, mcpCors, registerMCPRoutes(mcpOAuthService))
 
 	// ==========================================
 	// 6. Serve Static UI (Only on API Server)
@@ -147,10 +141,12 @@ async function startServers() {
 		}
 		console.log(`  🔌 API:       http://localhost:${API_PORT}${UI_BASE_PATH === '/' ? '' : UI_BASE_PATH}/api/projects`)
 		console.log(`  🔌 Socket.IO: http://localhost:${API_PORT} (authenticated)`)
-		console.log(`  🤖 MCP:       http://localhost:${API_PORT}/mcp (Streamable HTTP)`)
-		console.log(`  📋 MCP Tools: http://localhost:${API_PORT}/mcp/tools`)
-		console.log(`  📝 Prompts:   http://localhost:${API_PORT}/mcp/prompts`)
-		console.log(`  🔐 OAuth:     http://localhost:${API_PORT}/.well-known/oauth-authorization-server`)
+		console.log(`  🤖 MCP:       http://localhost:${API_PORT}${UI_BASE_PATH === '/' ? '' : UI_BASE_PATH}/mcp (Streamable HTTP)`)
+		console.log(`  📋 MCP Tools: http://localhost:${API_PORT}${UI_BASE_PATH === '/' ? '' : UI_BASE_PATH}/mcp/tools`)
+		console.log(`  📝 Prompts:   http://localhost:${API_PORT}${UI_BASE_PATH === '/' ? '' : UI_BASE_PATH}/mcp/prompts`)
+		console.log(
+			`  🔐 OAuth:     http://localhost:${API_PORT}${UI_BASE_PATH === '/' ? '' : UI_BASE_PATH}/.well-known/oauth-authorization-server`
+		)
 		console.log('')
 		logger.info(`Server started on port ${API_PORT}`)
 	})
