@@ -206,10 +206,10 @@ export class McpOAuthService {
 		}
 	}
 
-	getProtectedResourceMetadata(baseUrl: string, authServerUrl: string) {
+	getProtectedResourceMetadata(baseUrl: string) {
 		return {
 			resource: `${baseUrl}mcp`,
-			authorization_servers: [authServerUrl],
+			authorization_servers: [baseUrl],
 			scopes_supported: ['mcp:all', 'mcp:tools', 'mcp:resources', 'mcp:prompts'],
 			bearer_methods_supported: ['header']
 		}
