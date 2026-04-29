@@ -6,7 +6,7 @@ import { fileURLToPath, URL } from 'node:url'
 export default defineConfig((env) => {
 	const envars = loadEnv(env.mode, '../')
 
-	const base = envars.VITE_BASE_URL || '/agent-manager/'
+	const base = envars.VITE_BASE_URL || '/'
 	const baseUrl = base + (base.endsWith('/') ? '' : '/')
 
 	return {
