@@ -18,7 +18,8 @@ export function registerOAuthRoutes(): void {
 		path: '/.well-known/oauth-authorization-server',
 		handler: async ({ context: { req, res }, oauthService }) => {
 			if (!oauthService) return res.status(503).json({ error: 'OAuth not configured' })
-			const baseUrl = `${req.protocol}://${req.get('host')}`
+			const UI_BASE_PATH = process.env.UI_BASE_PATH || '/'
+			const baseUrl = `${req.protocol}://${req.get('host')}${UI_BASE_PATH}`
 			return oauthService.getAuthorizationServerMetadata(baseUrl)
 		}
 	})
@@ -30,8 +31,9 @@ export function registerOAuthRoutes(): void {
 		path: '/.well-known/oauth-protected-resource',
 		handler: async ({ context: { req, res }, oauthService }) => {
 			if (!oauthService) return res.status(503).json({ error: 'OAuth not configured' })
-			const apiBase = `${req.protocol}://${req.get('host')}`
-			const mcpBase = `${req.protocol}://${req.hostname}:${envs.SERVER_PORT}`
+			const UI_BASE_PATH = process.env.UI_BASE_PATH || '/'
+			const apiBase = `${req.protocol}://${req.get('host')}${UI_BASE_PATH}`
+			const mcpBase = `${req.protocol}://${req.hostname}${UI_BASE_PATH}`
 			return oauthService.getProtectedResourceMetadata(mcpBase, apiBase)
 		}
 	})
