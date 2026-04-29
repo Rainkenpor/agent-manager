@@ -84,15 +84,17 @@ async function startServers() {
 	apiApp.use(UI_BASE_PATH, registerServerRoutes(mcpOAuthService))
 
 	// MCP Routes
-	apiApp.use('/mcp', mcpCors, registerMCPRoutes(mcpOAuthService))
+	apiApp.use(`${UI_BASE_PATH}mcp`, mcpCors, registerMCPRoutes(mcpOAuthService))
 
 	// Well-known discovery so MCP clients can find the auth server
-	apiApp.get('/.well-known/oauth-protected-resource', mcpCors, (req, res) => {
-		const base = `${req.protocol}://${req.hostname}:${API_PORT}`
+	apiApp.get(`${UI_BASE_PATH}.well-known/oauth-protected-resource`, mcpCors, (req, res) => {
+		const baseUrl = process.env.VITE_BASE_URL || '/agent-manager/'
+		const base = `${req.protocol}://${req.hostname}${baseUrl}`
 		res.json(mcpOAuthService.getProtectedResourceMetadata(base, base))
 	})
-	apiApp.get('/.well-known/oauth-authorization-server', mcpCors, (req, res) => {
-		const base = `${req.protocol}://${req.hostname}:${API_PORT}`
+	apiApp.get(`${UI_BASE_PATH}.well-known/oauth-authorization-server`, mcpCors, (req, res) => {
+		const baseUrl = process.env.VITE_BASE_URL || '/agent-manager/'
+		const base = `${req.protocol}://${req.hostname}${baseUrl}`
 		res.json(mcpOAuthService.getAuthorizationServerMetadata(base))
 	})
 
