@@ -424,7 +424,7 @@ async function doDelete() {
               Tools
             </button>
             <template v-if="server.type !== 'local'">
-              <button v-if="connectionStatus[server.id] === 'disconnected'"
+              <button
                 class="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium text-slate-200 hover:text-emerald-400 hover:bg-emerald-900/30 transition-colors disabled:opacity-50"
                 :disabled="reconnecting[server.id]" @click="reconnect(server)">
                 <svg class="w-3.5 h-3.5" :class="{ 'animate-spin': reconnecting[server.id] }" fill="none"
