@@ -40,8 +40,8 @@ const router = createRouter({
 					meta: { resources: ['agents', 'governance'] }
 				},
 				{
-					path: 'mcp',
-					name: 'mcp',
+					path: 'mcps',
+					name: 'mcps',
 					component: () => import('@/views/McpHubView.vue'),
 					meta: { resources: ['mcp_servers', 'mcp_credentials'] }
 				},
@@ -72,8 +72,8 @@ const router = createRouter({
 				// Redirects for backward compatibility
 				{ path: 'agents', redirect: '/agentes' },
 				{ path: 'skills', redirect: '/agentes' },
-				{ path: 'mcps', redirect: '/mcp' },
-				{ path: 'mcp-credentials', redirect: '/mcp' },
+				{ path: 'mcps', redirect: '/mcps' },
+				{ path: 'mcp-credentials', redirect: '/mcps' },
 				{ path: 'hook-servers', redirect: '/automatizacion' },
 				{ path: 'event-listeners', redirect: '/automatizacion' },
 				{ path: 'users', redirect: '/admin' },
