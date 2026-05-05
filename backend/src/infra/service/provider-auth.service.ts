@@ -217,7 +217,7 @@ export class ProviderAuthService {
 		const challenge = generateChallenge(verifier)
 		const state = generateState()
 		const safeReturnTo =
-			returnTo?.trim() && returnTo.startsWith(envs.FRONTEND_URL) ? returnTo : `${envs.FRONTEND_URL}/config`
+			returnTo?.trim() && returnTo.startsWith(envs.SERVER_URL) ? returnTo : `${envs.SERVER_URL}/config`
 		this.authStateCache.set(state, {
 			codeVerifier: verifier,
 			returnTo: safeReturnTo

@@ -13,6 +13,7 @@ import { AgentService } from '@infra/service/agent.service.js'
 import { systemPrompt } from '../../const.js'
 import { MCPAgentService } from '@infra/service/mcp-agent.service.js'
 import { container } from '../container.js'
+import { envs } from '../../envs.js'
 
 let oauthService: McpOAuthService | null = null
 
@@ -339,7 +340,7 @@ const mcpAuthMiddleware = async (req: express.Request, res: express.Response, ne
 	if (!authHeader?.startsWith('Bearer ')) {
 		const serverPortAuth = process.env.SERVER_PORT_AUTH ? `:${process.env.SERVER_PORT_AUTH}` : ''
 		const basePath = (process.env.UI_BASE_PATH || '/').replace(/\/$/, '')
-		const mcpServerBase = `${req.protocol}://${req.get('host')}${serverPortAuth}${basePath}`
+		const mcpServerBase = envs.SERVER_URL
 		res.setHeader(
 			'WWW-Authenticate',
 			`Bearer realm="MCP Server", resource_metadata="${mcpServerBase}/.well-known/oauth-protected-resource"`
