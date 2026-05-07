@@ -14,4 +14,5 @@ export interface IChatRepository {
 	getMessages(conversationId: string): Promise<MessageRecord[]>
 	touchConversation(id: string): Promise<void>
 	updateDraft(id: string, draft: string): Promise<void>
+	deleteMessagesFrom(conversationId: string, fromMessageId: string): Promise<void>
 }

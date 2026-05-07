@@ -32,7 +32,7 @@ interface Conversation {
 
 interface RequestQuestion {
   id: string
-  type: 'text' | 'multi' | 'single' | 'confirm'
+  type: 'text' | 'multi' | 'single' | 'list' | 'confirm'
   label: string
   description: string
   options: Array<{ label: string; description: string }>
@@ -60,6 +60,9 @@ const loadingConversation = ref(false)
 const showNewChatModal = ref(false)
 const loadingChatAgents = ref(false)
 const error = ref('')
+const hoveredMessageId = ref<string | null>(null)
+const editingMessageId = ref<string | null>(null)
+const editingContent = ref('')
 
 const messagesContainer = ref<HTMLElement | null>(null)
 let abortController: AbortController | null = null
@@ -68,7 +71,7 @@ const showTraceabilitySidebar = ref(false)
 const hasLinkedTraceability = ref(false)
 
 // Form state keyed by message id
-const formAnswers = ref<Record<string, Record<string, { textValue: string; selectedOptions: string[] }>>>({})
+const formAnswers = ref<Record<string, Record<string, { textValue: string; selectedOptions: any[] }>>>({})
 const submittedForms = ref<string[]>([])
 
 const activeAgent = computed(() => agents.value.find((a) => a.id === activeConversation.value?.agentId))
@@ -280,7 +283,7 @@ function parseRequestBlock(content: string): RequestQuestion[] | null {
   const parts = match[1].split(/(?=\[Q\d+\|)/)
 
   for (const part of parts) {
-    const header = part.match(/^\[Q(\d+)\|(text|multi|single|confirm)\]\s*(.+?)(?:\n|$)/)
+    const header = part.match(/^\[Q(\d+)\|(text|multi|list|single|confirm)\]\s*(.+?)(?:\n|$)/)
     if (!header) continue
 
     const rest = part.slice(header[0].length).trim()
@@ -299,9 +302,11 @@ function parseRequestBlock(content: string): RequestQuestion[] | null {
       } else if (line.trim()) descLines.push(line.trim())
     }
 
+
+
     questions.push({
       id: `Q${header[1]}`,
-      type: header[2] as 'text' | 'multi' | 'single' | 'confirm',
+      type: header[2] as 'text' | 'multi' | 'list' | 'single' | 'confirm',
       label: header[3].trim(),
       description: descLines.join('\n'),
       options
@@ -422,6 +427,19 @@ function selectOption(msgId: string, questionId: string, option: string) {
   q.selectedOptions = [option]
 }
 
+function listItemChanged(opt: { label: string, description: string }, e: Event, msgId: string, questionId: string, key: string) {
+  opt.description = (e.target as HTMLInputElement).value
+  if (Number(key) === formAnswers.value[msgId]?.[questionId].selectedOptions.length - 1) {
+    formAnswers.value[msgId][questionId].selectedOptions.push({ label: '', description: '' })
+  }
+}
+
+function removeOption(msgId: string, questionId: string, key: string) {
+  const q = formAnswers.value[msgId]?.[questionId]
+  if (!q) return
+  q.selectedOptions.splice(Number(key), 1)
+}
+
 function initFormAnswersFromMessages() {
   for (let i = 0; i < messages.value.length; i++) {
     const msg = messages.value[i]
@@ -431,7 +449,11 @@ function initFormAnswersFromMessages() {
 
     if (!formAnswers.value[msg.id]) {
       const answers: Record<string, { textValue: string; selectedOptions: string[] }> = {}
-      for (const q of questions) answers[q.id] = { textValue: '', selectedOptions: [] }
+      for (const q of questions) {
+        const data = []
+        if (q.type === 'list') data.push({ label: '(sin selección)', description: '' })
+        answers[q.id] = { textValue: '', selectedOptions: data }
+      }
       formAnswers.value[msg.id] = answers
     }
 
@@ -458,6 +480,10 @@ async function submitRequestForm(msgId: string, questions: RequestQuestion[]) {
       const parts = [...a.selectedOptions]
       if (a.textValue.trim()) parts.push(a.textValue.trim())
       answerText = parts.length > 0 ? parts.join(', ') : '(sin selección)'
+    } else if (q.type === 'list') {
+      const parts = [...a.selectedOptions.map(o => `- ${o.description}`)]
+      if (a.textValue.trim()) parts.push(a.textValue.trim())
+      answerText = parts.length > 0 ? parts.join('\n ') : '(sin selección)'
     } else if (q.type === 'confirm') {
       answerText = a.selectedOptions[0] ?? (a.textValue.trim() || '(sin selección)')
       if (a.textValue.trim() && a.textValue.trim() !== answerText) answerText += ` (${a.textValue.trim()})`
@@ -472,6 +498,69 @@ async function submitRequestForm(msgId: string, questions: RequestQuestion[]) {
 
   submittedForms.value.push(msgId)
   messageInput.value = lines.join('\n')
+  await sendMessage()
+}
+
+async function retryMessage(msg: DisplayMessage) {
+  if (!activeConversation.value || sending.value) return
+  const idx = messages.value.findIndex((m) => m.id === msg.id)
+  if (idx === -1) return
+
+  // Find the preceding user message to delete from there (inclusive)
+  let userIdx = -1
+  let userContent = ''
+  for (let i = idx - 1; i >= 0; i--) {
+    if (messages.value[i].role === 'user') {
+      userIdx = i
+      userContent = messages.value[i].content
+      break
+    }
+  }
+  if (userIdx === -1) return
+
+  // Delete from the user message onwards so sendMessage can re-add it without duplicar
+  try {
+    await api.deleteMessagesFrom(activeConversation.value.id, messages.value[userIdx].id)
+  } catch (e: any) {
+    error.value = e.message
+    return
+  }
+
+  messages.value = messages.value.slice(0, userIdx)
+  messageInput.value = userContent
+  await sendMessage()
+}
+
+function editMessage(msg: DisplayMessage) {
+  if (sending.value) return
+  editingMessageId.value = msg.id
+  editingContent.value = msg.content
+}
+
+function cancelEdit() {
+  editingMessageId.value = null
+  editingContent.value = ''
+}
+
+async function confirmEdit(msg: DisplayMessage) {
+  if (!activeConversation.value || sending.value) return
+  const content = editingContent.value.trim()
+  if (!content) return
+
+  const idx = messages.value.findIndex((m) => m.id === msg.id)
+  if (idx === -1) return
+
+  try {
+    await api.deleteMessagesFrom(activeConversation.value.id, msg.id)
+  } catch (e: any) {
+    error.value = e.message
+    return
+  }
+
+  editingMessageId.value = null
+  editingContent.value = ''
+  messages.value = messages.value.slice(0, idx)
+  messageInput.value = content
   await sendMessage()
 }
 
@@ -554,8 +643,7 @@ onMounted(fetchInitialData)
             <p class="text-xs text-slate-400">Agente: {{ activeAgent?.name ?? activeConversation.agentId }}</p>
           </div>
           <!-- Traceability sidebar toggle -->
-          <button v-if="hasLinkedTraceability"
-            @click="showTraceabilitySidebar = !showTraceabilitySidebar"
+          <button v-if="hasLinkedTraceability" @click="showTraceabilitySidebar = !showTraceabilitySidebar"
             class="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
             :class="showTraceabilitySidebar ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'"
             title="Ver trazabilidad vinculada">
@@ -604,7 +692,9 @@ onMounted(fetchInitialData)
           </div>
 
           <div v-for="msg in messages" :key="msg.id" class="flex gap-3"
-            :class="msg.role === 'user' ? 'flex-row-reverse' : ''">
+            :class="msg.role === 'user' ? 'flex-row-reverse' : ''"
+            @mouseenter="hoveredMessageId = msg.id"
+            @mouseleave="hoveredMessageId = null">
             <!-- Avatar -->
             <div class="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold mt-0.5"
               :class="msg.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-300'">
@@ -617,9 +707,13 @@ onMounted(fetchInitialData)
               :style="msg.role === 'user' ? 'align-items:flex-end' : ''">
 
               <!-- ── Bubble ─────────────────────────────────── -->
-              <div class="px-4 py-2.5 rounded-2xl text-sm leading-relaxed" :class="msg.role === 'user'
-                ? 'bg-indigo-600 text-white rounded-tr-sm'
-                : 'bg-slate-800 text-slate-100 rounded-tl-sm border border-slate-700/50'">
+              <div class="rounded-2xl text-sm leading-relaxed"
+                :class="[
+                  editingMessageId === msg.id ? 'p-0' : 'px-4 py-2.5',
+                  msg.role === 'user'
+                    ? 'bg-indigo-600 text-white rounded-tr-sm'
+                    : 'bg-slate-800 text-slate-100 rounded-tl-sm border border-slate-700/50'
+                ]">
 
                 <!-- Tool calls — shown before the text content -->
                 <div v-if="msg.toolCalls?.length" class="flex flex-wrap gap-1.5 mb-2">
@@ -662,9 +756,30 @@ onMounted(fetchInitialData)
                             class="mt-0.5 shrink-0 rounded border-slate-600 bg-slate-800 accent-indigo-500 cursor-pointer" />
                           <span class="text-sm text-slate-200 leading-snug">
                             {{ opt.label }}
-                            <span v-if="opt.description" class="text-slate-500"> — {{ opt.description }}</span>
+                            <span v-if="opt.description" class="text-slate-300"> — {{ opt.description }}</span>
                           </span>
                         </label>
+                      </div>
+
+                      <!-- List: options as clickable buttons -->
+                      <div v-if="q.type === 'list'" class="flex flex-wrap gap-2">
+                        <div
+                          v-for="[key, opt] of Object.entries(formAnswers[msg.id][q.id].selectedOptions as { label: string, description: string }[])"
+                          :key="`list_${key}`" class="w-full">
+
+                          <div class="flex w-full">
+                            <input type="text" :value="opt.description"
+                              @input="(e) => listItemChanged(opt, e, msg.id, q.id, key)"
+                              class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors" />
+                            <div v-if="opt.description !== ''" class="w-12 btn btn-ghost btn-error"
+                              @click="removeOption(msg.id, q.id, key)">
+                              <span class="mdi mdi-close"></span>
+                            </div>
+                            <div v-else-if="formAnswers[msg.id][q.id].selectedOptions.length > 1" class="w-12">
+
+                            </div>
+                          </div>
+                        </div>
                       </div>
 
                       <!-- Confirm: options as clickable buttons -->
@@ -688,13 +803,13 @@ onMounted(fetchInitialData)
                             class="mt-0.5 shrink-0 border-slate-600 bg-slate-800 accent-indigo-500 cursor-pointer" />
                           <span class="text-sm text-slate-200 leading-snug">
                             {{ opt.label }}
-                            <span v-if="opt.description" class="text-slate-500"> — {{ opt.description }}</span>
+                            <span v-if="opt.description" class="text-slate-300"> — {{ opt.description }}</span>
                           </span>
                         </label>
                       </div>
 
                       <!-- Text input (always shown) -->
-                      <input :value="formAnswers[msg.id][q.id].textValue"
+                      <input v-if="q.type !== 'list'" :value="formAnswers[msg.id][q.id].textValue"
                         @input="(e) => (formAnswers[msg.id][q.id].textValue = (e.target as HTMLInputElement).value)"
                         type="text" :placeholder="q.type === 'multi' || q.type === 'single' || q.type === 'confirm'
                           ? 'Otra respuesta (opcional)...'
@@ -727,6 +842,32 @@ onMounted(fetchInitialData)
                     v-html="renderMarkdown(getContentAfterRequest(msg.content))" />
                 </template>
 
+                <!-- ── Inline edit mode (user messages only) ── -->
+                <template v-else-if="editingMessageId === msg.id">
+                  <div class="flex flex-col gap-2 p-2">
+                    <textarea
+                      v-model="editingContent"
+                      rows="3"
+                      class="w-full resize-none rounded-xl bg-indigo-700/60 border border-indigo-400/60 text-white text-sm px-3 py-2 placeholder-indigo-300 focus:outline-none focus:border-indigo-300 transition-colors min-w-[220px]"
+                      @keydown.enter.exact.prevent="confirmEdit(msg)"
+                      @keydown.esc="cancelEdit"
+                    />
+                    <div class="flex gap-2 justify-end">
+                      <button
+                        @click="cancelEdit"
+                        class="px-3 py-1 rounded-lg text-xs font-medium bg-indigo-700/60 hover:bg-indigo-700 text-indigo-200 transition-colors">
+                        Cancelar
+                      </button>
+                      <button
+                        @click="confirmEdit(msg)"
+                        :disabled="!editingContent.trim()"
+                        class="px-3 py-1 rounded-lg text-xs font-medium bg-white text-indigo-700 hover:bg-indigo-100 disabled:opacity-40 transition-colors">
+                        Aceptar
+                      </button>
+                    </div>
+                  </div>
+                </template>
+
                 <!-- ── Plain text content ── -->
                 <template v-else>
                   <span class="whitespace-pre-wrap" v-html="renderMarkdown(msg.content)" />
@@ -735,8 +876,8 @@ onMounted(fetchInitialData)
                 </template>
               </div>
 
-              <!-- Timestamp + response time -->
-              <div class="flex items-center gap-2 px-1">
+              <!-- Timestamp + response time + action buttons -->
+              <div v-if="editingMessageId !== msg.id" class="flex items-center gap-2 px-1">
                 <span class="text-xs text-slate-600">{{ formatTime(msg.createdAt) }}</span>
                 <span v-if="msg.role === 'assistant' && msg.responseTime != null && !msg.streaming"
                   class="flex items-center gap-1 text-xs text-slate-600">
@@ -746,6 +887,32 @@ onMounted(fetchInitialData)
                   </svg>
                   {{ formatResponseTime(msg.responseTime) }}
                 </span>
+
+                <!-- Retry button for assistant messages -->
+                <button
+                  v-if="msg.role === 'assistant' && !msg.streaming && hoveredMessageId === msg.id && !sending"
+                  @click="retryMessage(msg)"
+                  class="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs text-slate-500 hover:text-indigo-400 hover:bg-slate-800 transition-colors"
+                  title="Reintentar respuesta">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Reintentar
+                </button>
+
+                <!-- Edit button for user messages -->
+                <button
+                  v-if="msg.role === 'user' && hoveredMessageId === msg.id && !sending"
+                  @click="editMessage(msg)"
+                  class="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs text-slate-500 hover:text-indigo-400 hover:bg-slate-800 transition-colors"
+                  title="Editar mensaje">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  Editar
+                </button>
               </div>
             </div>
           </div>
@@ -791,12 +958,8 @@ onMounted(fetchInitialData)
 
     <!-- Traceability sidebar -->
     <transition name="sidebar">
-      <TraceabilitySidebarPanel
-        v-if="showTraceabilitySidebar && activeConversation"
-        :conversation-id="activeConversation.id"
-        @close="showTraceabilitySidebar = false"
-        @error="error = $event"
-      />
+      <TraceabilitySidebarPanel v-if="showTraceabilitySidebar && activeConversation"
+        :conversation-id="activeConversation.id" @close="showTraceabilitySidebar = false" @error="error = $event" />
     </transition>
 
   </div>

@@ -141,6 +141,8 @@ export const getConversation = (id: string) => request<{ success: boolean; data:
 export const createConversation = (data: { title: string; agentId: string }) =>
 	request<{ success: boolean; data: any }>('/chat/conversations', { method: 'POST', body: JSON.stringify(data) })
 export const deleteConversation = (id: string) => request<{ success: boolean }>(`/chat/conversations/${id}`, { method: 'DELETE' })
+export const deleteMessagesFrom = (conversationId: string, messageId: string) =>
+	request<{ success: boolean }>(`/chat/conversations/${conversationId}/messages/from/${messageId}`, { method: 'DELETE' })
 export const sendMessage = (conversationId: string, content: string) =>
 	request<{ success: boolean; data: any }>(`/chat/conversations/${conversationId}/messages`, {
 		method: 'POST',

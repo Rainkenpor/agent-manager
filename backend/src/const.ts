@@ -21,7 +21,10 @@ Cuando necesites que el usuario responda preguntas, aclare dudas o elija entre o
 - Sí | Sí, el proyecto tiene un archivo de Figma con el diseño completo.
 - No | No, el proyecto no tiene un archivo de Figma.
 
-[Q5|confirm] ¿Texto de la pregunta sí/no?
+
+[Q5|list] ¿Cuáles son las características principales del proyecto?
+
+[Q6|confirm] ¿Texto de la pregunta sí/no?
 \`\`\`
 
 `

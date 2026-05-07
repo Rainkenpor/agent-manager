@@ -138,13 +138,13 @@ export function registerAuthRoutes() {
 			const { code, state, error: azureError } = req.query as Record<string, string>
 
 			if (azureError) {
-				return res.redirect(`${SERVER_URL}/login?error=${encodeURIComponent(azureError)}`)
+				return res.redirect(`${SERVER_URL}login?error=${encodeURIComponent(azureError)}`)
 			}
 
 			// Validar state CSRF y recuperar code_verifier
 			const cached = oauthStateCache.get<{ codeVerifier: string; returnTo: string | null }>(state)
 			if (!state || !cached) {
-				return res.redirect(`${SERVER_URL}/login?error=invalid_state`)
+				return res.redirect(`${SERVER_URL}login?error=invalid_state`)
 			}
 			oauthStateCache.del(state)
 			const { codeVerifier, returnTo } = cached
@@ -168,7 +168,7 @@ export function registerAuthRoutes() {
 
 				if (!tokenRes.ok) {
 					console.error('Azure token exchange error:', tokens)
-					return res.redirect(`${SERVER_URL}/login?error=token_exchange_failed`)
+					return res.redirect(`${SERVER_URL}login?error=token_exchange_failed`)
 				}
 
 				// Obtener perfil del usuario desde Microsoft Graph
@@ -180,15 +180,14 @@ export function registerAuthRoutes() {
 
 				if (!graphRes.ok) {
 					console.error('Microsoft Graph error:', azureUser)
-					return res.redirect(`${SERVER_URL}/login?error=graph_api_failed`)
+					return res.redirect(`${SERVER_URL}login?error=graph_api_failed`)
 				}
 
 				const email = azureUser.mail || azureUser.userPrincipalName || ''
 
 				if (!email) {
-					return res.redirect(`${SERVER_URL}/login?error=no_email`)
+					return res.redirect(`${SERVER_URL}login?error=no_email`)
 				}
-
 
 				const userRepository = container.userRepository
 
@@ -220,9 +219,7 @@ export function registerAuthRoutes() {
 				const token = jwt.sign({ sub: user.id, username: user.username, email: user.email }, JWT_SECRET, { expiresIn: '7d' })
 
 				const tokenParam = `azureToken=${encodeURIComponent(token)}`
-				const destination = returnTo
-					? `${returnTo}${returnTo.includes('?') ? '&' : '?'}${tokenParam}`
-					: `${SERVER_URL}login?${tokenParam}`
+				const destination = returnTo ? `${returnTo}${returnTo.includes('?') ? '&' : '?'}${tokenParam}` : `${SERVER_URL}login?${tokenParam}`
 				res.redirect(destination)
 			} catch (err: any) {
 				console.error('Azure callback error:', err)

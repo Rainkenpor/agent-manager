@@ -52,6 +52,7 @@ import {
 	GetConversationUseCase,
 	DeleteConversationUseCase,
 	StreamMessageUseCase,
+	TruncateMessagesUseCase,
 	// MCP Credential Use Cases
 	GetMcpCredentialsUseCase,
 	UpsertMcpCredentialUseCase,
@@ -161,6 +162,7 @@ export class Container {
 	private _getConversationUseCase?: GetConversationUseCase
 	private _deleteConversationUseCase?: DeleteConversationUseCase
 	private _streamMessageUseCase?: StreamMessageUseCase
+	private _truncateMessagesUseCase?: TruncateMessagesUseCase
 
 	// MCP User Credential Repository & Use Cases
 	private _mcpUserCredentialRepository: IMcpUserCredentialRepository
@@ -406,6 +408,13 @@ export class Container {
 			)
 		}
 		return this._streamMessageUseCase
+	}
+
+	get truncateMessagesUseCase(): TruncateMessagesUseCase {
+		if (!this._truncateMessagesUseCase) {
+			this._truncateMessagesUseCase = new TruncateMessagesUseCase(this._chatRepository)
+		}
+		return this._truncateMessagesUseCase
 	}
 
 	// ==========================================

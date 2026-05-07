@@ -1,5 +1,6 @@
 import { AppDataSource } from '@infra/db/database.js'
 import { ConversationEntity, MessageEntity } from '@infra/db/entities.js'
+import { In } from 'typeorm'
 import { v4 as uuidv4 } from 'uuid'
 import type { IChatRepository } from '../../domain/repositories/chat.repository.js'
 import type { ConversationRecord, ConversationWithMessages, CreateConversationDTO, MessageRecord } from '../../domain/entities/chat.entity.js'
@@ -74,5 +75,13 @@ export class ChatRepository implements IChatRepository {
 
 	async updateDraft(id: string, draft: string): Promise<void> {
 		await this.convRepo.update(id, { draft })
+	}
+
+	async deleteMessagesFrom(conversationId: string, fromMessageId: string): Promise<void> {
+		const msgs = await this.msgRepo.find({ where: { conversationId }, order: { createdAt: 'ASC' } })
+		const idx = msgs.findIndex((m) => m.id === fromMessageId)
+		if (idx === -1) return
+		const idsToDelete = msgs.slice(idx).map((m) => m.id)
+		await this.msgRepo.delete({ id: In(idsToDelete) })
 	}
 }

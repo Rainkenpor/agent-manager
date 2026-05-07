@@ -12,6 +12,11 @@ const sendMessageSchema = z.object({
 	content: z.string().min(1)
 })
 
+const truncateSchema = z.object({
+	id: z.string(),
+	messageId: z.string()
+})
+
 export function registerChatRoutes(): void {
 	// List conversations for the authenticated user
 	registry.register({
@@ -68,6 +73,19 @@ export function registerChatRoutes(): void {
 		requiredPermission: { resource: 'chat', action: 'delete' },
 		handler: async ({ input }) => {
 			return await container.deleteConversationUseCase.execute(input.id)
+		}
+	})
+
+	// Truncate messages from a given message ID (inclusive)
+	registry.register({
+		useBy: ['server'],
+		method: 'DELETE',
+		path: '/api/chat/conversations/:id/messages/from/:messageId',
+		inputSchema: truncateSchema.shape,
+		requiresAuth: true,
+		requiredPermission: { resource: 'chat', action: 'delete' },
+		handler: async ({ input }) => {
+			return await container.truncateMessagesUseCase.execute(input.id, input.messageId)
 		}
 	})
 
