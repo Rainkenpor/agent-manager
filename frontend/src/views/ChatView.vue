@@ -761,8 +761,7 @@ onMounted(fetchInitialData)
 
                       <!-- List: options as clickable buttons -->
                       <div v-if="q.type === 'list'" class="flex flex-wrap gap-2">
-                        <div
-                          v-for="[key, opt] of Object.entries(formAnswers[msg.id][q.id].selectedOptions as { label: string, description: string }[])"
+                        <div v-for="[key, opt] of Object.entries(formAnswers[msg.id][q.id].selectedOptions)"
                           :key="`list_${key}`" class="w-full">
 
                           <div class="flex w-full">
