@@ -692,8 +692,7 @@ onMounted(fetchInitialData)
           </div>
 
           <div v-for="msg in messages" :key="msg.id" class="flex gap-3"
-            :class="msg.role === 'user' ? 'flex-row-reverse' : ''"
-            @mouseenter="hoveredMessageId = msg.id"
+            :class="msg.role === 'user' ? 'flex-row-reverse' : ''" @mouseenter="hoveredMessageId = msg.id"
             @mouseleave="hoveredMessageId = null">
             <!-- Avatar -->
             <div class="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold mt-0.5"
@@ -707,13 +706,12 @@ onMounted(fetchInitialData)
               :style="msg.role === 'user' ? 'align-items:flex-end' : ''">
 
               <!-- ── Bubble ─────────────────────────────────── -->
-              <div class="rounded-2xl text-sm leading-relaxed"
-                :class="[
-                  editingMessageId === msg.id ? 'p-0' : 'px-4 py-2.5',
-                  msg.role === 'user'
-                    ? 'bg-indigo-600 text-white rounded-tr-sm'
-                    : 'bg-slate-800 text-slate-100 rounded-tl-sm border border-slate-700/50'
-                ]">
+              <div class="rounded-2xl text-sm leading-relaxed" :class="[
+                editingMessageId === msg.id ? 'p-0' : 'px-4 py-2.5',
+                msg.role === 'user'
+                  ? 'bg-indigo-600 text-white rounded-tr-sm'
+                  : 'bg-slate-800 text-slate-100 rounded-tl-sm border border-slate-700/50'
+              ]">
 
                 <!-- Tool calls — shown before the text content -->
                 <div v-if="msg.toolCalls?.length" class="flex flex-wrap gap-1.5 mb-2">
@@ -845,22 +843,15 @@ onMounted(fetchInitialData)
                 <!-- ── Inline edit mode (user messages only) ── -->
                 <template v-else-if="editingMessageId === msg.id">
                   <div class="flex flex-col gap-2 p-2">
-                    <textarea
-                      v-model="editingContent"
-                      rows="3"
+                    <textarea v-model="editingContent" rows="3"
                       class="w-full resize-none rounded-xl bg-indigo-700/60 border border-indigo-400/60 text-white text-sm px-3 py-2 placeholder-indigo-300 focus:outline-none focus:border-indigo-300 transition-colors min-w-[220px]"
-                      @keydown.enter.exact.prevent="confirmEdit(msg)"
-                      @keydown.esc="cancelEdit"
-                    />
+                      @keydown.enter.exact.prevent="confirmEdit(msg)" @keydown.esc="cancelEdit" />
                     <div class="flex gap-2 justify-end">
-                      <button
-                        @click="cancelEdit"
+                      <button @click="cancelEdit"
                         class="px-3 py-1 rounded-lg text-xs font-medium bg-indigo-700/60 hover:bg-indigo-700 text-indigo-200 transition-colors">
                         Cancelar
                       </button>
-                      <button
-                        @click="confirmEdit(msg)"
-                        :disabled="!editingContent.trim()"
+                      <button @click="confirmEdit(msg)" :disabled="!editingContent.trim()"
                         class="px-3 py-1 rounded-lg text-xs font-medium bg-white text-indigo-700 hover:bg-indigo-100 disabled:opacity-40 transition-colors">
                         Aceptar
                       </button>
@@ -889,8 +880,7 @@ onMounted(fetchInitialData)
                 </span>
 
                 <!-- Retry button for assistant messages -->
-                <button
-                  v-if="msg.role === 'assistant' && !msg.streaming && hoveredMessageId === msg.id && !sending"
+                <button v-if="msg.role === 'assistant' && !msg.streaming && hoveredMessageId === msg.id && !sending"
                   @click="retryMessage(msg)"
                   class="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs text-slate-500 hover:text-indigo-400 hover:bg-slate-800 transition-colors"
                   title="Reintentar respuesta">
@@ -902,9 +892,7 @@ onMounted(fetchInitialData)
                 </button>
 
                 <!-- Edit button for user messages -->
-                <button
-                  v-if="msg.role === 'user' && hoveredMessageId === msg.id && !sending"
-                  @click="editMessage(msg)"
+                <button v-if="msg.role === 'user' && hoveredMessageId === msg.id && !sending" @click="editMessage(msg)"
                   class="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs text-slate-500 hover:text-indigo-400 hover:bg-slate-800 transition-colors"
                   title="Editar mensaje">
                   <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
