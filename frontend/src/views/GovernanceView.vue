@@ -191,9 +191,9 @@ function removeSection(index: number) {
       </button>
     </template>
 
-    <div class="flex flex-1 min-h-0">
+    <div class="flex flex-1 min-h-0 h-full">
       <!-- List -->
-      <div class="w-80 shrink-0 border-r border-slate-800/60 flex flex-col min-h-0">
+      <div class="w-80 shrink-0 border-r border-slate-800/60 flex flex-col min-h-0 overflow-auto">
         <div v-if="loading" class="flex items-center justify-center py-12 text-slate-500 text-sm">
           <span class="mdi mdi-loading mdi-spin mr-2" />Cargando...
         </div>
@@ -256,7 +256,7 @@ function removeSection(index: number) {
           <p class="text-xs text-slate-600">Haz clic en un ítem de la lista para ver sus detalles</p>
         </div>
 
-        <div v-else class="p-8 max-w-3xl">
+        <div v-else class="p-8 w-full">
           <div class="flex items-start justify-between mb-6 gap-4">
             <div>
               <div class="flex items-center gap-3 mb-1">

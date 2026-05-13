@@ -670,7 +670,7 @@ onMounted(fetchAll)
       </button>
     </template>
 
-    <div class="flex  h-full overflow-auto">
+    <div class="flex gap-5 h-full overflow-auto">
       <div class="flex flex-col ">
         <!-- Tabs -->
         <div class="flex gap-1 mb-5 bg-slate-900 rounded-xl p-1 w-fit">
@@ -790,7 +790,15 @@ onMounted(fetchAll)
               <div v-if="!editingTrac" class="flex items-start justify-between gap-3">
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center gap-3 flex-wrap">
-                    <h2 class="text-xl font-bold text-white">{{ activeTrac.title }}</h2>
+                    <h2 class="text-xl font-bold text-white">
+                      {{ activeTrac.title }}
+                    </h2>
+                  </div>
+                  <div class="flex gap-2 mt-1">
+                    <span
+                      class="text-xs px-2 py-0.5 rounded-full font-medium bg-blue-500/10 text-blue-400 ring-1 ring-blue-500/20">
+                      <b>Código:</b> {{ activeTrac.code }}
+                    </span>
                     <span class="text-xs px-2 py-0.5 rounded-full font-medium"
                       :class="tracStatusClass[activeTrac.status]">
                       {{ tracStatusLabel[activeTrac.status] }}

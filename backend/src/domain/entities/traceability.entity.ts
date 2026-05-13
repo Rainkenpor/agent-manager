@@ -154,6 +154,7 @@ export interface TraceabilityStage {
 
 export interface Traceability {
 	id: string
+	code: string
 	title: string
 	description?: string | null
 	status: TraceabilityStatus

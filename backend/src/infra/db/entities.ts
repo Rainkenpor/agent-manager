@@ -582,6 +582,9 @@ export class TraceabilityEntity {
 	@PrimaryColumn({ type: 'text' })
 	id!: string
 
+	@Column({ type: 'text', unique: true, nullable: true })
+	code!: string | null
+
 	@Column({ type: 'text' })
 	title!: string
 

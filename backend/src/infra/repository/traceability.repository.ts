@@ -51,8 +51,8 @@ function generateCode(): string {
 	return Array.from({ length: 4 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join('')
 }
 
-async function generateUniqueCode(): Promise<string> {
-	const repo = AppDataSource.getRepository(TraceabilityTemplateEntity)
+async function generateUniqueCode(entity: any): Promise<string> {
+	const repo = AppDataSource.getRepository(entity)
 	for (let attempt = 0; attempt < 20; attempt++) {
 		const code = generateCode()
 		const existing = await repo.findOneBy({ code })
@@ -161,7 +161,7 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 	async createTemplate(data: CreateTemplateDTO): Promise<TraceabilityTemplate> {
 		const tplRepo = AppDataSource.getRepository(TraceabilityTemplateEntity)
 		const id = uuidv4()
-		const code = await generateUniqueCode()
+		const code = await generateUniqueCode(TraceabilityTemplateEntity)
 		const now = new Date().toISOString()
 		await tplRepo.save(tplRepo.create({ id, code, name: data.name, description: data.description ?? null, createdAt: now, updatedAt: now }))
 		return { id, code, name: data.name, description: data.description ?? null, stages: [], createdAt: now, updatedAt: now }
@@ -202,9 +202,7 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 		})
 		await stageRepo.save(entity)
 		if (data.predecessors?.length) {
-			const preds = data.predecessors.map((predId) =>
-				predRepo.create({ id: uuidv4(), stageId: id, predecessorStageId: predId })
-			)
+			const preds = data.predecessors.map((predId) => predRepo.create({ id: uuidv4(), stageId: id, predecessorStageId: predId }))
 			await predRepo.save(preds)
 		}
 		return {
@@ -225,9 +223,7 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 		if (predecessors !== undefined) {
 			await predRepo.delete({ stageId: id })
 			if (predecessors.length) {
-				const preds = predecessors.map((predId) =>
-					predRepo.create({ id: uuidv4(), stageId: id, predecessorStageId: predId })
-				)
+				const preds = predecessors.map((predId) => predRepo.create({ id: uuidv4(), stageId: id, predecessorStageId: predId }))
 				await predRepo.save(preds)
 			}
 		}
@@ -303,22 +299,24 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 					})
 				} else {
 					const newId = uuidv4()
-					await tsRepo.save(tsRepo.create({
-						id: newId,
-						traceabilityId: trac.id,
-						templateStageId: ts.id,
-						name: ts.name,
-						description: ts.description ?? null,
-						role: ts.role ?? null,
-						order: ts.order,
-						parallelGroup: ts.parallelGroup ?? null,
-						type: ts.type ?? 'manual',
-						agentId: ts.agentId ?? null,
-						effortScore: ts.effortScore ?? 5,
-						status: 'pending',
-						createdAt: now,
-						updatedAt: now
-					}))
+					await tsRepo.save(
+						tsRepo.create({
+							id: newId,
+							traceabilityId: trac.id,
+							templateStageId: ts.id,
+							name: ts.name,
+							description: ts.description ?? null,
+							role: ts.role ?? null,
+							order: ts.order,
+							parallelGroup: ts.parallelGroup ?? null,
+							type: ts.type ?? 'manual',
+							agentId: ts.agentId ?? null,
+							effortScore: ts.effortScore ?? 5,
+							status: 'pending',
+							createdAt: now,
+							updatedAt: now
+						})
+					)
 					tplToTrac.set(ts.id, newId)
 				}
 			}
@@ -370,6 +368,13 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 		})
 	}
 
+	async findByCode(code: string): Promise<Traceability | null> {
+		const tracRepo = AppDataSource.getRepository(TraceabilityEntity)
+		const t = await tracRepo.findOneBy({ code })
+		if (!t) return null
+		return this.findById(t.id)
+	}
+
 	async findById(id: string): Promise<Traceability | null> {
 		const tracRepo = AppDataSource.getRepository(TraceabilityEntity)
 		const tsRepo = AppDataSource.getRepository(TraceabilityStageEntity)
@@ -417,6 +422,7 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 
 		return {
 			id: t.id,
+			code: t.code,
 			title: t.title,
 			description: t.description,
 			status: t.status as Traceability['status'],
@@ -443,22 +449,26 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 		const tspRepo = AppDataSource.getRepository(TraceabilityStagePredecessorEntity)
 
 		const id = uuidv4()
+		const code = await generateUniqueCode(TraceabilityEntity)
 		const now = new Date().toISOString()
 		const template = await this.findTemplateById(data.templateId)
 		if (!template) throw new Error(`Template ${data.templateId} not found`)
 
-		await tracRepo.save(tracRepo.create({
-			id,
-			title: data.title,
-			description: data.description ?? null,
-			status: 'active',
-			templateId: data.templateId,
-			templateName: template.name,
-			createdBy: data.createdBy ?? null,
-			chatId: data.chatId ?? null,
-			createdAt: now,
-			updatedAt: now
-		}))
+		await tracRepo.save(
+			tracRepo.create({
+				id,
+				code,
+				title: data.title,
+				description: data.description ?? null,
+				status: 'active',
+				templateId: data.templateId,
+				templateName: template.name,
+				createdBy: data.createdBy ?? null,
+				chatId: data.chatId ?? null,
+				createdAt: now,
+				updatedAt: now
+			})
+		)
 
 		const stageIdMap = new Map<string, string>()
 		const stageList: TraceabilityStage[] = []
@@ -482,39 +492,56 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 					let minEffort = minUser.effortScore + (sessionEffortDelta.get(minUser.userId) ?? 0)
 					for (const u of candidates) {
 						const total = u.effortScore + (sessionEffortDelta.get(u.userId) ?? 0)
-						if (total < minEffort) { minEffort = total; minUser = u }
+						if (total < minEffort) {
+							minEffort = total
+							minUser = u
+						}
 					}
 					assignedUserId = minUser.userId
 					sessionEffortDelta.set(minUser.userId, (sessionEffortDelta.get(minUser.userId) ?? 0) + (ts.effortScore ?? 5))
 				}
 			}
 
-			await tsRepo.save(tsRepo.create({
+			await tsRepo.save(
+				tsRepo.create({
+					id: stageId,
+					traceabilityId: id,
+					templateStageId: ts.id,
+					name: ts.name,
+					description: ts.description ?? null,
+					role: ts.role ?? null,
+					order: ts.order,
+					parallelGroup: ts.parallelGroup ?? null,
+					type: ts.type ?? 'manual',
+					agentId: ts.agentId ?? null,
+					effortScore: ts.effortScore ?? 5,
+					assignedUserId,
+					status: 'pending',
+					createdAt: now,
+					updatedAt: now
+				})
+			)
+
+			stageList.push({
 				id: stageId,
 				traceabilityId: id,
 				templateStageId: ts.id,
 				name: ts.name,
-				description: ts.description ?? null,
-				role: ts.role ?? null,
+				description: ts.description,
+				role: ts.role,
 				order: ts.order,
-				parallelGroup: ts.parallelGroup ?? null,
+				parallelGroup: ts.parallelGroup,
 				type: ts.type ?? 'manual',
 				agentId: ts.agentId ?? null,
+				predecessors: [],
+				status: 'pending',
 				effortScore: ts.effortScore ?? 5,
 				assignedUserId,
-				status: 'pending',
+				tasks: [],
+				links: [],
+				documents: [],
 				createdAt: now,
 				updatedAt: now
-			}))
-
-			stageList.push({
-				id: stageId, traceabilityId: id, templateStageId: ts.id,
-				name: ts.name, description: ts.description, role: ts.role,
-				order: ts.order, parallelGroup: ts.parallelGroup,
-				type: ts.type ?? 'manual', agentId: ts.agentId ?? null,
-				predecessors: [], status: 'pending', effortScore: ts.effortScore ?? 5,
-				assignedUserId, tasks: [], links: [], documents: [],
-				createdAt: now, updatedAt: now
 			})
 		}
 
@@ -535,10 +562,17 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 		}
 
 		return {
-			id, title: data.title, description: data.description ?? null,
-			status: 'active', templateId: data.templateId, templateName: template.name,
-			createdBy: data.createdBy ?? null, stages: stageList,
-			createdAt: now, updatedAt: now
+			id,
+			code,
+			title: data.title,
+			description: data.description ?? null,
+			status: 'active',
+			templateId: data.templateId,
+			templateName: template.name,
+			createdBy: data.createdBy ?? null,
+			stages: stageList,
+			createdAt: now,
+			updatedAt: now
 		}
 	}
 
@@ -585,13 +619,25 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 		])
 
 		return {
-			id: s.id, traceabilityId: s.traceabilityId, templateStageId: s.templateStageId,
-			name: s.name, description: s.description, role: s.role, order: s.order,
-			parallelGroup: s.parallelGroup, type: (s.type ?? 'manual') as 'manual' | 'agent',
-			agentId: s.agentId ?? null, predecessors: predRows.map((p) => p.predecessorStageId),
-			status: newStatus, effortScore: s.effortScore ?? 5, assignedUserId: s.assignedUserId ?? null,
-			tasks: tasks as TraceabilityTask[], links: links as TraceabilityLink[],
-			documents: documents as TraceabilityDocument[], createdAt: s.createdAt, updatedAt: now
+			id: s.id,
+			traceabilityId: s.traceabilityId,
+			templateStageId: s.templateStageId,
+			name: s.name,
+			description: s.description,
+			role: s.role,
+			order: s.order,
+			parallelGroup: s.parallelGroup,
+			type: (s.type ?? 'manual') as 'manual' | 'agent',
+			agentId: s.agentId ?? null,
+			predecessors: predRows.map((p) => p.predecessorStageId),
+			status: newStatus,
+			effortScore: s.effortScore ?? 5,
+			assignedUserId: s.assignedUserId ?? null,
+			tasks: tasks as TraceabilityTask[],
+			links: links as TraceabilityLink[],
+			documents: documents as TraceabilityDocument[],
+			createdAt: s.createdAt,
+			updatedAt: now
 		}
 	}
 
@@ -638,20 +684,31 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 			const agentRow = await agentRepo.findOneBy({ id: stage.agentId })
 			if (!agentRow || !agentRow.isActive) continue
 
-			const [stageTasks, stageLinks] = await Promise.all([
-				taskRepo.findBy({ stageId: stage.id }),
-				linkRepo.findBy({ stageId: stage.id })
-			])
+			const [stageTasks, stageLinks] = await Promise.all([taskRepo.findBy({ stageId: stage.id }), linkRepo.findBy({ stageId: stage.id })])
 
 			result.push({
-				id: stage.id, traceabilityId: stage.traceabilityId, templateStageId: stage.templateStageId,
-				name: stage.name, description: stage.description, role: stage.role, order: stage.order,
-				parallelGroup: stage.parallelGroup, type: stage.type as 'agent', agentId: stage.agentId,
-				status: stage.status as StageStatus, effortScore: stage.effortScore ?? 5,
-				assignedUserId: stage.assignedUserId ?? null, predecessors: predIds,
-				nextStages: nextStages as any, tasks: stageTasks as TraceabilityTask[], links: stageLinks as TraceabilityLink[],
-				documents: [], createdAt: stage.createdAt, updatedAt: stage.updatedAt,
-				agentSlug: agentRow.slug, agentContent: agentRow.content
+				id: stage.id,
+				traceabilityId: stage.traceabilityId,
+				templateStageId: stage.templateStageId,
+				name: stage.name,
+				description: stage.description,
+				role: stage.role,
+				order: stage.order,
+				parallelGroup: stage.parallelGroup,
+				type: stage.type as 'agent',
+				agentId: stage.agentId,
+				status: stage.status as StageStatus,
+				effortScore: stage.effortScore ?? 5,
+				assignedUserId: stage.assignedUserId ?? null,
+				predecessors: predIds,
+				nextStages: nextStages as any,
+				tasks: stageTasks as TraceabilityTask[],
+				links: stageLinks as TraceabilityLink[],
+				documents: [],
+				createdAt: stage.createdAt,
+				updatedAt: stage.updatedAt,
+				agentSlug: agentRow.slug,
+				agentContent: agentRow.content
 			})
 		}
 
@@ -669,9 +726,14 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 		const taskRepo = AppDataSource.getRepository(TraceabilityTaskEntity)
 		const now = new Date().toISOString()
 		const entity = taskRepo.create({
-			id: uuidv4(), stageId: data.stageId, title: data.title,
-			description: data.description ?? null, type: data.type ?? 'task',
-			status: data.status ?? 'todo', createdAt: now, updatedAt: now
+			id: uuidv4(),
+			stageId: data.stageId,
+			title: data.title,
+			description: data.description ?? null,
+			type: data.type ?? 'task',
+			status: data.status ?? 'todo',
+			createdAt: now,
+			updatedAt: now
 		})
 		await taskRepo.save(entity)
 		return entity as TraceabilityTask
@@ -696,8 +758,12 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 		const linkRepo = AppDataSource.getRepository(TraceabilityLinkEntity)
 		const now = new Date().toISOString()
 		const entity = linkRepo.create({
-			id: uuidv4(), stageId: data.stageId, label: data.label,
-			url: data.url, platform: data.platform ?? 'generic', createdAt: now
+			id: uuidv4(),
+			stageId: data.stageId,
+			label: data.label,
+			url: data.url,
+			platform: data.platform ?? 'generic',
+			createdAt: now
 		})
 		await linkRepo.save(entity)
 		return entity as TraceabilityLink
@@ -714,8 +780,12 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 		const docRepo = AppDataSource.getRepository(TraceabilityDocumentEntity)
 		const now = new Date().toISOString()
 		const entity = docRepo.create({
-			id: uuidv4(), stageId: data.stageId, name: data.name,
-			content: data.content ?? '', createdAt: now, updatedAt: now
+			id: uuidv4(),
+			stageId: data.stageId,
+			name: data.name,
+			content: data.content ?? '',
+			createdAt: now,
+			updatedAt: now
 		})
 		await docRepo.save(entity)
 		return entity as TraceabilityDocument
@@ -818,15 +888,25 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 			}
 
 			result.push({
-				id: stage.id, traceabilityId: stage.traceabilityId, templateStageId: stage.templateStageId,
-				name: stage.name, description: stage.description, role: stage.role, order: stage.order,
-				parallelGroup: stage.parallelGroup, type: (stage.type ?? 'manual') as 'manual' | 'agent',
-				agentId: stage.agentId ?? null, predecessors: predIds,
-				status: stage.status as StageStatus, effortScore: stage.effortScore ?? 5,
+				id: stage.id,
+				traceabilityId: stage.traceabilityId,
+				templateStageId: stage.templateStageId,
+				name: stage.name,
+				description: stage.description,
+				role: stage.role,
+				order: stage.order,
+				parallelGroup: stage.parallelGroup,
+				type: (stage.type ?? 'manual') as 'manual' | 'agent',
+				agentId: stage.agentId ?? null,
+				predecessors: predIds,
+				status: stage.status as StageStatus,
+				effortScore: stage.effortScore ?? 5,
 				assignedUserId: stage.assignedUserId ?? null,
-				tasks: tasks as TraceabilityTask[], links: links as TraceabilityLink[],
+				tasks: tasks as TraceabilityTask[],
+				links: links as TraceabilityLink[],
 				documents: docs as TraceabilityDocument[],
-				createdAt: stage.createdAt, updatedAt: stage.updatedAt,
+				createdAt: stage.createdAt,
+				updatedAt: stage.updatedAt,
 				traceabilityTitle: trac.title,
 				traceabilityStatus: trac.status as TraceabilityStatus,
 				predecessorsCompleted

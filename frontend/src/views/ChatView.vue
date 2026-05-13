@@ -801,8 +801,8 @@ onMounted(fetchInitialData)
 
                       <!-- Boton para establecer credenciales -->
                       <button v-if="q.type === 'setCredential'" type="button" @click="openCredentialModal"
-                        class="btn btn-info w-full text-white">
-                        Establecer credenciales
+                        class="btn bg-indigo-600 hover:bg-indigo-500/60  text-white mb-5">
+                        Establecer credenciales <span class="mdi mdi-key-chain-variant"></span>
                       </button>
 
                       <!-- Confirm: options as clickable buttons -->
@@ -952,19 +952,14 @@ onMounted(fetchInitialData)
           <button v-if="sending"
             class="shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-colors bg-red-600 hover:bg-red-500"
             @click="cancelRequest" title="Cancelar">
-            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <span class="mdi mdi-window-close"></span>
           </button>
           <!-- Send button -->
           <button v-else
             class="shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-colors disabled:opacity-40"
             :class="messageInput.trim() && activeConversation ? 'bg-indigo-600 hover:bg-indigo-500' : 'bg-slate-700'"
             :disabled="!messageInput.trim() || !activeConversation" @click="sendMessage">
-            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-            </svg>
+            <span class="mdi mdi-send"></span>
           </button>
         </div>
       </div>
@@ -980,7 +975,8 @@ onMounted(fetchInitialData)
 
   <!-- Credential modal -->
   <AppModal v-if="showCredentialModal" title="Establecer credenciales" @close="showCredentialModal = false">
-    <NewCredential :servers="credentialServers" @saved="showCredentialModal = false" @cancel="showCredentialModal = false" />
+    <NewCredential :servers="credentialServers" @saved="showCredentialModal = false"
+      @cancel="showCredentialModal = false" />
   </AppModal>
 
   <!-- New conversation modal -->

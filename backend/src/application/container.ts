@@ -462,6 +462,10 @@ export class Container {
 		return this._governanceRepository
 	}
 
+	get traceabilityRepository(): ITraceabilityRepository {
+		return this._traceabilityRepository
+	}
+
 	// ==========================================
 	// SKILL USE CASES
 	// ==========================================
