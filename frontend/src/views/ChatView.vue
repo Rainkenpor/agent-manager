@@ -2,6 +2,9 @@
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import * as api from '@/api/api'
 import TraceabilitySidebarPanel from '@/components/TraceabilitySidebarPanel.vue'
+import AppModal from '@/components/AppModal.vue'
+import NewCredential from '@/components/NewCredential.vue'
+import type { McpServer } from '@/types/types'
 
 interface Agent {
   id: string
@@ -32,7 +35,7 @@ interface Conversation {
 
 interface RequestQuestion {
   id: string
-  type: 'text' | 'multi' | 'single' | 'list' | 'confirm'
+  type: 'text' | 'multi' | 'single' | 'list' | 'confirm' | 'setCredential'
   label: string
   description: string
   options: Array<{ label: string; description: string }>
@@ -283,7 +286,7 @@ function parseRequestBlock(content: string): RequestQuestion[] | null {
   const parts = match[1].split(/(?=\[Q\d+\|)/)
 
   for (const part of parts) {
-    const header = part.match(/^\[Q(\d+)\|(text|multi|list|single|confirm)\]\s*(.+?)(?:\n|$)/)
+    const header = part.match(/^\[Q(\d+)\|(text|multi|list|single|confirm|setCredential)\]\s*(.+?)(?:\n|$)/)
     if (!header) continue
 
     const rest = part.slice(header[0].length).trim()
@@ -306,7 +309,7 @@ function parseRequestBlock(content: string): RequestQuestion[] | null {
 
     questions.push({
       id: `Q${header[1]}`,
-      type: header[2] as 'text' | 'multi' | 'list' | 'single' | 'confirm',
+      type: header[2] as 'text' | 'multi' | 'list' | 'single' | 'confirm' | 'setCredential',
       label: header[3].trim(),
       description: descLines.join('\n'),
       options
@@ -487,6 +490,8 @@ async function submitRequestForm(msgId: string, questions: RequestQuestion[]) {
     } else if (q.type === 'confirm') {
       answerText = a.selectedOptions[0] ?? (a.textValue.trim() || '(sin selección)')
       if (a.textValue.trim() && a.textValue.trim() !== answerText) answerText += ` (${a.textValue.trim()})`
+    } else if (q.type === 'setCredential') {
+      answerText = 'Se establecieron las credenciales'
     } else {
       // select
       answerText = a.selectedOptions[0] ?? (a.textValue.trim() || '(sin selección)')
@@ -562,6 +567,21 @@ async function confirmEdit(msg: DisplayMessage) {
   messages.value = messages.value.slice(0, idx)
   messageInput.value = content
   await sendMessage()
+}
+
+// ── Credential modal ─────────────────────────────────────────────────────────
+
+const showCredentialModal = ref(false)
+const credentialServers = ref<McpServer[]>([])
+
+async function openCredentialModal() {
+  try {
+    const res = await api.getMcpServers()
+    credentialServers.value = (res.data ?? []).filter((s: McpServer) => s.active)
+  } catch {
+    credentialServers.value = []
+  }
+  showCredentialModal.value = true
 }
 
 watch(messages, initFormAnswersFromMessages, { deep: true })
@@ -779,6 +799,12 @@ onMounted(fetchInitialData)
                         </div>
                       </div>
 
+                      <!-- Boton para establecer credenciales -->
+                      <button v-if="q.type === 'setCredential'" type="button" @click="openCredentialModal"
+                        class="btn btn-info w-full text-white">
+                        Establecer credenciales
+                      </button>
+
                       <!-- Confirm: options as clickable buttons -->
                       <div v-if="q.type === 'confirm' && q.options.length" class="flex flex-wrap gap-2">
                         <button v-for="opt in q.options" :key="opt.label" type="button"
@@ -806,7 +832,8 @@ onMounted(fetchInitialData)
                       </div>
 
                       <!-- Text input (always shown) -->
-                      <input v-if="q.type !== 'list'" :value="formAnswers[msg.id][q.id].textValue"
+                      <input v-if="q.type !== 'list' && q.type !== 'setCredential'"
+                        :value="formAnswers[msg.id][q.id].textValue"
                         @input="(e) => (formAnswers[msg.id][q.id].textValue = (e.target as HTMLInputElement).value)"
                         type="text" :placeholder="q.type === 'multi' || q.type === 'single' || q.type === 'confirm'
                           ? 'Otra respuesta (opcional)...'
@@ -950,6 +977,11 @@ onMounted(fetchInitialData)
     </transition>
 
   </div>
+
+  <!-- Credential modal -->
+  <AppModal v-if="showCredentialModal" title="Establecer credenciales" @close="showCredentialModal = false">
+    <NewCredential :servers="credentialServers" @saved="showCredentialModal = false" @cancel="showCredentialModal = false" />
+  </AppModal>
 
   <!-- New conversation modal -->
   <div v-if="showNewChatModal"

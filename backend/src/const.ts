@@ -25,6 +25,8 @@ Cuando necesites que el usuario responda preguntas, aclare dudas o elija entre o
 [Q5|list] ¿Cuáles son las características principales del proyecto?
 
 [Q6|confirm] ¿Texto de la pregunta sí/no?
+
+[Q7|setCredential] Es necesario que establezcas tus credenciales de <servicio> (Solo aplica si falla algún mcp o si el usuario indica que necesita establecer credenciales)
 \`\`\`
 
 `

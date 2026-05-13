@@ -7,6 +7,8 @@ const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 
+const appVersion = __APP_VERSION__
+
 const allNavLinks = [
   { to: '/', label: 'Home', icon: 'mdi-home', resources: null },
   { to: '/chat', label: 'Chat', icon: 'mdi-chat', resources: ['chat'] },
@@ -72,6 +74,7 @@ function logout() {
         @click="logout">
         <span class="mdi mdi-logout"></span>
       </button>
+      <p class="text-center text-slate-600 text-[10px] mt-2 font-mono">v{{ appVersion }}</p>
     </div>
   </aside>
 </template>
