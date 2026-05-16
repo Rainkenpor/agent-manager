@@ -36,6 +36,7 @@ export interface Agent {
 	slug: string
 	description?: string
 	mode: 'primary' | 'subagent'
+	groupIds: string[]
 	model: string
 	temperature: string
 	tools: Record<string, boolean>
@@ -44,6 +45,17 @@ export interface Agent {
 	updatedAt: string
 	isActive: boolean
 	subagents?: Agent[]
+}
+
+export interface AgentGroup {
+	id: string
+	name: string
+	slug: string
+	description?: string | null
+	icon?: string | null
+	color?: string | null
+	createdAt: string
+	updatedAt: string
 }
 
 export interface AgentTool {

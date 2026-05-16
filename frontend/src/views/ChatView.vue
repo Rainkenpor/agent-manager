@@ -4,7 +4,11 @@ import * as api from '@/api/api'
 import TraceabilitySidebarPanel from '@/components/TraceabilitySidebarPanel.vue'
 import AppModal from '@/components/AppModal.vue'
 import NewCredential from '@/components/NewCredential.vue'
+import ShareTraceabilityModal from '@/components/ShareTraceabilityModal.vue'
+import { useAuthStore } from '@/store/useAuth'
 import type { McpServer } from '@/types/types'
+
+const auth = useAuthStore()
 
 interface Agent {
   id: string
@@ -73,6 +77,56 @@ let abortController: AbortController | null = null
 const showTraceabilitySidebar = ref(false)
 const hasLinkedTraceability = ref(false)
 
+interface LinkedTraceability {
+  id: string
+  title: string
+  createdBy: string | null
+}
+interface Participant {
+  userId: string
+  chatId: string | null
+}
+interface TraceabilityInvitation {
+  traceabilityId: string
+  title: string
+  description: string | null
+  chatId: string | null
+  agentId: string | null
+}
+interface UserSummary {
+  id: string
+  username: string
+  firstName?: string | null
+  lastName?: string | null
+}
+
+const linkedTraceability = ref<LinkedTraceability | null>(null)
+const participants = ref<Participant[]>([])
+const invitations = ref<TraceabilityInvitation[]>([])
+const allUsers = ref<UserSummary[]>([])
+const showShareModal = ref(false)
+
+const canShareTraceability = computed(() => {
+  if (!linkedTraceability.value) return false
+  if (auth.hasPermission('traceability', 'update')) return true
+  return auth.user?.id === linkedTraceability.value.createdBy
+})
+
+function userInitials(userId: string): string {
+  const u = allUsers.value.find((x) => x.id === userId)
+  const name = u ? [u.firstName, u.lastName].filter(Boolean).join(' ') || u.username : userId
+  const parts = name.trim().split(/\s+/)
+  const a = parts[0]?.[0] ?? '?'
+  const b = parts[1]?.[0] ?? ''
+  return (a + b).toUpperCase()
+}
+
+function userDisplayName(userId: string): string {
+  const u = allUsers.value.find((x) => x.id === userId)
+  if (!u) return userId
+  return [u.firstName, u.lastName].filter(Boolean).join(' ') || u.username
+}
+
 // Form state keyed by message id
 const formAnswers = ref<Record<string, Record<string, { textValue: string; selectedOptions: any[] }>>>({})
 const submittedForms = ref<string[]>([])
@@ -81,9 +135,55 @@ const activeAgent = computed(() => agents.value.find((a) => a.id === activeConve
 
 async function fetchInitialData() {
   try {
-    const [agentsRes, convRes] = await Promise.all([api.getAgents(), api.getConversations()])
+    const [agentsRes, convRes, usersRes, invitationsRes] = await Promise.all([
+      api.getAgents(),
+      api.getConversations(),
+      api.getUsers().catch(() => ({ data: [] }) as any),
+      api.listTraceabilityInvitations().catch(() => ({ data: [] }) as any)
+    ])
     agents.value = (agentsRes.data ?? []).filter((a: Agent) => a.isActive)
     conversations.value = convRes.data ?? []
+    const usersData: any = Array.isArray(usersRes) ? usersRes : usersRes?.data ?? []
+    allUsers.value = usersData as UserSummary[]
+    const invData: any = (invitationsRes as any)?.data ?? []
+    invitations.value = (invData as TraceabilityInvitation[]).filter((i) => !i.chatId)
+  } catch (e: any) {
+    error.value = e.message
+  }
+}
+
+async function openInvitation(inv: TraceabilityInvitation) {
+  try {
+    const res = await api.openTraceabilityInvitation(inv.traceabilityId)
+    const conv: any = res.data
+    if (!conversations.value.find((c) => c.id === conv.id)) {
+      conversations.value.unshift(conv)
+    }
+    invitations.value = invitations.value.filter((i) => i.traceabilityId !== inv.traceabilityId)
+    await openConversation(conv)
+  } catch (e: any) {
+    error.value = e.message
+  }
+}
+
+async function fetchParticipants(traceabilityId: string) {
+  try {
+    const res = await api.listTraceabilityParticipants(traceabilityId)
+    participants.value = (res.data ?? []) as Participant[]
+  } catch {
+    participants.value = []
+  }
+}
+
+async function onShareSaved() {
+  if (linkedTraceability.value) await fetchParticipants(linkedTraceability.value.id)
+}
+
+async function removeParticipant(userId: string) {
+  if (!linkedTraceability.value) return
+  try {
+    await api.removeTraceabilityParticipant(linkedTraceability.value.id, userId)
+    participants.value = participants.value.filter((p) => p.userId !== userId)
   } catch (e: any) {
     error.value = e.message
   }
@@ -589,10 +689,18 @@ watch(messages, initFormAnswersFromMessages, { deep: true })
 async function fetchHasLinkedTraceability(conversationId: string) {
   hasLinkedTraceability.value = false
   showTraceabilitySidebar.value = false
+  linkedTraceability.value = null
+  participants.value = []
   try {
     const res = await api.getTraceabilityByConversation(conversationId)
-    hasLinkedTraceability.value = Array.isArray(res.data) && res.data.length > 0
-    if (hasLinkedTraceability.value) showTraceabilitySidebar.value = true
+    const list: any[] = Array.isArray(res.data) ? res.data : []
+    hasLinkedTraceability.value = list.length > 0
+    if (hasLinkedTraceability.value) {
+      showTraceabilitySidebar.value = true
+      const t = list[0]
+      linkedTraceability.value = { id: t.id, title: t.title, createdBy: t.createdBy ?? null }
+      await fetchParticipants(t.id)
+    }
   } catch {
     hasLinkedTraceability.value = false
   }
@@ -607,17 +715,38 @@ onMounted(fetchInitialData)
     <!-- Sidebar: conversation list -->
     <div class="w-52 shrink-0 flex flex-col border-r border-slate-800 bg-base-100">
       <div class="px-4 py-4 border-b border-slate-800 flex items-center justify-between">
-        <h2 class="text-sm font-semibold text-white">Conversaciones</h2>
-        <button
-          class="text-xs px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium transition-colors"
-          @click="openNewChatModal">
-          + Nueva
+        <button class="btn btn-info btn-outline btn-sm" @click="openNewChatModal">
+          + Nuevo Chat
         </button>
       </div>
 
       <!-- Conversation list -->
       <div class="flex-1 overflow-y-auto">
-        <div v-if="conversations.length === 0" class="px-4 py-8 text-center text-slate-500 text-sm">
+        <!-- Traceability invitations -->
+        <div v-if="invitations.length > 0" class="border-b border-slate-800">
+          <div
+            class="px-4 py-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-amber-400">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+            Trazabilidades disponibles
+          </div>
+          <button v-for="inv in invitations" :key="inv.traceabilityId"
+            class="w-full text-left px-4 py-3 border-t border-slate-800/60 hover:bg-amber-500/5 transition-colors"
+            @click="openInvitation(inv)" :title="inv.description || 'Iniciar chat para esta trazabilidad'">
+            <div class="flex items-start gap-2">
+              <span class="mt-0.5 mdi mdi-clipboard-text-outline text-amber-400 shrink-0"></span>
+              <div class="min-w-0 flex-1">
+                <p class="text-sm font-medium text-white truncate">{{ inv.title }}</p>
+                <p class="text-xs text-amber-400/80 truncate">Iniciar chat</p>
+              </div>
+            </div>
+          </button>
+        </div>
+
+        <div v-if="conversations.length === 0 && invitations.length === 0"
+          class="px-4 py-8 text-center text-slate-500 text-sm">
           Sin conversaciones
         </div>
         <button v-for="conv in conversations" :key="conv.id"
@@ -627,8 +756,8 @@ onMounted(fetchInitialData)
             <div class="min-w-0 flex-1 pr-2">
               <p class="text-sm font-medium text-white truncate">{{ conv.title }}</p>
               <div class="flex items-center gap-2 mt-0.5">
-                <p class="text-xs text-slate-500 truncate">{{ new Date(conv.updatedAt).toLocaleDateString() }}</p>
-                <span class="text-slate-700">•</span>
+                <!-- <p class="text-xs text-slate-500 truncate">{{ new Date(conv.updatedAt).toLocaleDateString() }}</p> -->
+                <!-- <span class="text-slate-700">•</span> -->
                 <p class="text-xs text-indigo-400 truncate" :title="agentsMap.get(conv.agentId) || conv.agentId">
                   {{ agentsMap.get(conv.agentId) || 'Agente' }}
                 </p>
@@ -661,6 +790,22 @@ onMounted(fetchInitialData)
           <div class="flex-1 min-w-0">
             <p class="text-sm font-semibold text-white">{{ activeConversation.title }}</p>
             <p class="text-xs text-slate-400">Agente: {{ activeAgent?.name ?? activeConversation.agentId }}</p>
+          </div>
+          <!-- Participants strip (when traceability is linked) -->
+          <div v-if="hasLinkedTraceability && linkedTraceability" class="flex items-center gap-1 shrink-0">
+            <div v-for="p in participants" :key="p.userId"
+              class="w-7 h-7 -ml-1 first:ml-0 rounded-full bg-slate-700 ring-2 ring-base-100 flex items-center justify-center text-[10px] font-bold text-slate-200 group relative"
+              :title="userDisplayName(p.userId)">
+              {{ userInitials(p.userId) }}
+              <button v-if="canShareTraceability" @click.stop="removeParticipant(p.userId)"
+                class="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-red-600 hover:bg-red-500 text-white text-[9px] leading-none opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                title="Quitar acceso">×</button>
+            </div>
+            <button v-if="canShareTraceability" @click="showShareModal = true"
+              class="ml-1 w-7 h-7 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center transition-colors"
+              title="Compartir trazabilidad">
+              <span class="mdi mdi-plus text-base"></span>
+            </button>
           </div>
           <!-- Traceability sidebar toggle -->
           <button v-if="hasLinkedTraceability" @click="showTraceabilitySidebar = !showTraceabilitySidebar"
@@ -972,6 +1117,14 @@ onMounted(fetchInitialData)
     </transition>
 
   </div>
+
+  <!-- Share traceability modal -->
+  <ShareTraceabilityModal v-if="showShareModal && linkedTraceability" :traceability-id="linkedTraceability.id"
+    :excluded-user-ids="[
+      ...participants.map(p => p.userId),
+      ...(linkedTraceability.createdBy ? [linkedTraceability.createdBy] : []),
+      ...(auth.user?.id ? [auth.user.id] : [])
+    ]" @close="showShareModal = false" @saved="onShareSaved" />
 
   <!-- Credential modal -->
   <AppModal v-if="showCredentialModal" title="Establecer credenciales" @close="showCredentialModal = false">

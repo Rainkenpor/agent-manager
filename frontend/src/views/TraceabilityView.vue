@@ -59,7 +59,7 @@ async function fetchAll() {
       api.getTraceabilityTemplates(),
       api.getTraceabilities(),
       api.getRoles(),
-      api.getAgents(),
+      api.getAgents({ group: 'traceability' }),
       api.getUsers(),
     ])
     templates.value = tplRes.data ?? []

@@ -6,12 +6,12 @@ export class ListAgentsUseCase {
 
 	constructor(private readonly agentRepository: IAgentRepository) {}
 
-	async execute(): Promise<
+	async execute(options?: { groupSlug?: string }): Promise<
 		| { success: true; data: Partial<AgentWithSubagents>[] }
 		| { success: false; error: string }
 	> {
 		try {
-			const agents = await this.agentRepository.findAll();
+			const agents = await this.agentRepository.findAll(options);
 			this.agentes = agents;
 			return { success: true, data: agents };
 		} catch (error) {

@@ -1,7 +1,7 @@
-import { registry } from '@applicationService/registry.service.js'
 import { listAvailableAgentTools } from '@applicationService/agent-tools.service.js'
-import { container } from '../container.js'
+import { registry } from '@applicationService/registry.service.js'
 import { z } from 'zod'
+import { container } from '../container.js'
 
 const createAgentSchema = z.object({
 	name: z.string().min(1),
@@ -15,6 +15,7 @@ const createAgentSchema = z.object({
 	temperature: z.string().default('0.2'),
 	tools: z.record(z.string(), z.boolean()).default({}),
 	content: z.string().default(''),
+	groupIds: z.array(z.string()).optional(),
 	subagentIds: z.array(z.string()).optional()
 })
 
@@ -34,12 +35,13 @@ const updateAgentSchema = z.object({
 	content: z.string().optional(),
 	useByChat: z.boolean().optional(),
 	isActive: z.boolean().optional(),
+	groupIds: z.array(z.string()).optional(),
 	subagentIds: z.array(z.string()).optional()
 })
 
 const getAgentSchema = z.object({ id: z.string() })
 const deleteAgentSchema = z.object({ id: z.string() })
-const getAgent = z.object({})
+const getAgent = z.object({ group: z.string().optional() })
 
 export function registerAgentRoutes(): void {
 	// ==========================================
@@ -79,7 +81,10 @@ export function registerAgentRoutes(): void {
 				const all = await container.listAgentsUseCase.execute()
 				if (!all.success) return { success: true as const, data: [] }
 				const agentList = (all.data ?? []).filter((a: any) => a.isActive && a.useByChat)
-				return { success: true as const, data: agentList.map((a: any) => ({ id: a.id, name: a.name, slug: a.slug, description: a.description ?? null })) }
+				return {
+					success: true as const,
+					data: agentList.map((a: any) => ({ id: a.id, name: a.name, slug: a.slug, description: a.description ?? null }))
+				}
 			}
 			for (const role of userRoles) {
 				const roleAgents = await container.mcpServerRepository.getAgentsByRole(role.id)
@@ -100,7 +105,7 @@ export function registerAgentRoutes(): void {
 				}
 			}
 			return { success: true as const, data: filtered }
-		},
+		}
 	})
 
 	// List all agents
@@ -111,8 +116,8 @@ export function registerAgentRoutes(): void {
 		inputSchema: getAgent.shape,
 		requiresAuth: true,
 		requiredPermission: { resource: 'agents', action: 'read' },
-		handler: async () => {
-			return await container.listAgentsUseCase.execute()
+		handler: async ({ input }) => {
+			return await container.listAgentsUseCase.execute(input.group ? { groupSlug: input.group } : undefined)
 		}
 	})
 

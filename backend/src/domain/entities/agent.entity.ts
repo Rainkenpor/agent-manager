@@ -69,6 +69,7 @@ export interface AgentRecord {
 	slug: string
 	description: string | null
 	mode: 'primary' | 'subagent'
+	groupIds: string[]
 	model: string
 	temperature: string
 	tools: Record<string, boolean>
@@ -88,6 +89,7 @@ export interface CreateAgentDTO {
 	slug: string
 	description?: string
 	mode: 'primary' | 'subagent'
+	groupIds?: string[]
 	model: string
 	temperature: string
 	tools: Record<string, boolean>
@@ -101,6 +103,7 @@ export interface UpdateAgentDTO {
 	slug?: string
 	description?: string | null
 	mode?: 'primary' | 'subagent'
+	groupIds?: string[]
 	model?: string
 	temperature?: string
 	tools?: Record<string, boolean>

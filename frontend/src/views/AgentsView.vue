@@ -5,7 +5,7 @@ import PageLayout from '@/components/PageLayout.vue'
 import AppModal from '@/components/AppModal.vue'
 import { useToastStore } from '@/store/useToast'
 import * as api from '@/api/api'
-import type { Agent, AgentTool } from '@/types/types'
+import type { Agent, AgentGroup, AgentTool } from '@/types/types'
 import Card from '@/components/Card.vue'
 import TextAreaComplete from '@/components/TextAreaComplete.vue'
 
@@ -13,6 +13,9 @@ const toast = useToastStore()
 
 const agents = ref<Agent[]>([])
 const availableTools = ref<AgentTool[]>([])
+const groups = ref<AgentGroup[]>([])
+const activeTab = ref<string>('__all__')
+const showGroupsModal = ref(false)
 const loading = ref(false)
 
 // Modal
@@ -25,6 +28,7 @@ interface AgentFormData {
   slug: string
   description: string
   mode: 'primary' | 'subagent'
+  groupIds: string[]
   model: string
   temperature: string
   content: string
@@ -38,6 +42,7 @@ const defaultForm = (): AgentFormData => ({
   slug: '',
   description: '',
   mode: 'primary',
+  groupIds: [],
   model: '',
   temperature: '0.7',
   content: '',
@@ -55,8 +60,54 @@ const deleting = ref(false)
 // Detail view
 const detailAgent = ref<Agent | null>(null)
 
-const primaryAgents = computed(() => agents.value.filter((a) => a.mode === 'primary'))
-const subagents = computed(() => agents.value.filter((a) => a.mode === 'subagent'))
+const groupById = computed(() => {
+  const map = new Map<string, AgentGroup>()
+  for (const g of groups.value) map.set(g.id, g)
+  return map
+})
+
+const agentGroupCountByTab = computed(() => {
+  const counts: Record<string, number> = { __all__: agents.value.length, __ungrouped__: 0 }
+  for (const g of groups.value) counts[g.id] = 0
+  for (const a of agents.value) {
+    if (!a.groupIds || a.groupIds.length === 0) counts.__ungrouped__ += 1
+    else for (const gid of a.groupIds) if (counts[gid] !== undefined) counts[gid] += 1
+  }
+  return counts
+})
+
+const filteredAgents = computed(() => {
+  if (activeTab.value === '__all__') return agents.value
+  if (activeTab.value === '__ungrouped__') return agents.value.filter((a) => !a.groupIds?.length)
+  return agents.value.filter((a) => a.groupIds?.includes(activeTab.value))
+})
+
+const primaryAgents = computed(() => filteredAgents.value.filter((a) => a.mode === 'primary'))
+const subagents = computed(() => filteredAgents.value.filter((a) => a.mode === 'subagent'))
+
+function groupColorOrFallback(g: AgentGroup | undefined): string {
+  return g?.color || '#a855f7'
+}
+
+function groupChipStyle(groupId: string): { backgroundColor: string; color: string; borderColor: string } {
+  const g = groupById.value.get(groupId)
+  const color = groupColorOrFallback(g)
+  return {
+    backgroundColor: `${color}1f`,
+    color: color,
+    borderColor: `${color}66`
+  }
+}
+
+function tabStyle(groupId: string, active: boolean): Record<string, string> {
+  const g = groupById.value.get(groupId)
+  if (!g) return {}
+  const color = groupColorOrFallback(g)
+  if (active) {
+    return { backgroundColor: `${color}26`, color: color, borderColor: color }
+  }
+  return { color: color, borderColor: 'transparent' }
+}
 
 function slugify(text: string): string {
   return text
@@ -79,9 +130,14 @@ watch(
 async function fetchData() {
   loading.value = true
   try {
-    const [agentsRes, toolsRes] = await Promise.all([api.getAgents(), api.getAgentTools()])
-    agents.value = agentsRes.data ?? agentsRes as any
-    availableTools.value = toolsRes.data ?? toolsRes as any
+    const [agentsRes, toolsRes, groupsRes] = await Promise.all([
+      api.getAgents(),
+      api.getAgentTools(),
+      api.getAgentGroups()
+    ])
+    agents.value = agentsRes.data ?? (agentsRes as any)
+    availableTools.value = toolsRes.data ?? (toolsRes as any)
+    groups.value = groupsRes.data ?? []
   } catch (e: any) {
     toast.error(e.message ?? 'Failed to load agents')
   } finally {
@@ -110,6 +166,7 @@ function openEdit(agent: Agent) {
     slug: agent.slug,
     description: agent.description ?? '',
     mode: agent.mode,
+    groupIds: [...(agent.groupIds ?? [])],
     model: agent.model,
     temperature: agent.temperature,
     content: agent.content,
@@ -141,6 +198,7 @@ async function saveAgent() {
       slug: agentForm.value.slug,
       description: agentForm.value.description || undefined,
       mode: agentForm.value.mode,
+      groupIds: agentForm.value.groupIds,
       model: agentForm.value.model,
       temperature: agentForm.value.temperature,
       content: agentForm.value.content,
@@ -257,20 +315,149 @@ const toolGroups = computed(() => {
 })
 
 const selectedToolSource = ref<string>('')
+
+// ─── Group management ────────────────────────────────────────────────────────
+const newGroupName = ref('')
+const newGroupSlug = ref('')
+const newGroupDescription = ref('')
+const newGroupIcon = ref('mdi-folder-outline')
+const newGroupColor = ref('#a855f7')
+const savingGroup = ref(false)
+const editingGroupId = ref<string | null>(null)
+const SYSTEM_GROUP_SLUGS = new Set(['traceability', 'chat'])
+
+function isSystemGroup(g: AgentGroup): boolean {
+  return SYSTEM_GROUP_SLUGS.has(g.slug)
+}
+
+function groupAgentCount(groupId: string): number {
+  return agents.value.filter((a) => a.groupIds?.includes(groupId)).length
+}
+
+function toggleFormGroup(groupId: string) {
+  const idx = agentForm.value.groupIds.indexOf(groupId)
+  if (idx === -1) agentForm.value.groupIds.push(groupId)
+  else agentForm.value.groupIds.splice(idx, 1)
+}
+
+function resetGroupForm() {
+  editingGroupId.value = null
+  newGroupName.value = ''
+  newGroupSlug.value = ''
+  newGroupDescription.value = ''
+  newGroupIcon.value = 'mdi-folder-outline'
+  newGroupColor.value = '#a855f7'
+}
+
+function startEditGroup(g: AgentGroup) {
+  editingGroupId.value = g.id
+  newGroupName.value = g.name
+  newGroupSlug.value = g.slug
+  newGroupDescription.value = g.description ?? ''
+  newGroupIcon.value = g.icon || 'mdi-folder-outline'
+  newGroupColor.value = g.color || '#a855f7'
+}
+
+async function saveGroup() {
+  const name = newGroupName.value.trim()
+  const slug = newGroupSlug.value.trim() || slugify(name)
+  if (!name || !slug) return
+  savingGroup.value = true
+  try {
+    const payload = {
+      name,
+      slug,
+      description: newGroupDescription.value.trim() || null,
+      icon: newGroupIcon.value.trim() || null,
+      color: newGroupColor.value || null
+    }
+    if (editingGroupId.value) {
+      await api.updateAgentGroup(editingGroupId.value, payload)
+      toast.success('Grupo actualizado')
+    } else {
+      await api.createAgentGroup(payload)
+      toast.success('Grupo creado')
+    }
+    resetGroupForm()
+    const res = await api.getAgentGroups()
+    groups.value = res.data ?? []
+  } catch (e: any) {
+    toast.error(e.message ?? 'Failed to save group')
+  } finally {
+    savingGroup.value = false
+  }
+}
+
+async function removeGroup(g: AgentGroup) {
+  if (isSystemGroup(g)) {
+    toast.error('No se puede eliminar un grupo del sistema')
+    return
+  }
+  if (groupAgentCount(g.id) > 0) {
+    toast.error('No se puede eliminar un grupo con agentes asignados')
+    return
+  }
+  try {
+    await api.deleteAgentGroup(g.id)
+    groups.value = groups.value.filter((x) => x.id !== g.id)
+    toast.success('Grupo eliminado')
+  } catch (e: any) {
+    toast.error(e.message ?? 'Failed to delete group')
+  }
+}
+
+watch(newGroupName, (v) => {
+  if (!newGroupSlug.value) newGroupSlug.value = slugify(v)
+})
 </script>
 
 <template>
   <PageLayout title="Agents" description="Manage primary agents and subagents">
     <template #actions>
-      <button
-        class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm"
-        @click="openCreate">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-        </svg>
-        Create Agent
-      </button>
+      <div class="flex items-center gap-2">
+        <button
+          class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors"
+          @click="showGroupsModal = true">
+          <span class="mdi mdi-folder-multiple-outline"></span>
+          Grupos
+        </button>
+        <button
+          class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm"
+          @click="openCreate">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+          Create Agent
+        </button>
+      </div>
     </template>
+
+    <!-- Tabs por grupo -->
+    <div v-if="!loading" class="flex flex-wrap items-center gap-1.5 mb-5 border-b border-slate-800 pb-2">
+      <button @click="activeTab = '__all__'"
+        class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border-2 transition-colors" :class="activeTab === '__all__'
+          ? 'bg-indigo-600/20 border-indigo-500 text-white'
+          : 'border-transparent text-slate-400 hover:text-white hover:bg-slate-800'">
+        <span class="mdi mdi-view-grid-outline"></span>
+        Todos
+        <span class="text-[10px] opacity-70">({{ agentGroupCountByTab.__all__ }})</span>
+      </button>
+      <button v-for="g in groups" :key="g.id" @click="activeTab = g.id"
+        class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border-2 transition-colors"
+        :style="tabStyle(g.id, activeTab === g.id)" :class="activeTab === g.id ? '' : 'hover:bg-slate-800'">
+        <span :class="['mdi', g.icon || 'mdi-folder-outline']"></span>
+        {{ g.name }}
+        <span class="text-[10px] opacity-70">({{ agentGroupCountByTab[g.id] || 0 }})</span>
+      </button>
+      <button @click="activeTab = '__ungrouped__'"
+        class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border-2 transition-colors" :class="activeTab === '__ungrouped__'
+          ? 'bg-slate-700/40 border-slate-500 text-slate-200'
+          : 'border-transparent text-slate-500 hover:text-white hover:bg-slate-800'">
+        <span class="mdi mdi-folder-off-outline"></span>
+        Sin grupo
+        <span class="text-[10px] opacity-70">({{ agentGroupCountByTab.__ungrouped__ }})</span>
+      </button>
+    </div>
 
     <!-- Loading -->
     <div v-if="loading" class="flex items-center justify-center py-20">
@@ -285,12 +472,12 @@ const selectedToolSource = ref<string>('')
       <section>
         <h2 class="text-base font-semibold text-white mb-4 flex items-center gap-2">
           <span class="w-2 h-2 rounded-full bg-indigo-500 inline-block"></span>
-          Primary Agents
+          Listado de Agentes
           <span class="ml-1 text-xs font-normal text-white">({{ primaryAgents.length }})</span>
         </h2>
         <div v-if="!primaryAgents.length"
           class="text-slate-400 text-sm py-6 text-center bg-slate-900 rounded-xl border border-slate-700">
-          No primary agents yet
+          No existen agentes
         </div>
         <div v-else class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
           <Card v-for="agent in primaryAgents" :key="agent.id" @click="openDetail(agent)">
@@ -300,7 +487,13 @@ const selectedToolSource = ref<string>('')
                   <h3 class="font-semibold text-white truncate">{{ agent.name }}</h3>
                   <p class="text-xs text-slate-400 font-mono mt-0.5 truncate">{{ agent.slug }}</p>
                 </div>
-                <div class="flex items-start gap-1.5  ">
+                <div class="flex items-start gap-1.5 flex-wrap justify-end">
+                  <span v-for="gid in (agent.groupIds ?? [])" :key="gid"
+                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border"
+                    :style="groupChipStyle(gid)">
+                    <span v-if="groupById.get(gid)?.icon" :class="['mdi', groupById.get(gid)?.icon]"></span>
+                    {{ groupById.get(gid)?.name || 'grupo' }}
+                  </span>
                   <span class="px-2 py-0.5 rounded-full text-xs font-medium"
                     :class="agent.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'">
                     {{ agent.isActive ? 'active' : 'inactive' }}
@@ -341,61 +534,6 @@ const selectedToolSource = ref<string>('')
         </div>
       </section>
 
-      <!-- Subagents -->
-      <section>
-        <h2 class="text-base font-semibold text-white mb-4 flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full bg-violet-500 inline-block"></span>
-          Subagents
-          <span class="ml-1 text-xs font-normal text-white">({{ subagents.length }})</span>
-        </h2>
-        <div v-if="!subagents.length"
-          class="text-slate-400 text-sm py-6 text-center bg-slate-900 rounded-xl border border-slate-700">
-          No subagents yet
-        </div>
-        <div v-else class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-          <Card v-for="agent in subagents" :key="agent.id" @click="openDetail(agent)">
-            <template #header>
-              <div class="flex-1 min-w-0">
-                <h3 class="font-semibold text-white truncate">{{ agent.name }}</h3>
-                <p class="text-xs text-slate-400 font-mono mt-0.5 truncate">{{ agent.slug }}</p>
-              </div>
-              <div class="flex items-start gap-1.5 ml-3 shrink-0">
-                <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-violet-100 text-violet-700">subagent</span>
-                <span class="px-2 py-0.5 rounded-full text-xs font-medium"
-                  :class="agent.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'">
-                  {{ agent.isActive ? 'active' : 'inactive' }}
-                </span>
-              </div>
-            </template>
-
-            <p v-if="agent.description" class="text-sm text-slate-500 mb-3 line-clamp-2">{{ agent.description }}</p>
-
-
-
-
-            <template #options>
-              <button
-                class="btn w-full justify-start btn-ghost hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
-                @click="openEdit(agent)">
-                <span class="mdi mdi-pencil"></span>
-                Edit
-              </button>
-              <button
-                class="btn w-full justify-start btn-ghost hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
-                @click="duplicateAgent(agent)">
-                <span class="mdi mdi-content-copy"></span>
-                Duplicate
-              </button>
-              <button class="btn w-full justify-start btn-ghost hover:text-red-600 hover:bg-red-50 transition-colors"
-                @click="confirmDelete(agent)">
-                <span class="mdi mdi-delete"></span>
-                Delete
-              </button>
-            </template>
-
-          </Card>
-        </div>
-      </section>
     </div>
   </PageLayout>
 
@@ -449,6 +587,25 @@ const selectedToolSource = ref<string>('')
                   <span class="text-sm text-white">Active</span>
                 </label>
               </div>
+            </div>
+
+            <!-- Groups (multi-select) -->
+            <div>
+              <label class="block text-sm font-medium text-white mb-1.5">Grupos</label>
+              <div v-if="!groups.length" class="text-xs text-slate-500 italic">No hay grupos disponibles.</div>
+              <div v-else class="flex flex-wrap gap-2">
+                <button v-for="g in groups" :key="g.id" type="button" @click="toggleFormGroup(g.id)"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border-2 transition-colors"
+                  :style="agentForm.groupIds.includes(g.id) ? groupChipStyle(g.id) : { borderColor: '#334155', color: '#94a3b8' }">
+                  <span v-if="agentForm.groupIds.includes(g.id)" class="mdi mdi-check"></span>
+                  <span v-else :class="['mdi', g.icon || 'mdi-folder-outline']"></span>
+                  {{ g.name }}
+                </button>
+              </div>
+              <p class="text-xs text-slate-400 mt-1.5">
+                Un agente puede pertenecer a varios grupos. Solo los agentes del grupo "Trazabilidad" se ofrecen al
+                asignar etapas en las plantillas de trazabilidad.
+              </p>
             </div>
 
 
@@ -577,9 +734,8 @@ const selectedToolSource = ref<string>('')
       <!-- System Prompt -->
       <div v-if="detailAgent.content">
         <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">System Prompt</h3>
-        <pre
-          class="text-xs bg-slate-800 rounded-lg p-3 text-slate-200 overflow-x-auto whitespace-pre-wrap font-mono border border-slate-700">
-        {{ detailAgent.content }}</pre>
+        <pre class="text-xs bg-slate-800 rounded-lg p-3 text-slate-200 overflow-x-auto whitespace-pre-wrap font-mono">{{
+          detailAgent.content }}</pre>
       </div>
 
       <!-- Tools -->
@@ -629,4 +785,94 @@ const selectedToolSource = ref<string>('')
   <ConfirmDialog v-if="deleteTarget" title="Delete Agent"
     :message="`Are you sure you want to delete &quot;${deleteTarget.name}&quot;? This action cannot be undone.`"
     :loading="deleting" @confirm="doDelete" @cancel="deleteTarget = null" />
+
+  <!-- Groups management modal -->
+  <AppModal v-if="showGroupsModal" size="lg" title="Grupos de agentes"
+    @close="() => { showGroupsModal = false; resetGroupForm() }">
+    <div class="p-6 space-y-5">
+      <p class="text-sm text-slate-400">
+        Organiza los agentes por grupos. Cada grupo puede tener su propio icono (clase <span
+          class="font-mono text-slate-300">mdi-*</span>)
+        y color. El grupo <span class="font-mono text-cyan-300">traceability</span> alimenta las etapas de plantillas
+        de trazabilidad.
+      </p>
+
+      <!-- Existing groups -->
+      <div class="space-y-2 max-h-64 overflow-y-auto pr-1">
+        <div v-for="g in groups" :key="g.id"
+          class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700">
+          <span class="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-lg"
+            :style="{ backgroundColor: `${g.color || '#a855f7'}26`, color: g.color || '#a855f7' }">
+            <span :class="['mdi', g.icon || 'mdi-folder-outline']"></span>
+          </span>
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2 flex-wrap">
+              <p class="text-sm font-medium text-white truncate">{{ g.name }}</p>
+              <span class="text-xs font-mono text-slate-500">{{ g.slug }}</span>
+              <span v-if="isSystemGroup(g)"
+                class="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/20">
+                sistema
+              </span>
+            </div>
+            <p v-if="g.description" class="text-xs text-slate-500 truncate">{{ g.description }}</p>
+          </div>
+          <span class="text-xs text-slate-500 shrink-0">{{ groupAgentCount(g.id) }} agentes</span>
+          <button class="text-slate-500 hover:text-indigo-400 shrink-0" @click="startEditGroup(g)" title="Editar">
+            <span class="mdi mdi-pencil"></span>
+          </button>
+          <button class="text-slate-500 hover:text-red-400 shrink-0 disabled:opacity-30"
+            :disabled="isSystemGroup(g) || groupAgentCount(g.id) > 0" @click="removeGroup(g)" title="Eliminar grupo">
+            <span class="mdi mdi-delete"></span>
+          </button>
+        </div>
+        <div v-if="!groups.length" class="text-sm text-slate-500 text-center py-4">Aún no hay grupos</div>
+      </div>
+
+      <!-- Create / edit -->
+      <div class="border-t border-slate-700 pt-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <p class="text-sm font-semibold text-white">
+            {{ editingGroupId ? 'Editar grupo' : 'Nuevo grupo' }}
+          </p>
+          <button v-if="editingGroupId" class="text-xs text-slate-400 hover:text-white" @click="resetGroupForm">
+            Cancelar edición
+          </button>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <input v-model="newGroupName" type="text" placeholder="Nombre"
+            class="px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500" />
+          <input v-model="newGroupSlug" type="text" placeholder="slug"
+            class="px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm text-white placeholder-slate-500 font-mono focus:outline-none focus:border-indigo-500" />
+        </div>
+        <input v-model="newGroupDescription" type="text" placeholder="Descripción (opcional)"
+          class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500" />
+
+        <div class="grid grid-cols-[1fr_auto] gap-3 items-center">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Icono (clase mdi-*)</label>
+            <div class="flex items-center gap-2">
+              <span class="w-9 h-9 rounded-lg flex items-center justify-center text-lg shrink-0"
+                :style="{ backgroundColor: `${newGroupColor}26`, color: newGroupColor }">
+                <span :class="['mdi', newGroupIcon || 'mdi-folder-outline']"></span>
+              </span>
+              <input v-model="newGroupIcon" type="text" placeholder="mdi-folder-outline"
+                class="flex-1 px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm text-white placeholder-slate-500 font-mono focus:outline-none focus:border-indigo-500" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Color</label>
+            <input v-model="newGroupColor" type="color"
+              class="w-16 h-9 rounded-lg bg-slate-800 border border-slate-700 cursor-pointer" />
+          </div>
+        </div>
+
+        <div class="flex justify-end">
+          <button @click="saveGroup" :disabled="savingGroup || !newGroupName.trim()"
+            class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-sm font-medium transition-colors">
+            {{ savingGroup ? 'Guardando...' : (editingGroupId ? 'Guardar cambios' : 'Crear grupo') }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </AppModal>
 </template>

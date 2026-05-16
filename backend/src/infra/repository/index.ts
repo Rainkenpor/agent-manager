@@ -1,4 +1,5 @@
 export * from "./agent.repository.js";
+export * from "./agent-group.repository.js";
 export * from "./user.repository.js";
 export * from "./role.repository.js";
 export * from "./permission.repository.js";
@@ -9,5 +10,6 @@ export * from "./provider-config.repository.js";
 export * from "./skill.repository.js";
 export * from "./governance.repository.js";
 export * from "./traceability.repository.js";
+export * from "./traceability-participant.repository.js";
 export * from "./hook-server.repository.js";
 export * from "./event-listener.repository.js";

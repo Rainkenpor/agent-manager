@@ -3,6 +3,7 @@ import type {
 	IRoleRepository,
 	IPermissionRepository,
 	IAgentRepository,
+	IAgentGroupRepository,
 	IMcpServerRepository,
 	IChatRepository,
 	IMcpUserCredentialRepository,
@@ -11,12 +12,14 @@ import type {
 	ITraceabilityRepository,
 	IHookServerRepository,
 	IEventListenerRepository,
-	IGovernanceRepository
+	IGovernanceRepository,
+	ITraceabilityParticipantRepository
 } from '@domain/repositories/index.js'
 import { mcpExternalManager } from '@infra/service/mcp-external.js'
 
 import {
 	AgentRepository,
+	AgentGroupRepository,
 	UserRepository,
 	RoleRepository,
 	PermissionRepository,
@@ -26,6 +29,7 @@ import {
 	SkillRepository,
 	GovernanceRepository,
 	TraceabilityRepository,
+	TraceabilityParticipantRepository,
 	HookServerRepository,
 	EventListenerRepository
 } from '@infra/repository/index.js'
@@ -46,6 +50,11 @@ import {
 	UpdateAgentUseCase,
 	DeleteAgentUseCase,
 	DuplicateAgentUseCase,
+	// Agent Group Use Cases
+	ListAgentGroupsUseCase,
+	CreateAgentGroupUseCase,
+	UpdateAgentGroupUseCase,
+	DeleteAgentGroupUseCase,
 	// Chat Use Cases
 	CreateConversationUseCase,
 	ListConversationsUseCase,
@@ -98,6 +107,11 @@ import {
 	AssignStageUserUseCase,
 	GetMyStagesUseCase,
 	GetTraceabilityByConversationUseCase,
+	ShareTraceabilityUseCase,
+	RemoveTraceabilityShareUseCase,
+	ListTraceabilityParticipantsUseCase,
+	ListMyTraceabilityInvitationsUseCase,
+	OpenOrCreateChatForTraceabilityUseCase,
 	StreamAgentLogsUseCase,
 	ExportConfigUseCase,
 	ImportConfigUseCase,
@@ -149,6 +163,13 @@ export class Container {
 	private _updateAgentUseCase?: UpdateAgentUseCase
 	private _deleteAgentUseCase?: DeleteAgentUseCase
 	private _duplicateAgentUseCase?: DuplicateAgentUseCase
+
+	// Agent Group Repository & Use Cases
+	private _agentGroupRepository: IAgentGroupRepository
+	private _listAgentGroupsUseCase?: ListAgentGroupsUseCase
+	private _createAgentGroupUseCase?: CreateAgentGroupUseCase
+	private _updateAgentGroupUseCase?: UpdateAgentGroupUseCase
+	private _deleteAgentGroupUseCase?: DeleteAgentGroupUseCase
 
 	// MCP Server Repository
 	private _mcpServerRepository: IMcpServerRepository
@@ -231,6 +252,12 @@ export class Container {
 	private _assignStageUserUseCase?: AssignStageUserUseCase
 	private _getMyStagesUseCase?: GetMyStagesUseCase
 	private _getTraceabilityByConversationUseCase?: GetTraceabilityByConversationUseCase
+	private _traceabilityParticipantRepository: ITraceabilityParticipantRepository
+	private _shareTraceabilityUseCase?: ShareTraceabilityUseCase
+	private _removeTraceabilityShareUseCase?: RemoveTraceabilityShareUseCase
+	private _listTraceabilityParticipantsUseCase?: ListTraceabilityParticipantsUseCase
+	private _listMyTraceabilityInvitationsUseCase?: ListMyTraceabilityInvitationsUseCase
+	private _openOrCreateChatForTraceabilityUseCase?: OpenOrCreateChatForTraceabilityUseCase
 	private _streamAgentLogsUseCase?: StreamAgentLogsUseCase
 	private _streamAiAssistUseCase?: StreamAiAssistUseCase
 
@@ -244,12 +271,14 @@ export class Container {
 		this._roleRepository = new RoleRepository()
 		this._permissionRepository = new PermissionRepository()
 		this._agentRepository = new AgentRepository()
+		this._agentGroupRepository = new AgentGroupRepository()
 		this._mcpServerRepository = new McpServerRepository()
 		this._chatRepository = new ChatRepository()
 		this._mcpUserCredentialRepository = new McpUserCredentialRepository()
 		this._skillRepository = new SkillRepository()
 		this._governanceRepository = new GovernanceRepository()
 		this._traceabilityRepository = new TraceabilityRepository()
+		this._traceabilityParticipantRepository = new TraceabilityParticipantRepository()
 		this._hookServerRepository = new HookServerRepository()
 		this._eventListenerRepository = new EventListenerRepository()
 
@@ -364,6 +393,34 @@ export class Container {
 			this._duplicateAgentUseCase = new DuplicateAgentUseCase(this._agentRepository)
 		}
 		return this._duplicateAgentUseCase
+	}
+
+	// ==========================================
+	// AGENT GROUP USE CASES
+	// ==========================================
+
+	get agentGroupRepository(): IAgentGroupRepository {
+		return this._agentGroupRepository
+	}
+
+	get listAgentGroupsUseCase(): ListAgentGroupsUseCase {
+		if (!this._listAgentGroupsUseCase) this._listAgentGroupsUseCase = new ListAgentGroupsUseCase(this._agentGroupRepository)
+		return this._listAgentGroupsUseCase
+	}
+
+	get createAgentGroupUseCase(): CreateAgentGroupUseCase {
+		if (!this._createAgentGroupUseCase) this._createAgentGroupUseCase = new CreateAgentGroupUseCase(this._agentGroupRepository)
+		return this._createAgentGroupUseCase
+	}
+
+	get updateAgentGroupUseCase(): UpdateAgentGroupUseCase {
+		if (!this._updateAgentGroupUseCase) this._updateAgentGroupUseCase = new UpdateAgentGroupUseCase(this._agentGroupRepository)
+		return this._updateAgentGroupUseCase
+	}
+
+	get deleteAgentGroupUseCase(): DeleteAgentGroupUseCase {
+		if (!this._deleteAgentGroupUseCase) this._deleteAgentGroupUseCase = new DeleteAgentGroupUseCase(this._agentGroupRepository)
+		return this._deleteAgentGroupUseCase
 	}
 
 	// ==========================================
@@ -670,6 +727,52 @@ export class Container {
 		if (!this._getTraceabilityByConversationUseCase)
 			this._getTraceabilityByConversationUseCase = new GetTraceabilityByConversationUseCase(this._traceabilityRepository)
 		return this._getTraceabilityByConversationUseCase
+	}
+
+	// ==========================================
+	// TRACEABILITY PARTICIPANT USE CASES
+	// ==========================================
+
+	get traceabilityParticipantRepository(): ITraceabilityParticipantRepository {
+		return this._traceabilityParticipantRepository
+	}
+
+	get shareTraceabilityUseCase(): ShareTraceabilityUseCase {
+		if (!this._shareTraceabilityUseCase)
+			this._shareTraceabilityUseCase = new ShareTraceabilityUseCase(
+				this._traceabilityParticipantRepository,
+				this._traceabilityRepository,
+				this._userRepository
+			)
+		return this._shareTraceabilityUseCase
+	}
+
+	get removeTraceabilityShareUseCase(): RemoveTraceabilityShareUseCase {
+		if (!this._removeTraceabilityShareUseCase)
+			this._removeTraceabilityShareUseCase = new RemoveTraceabilityShareUseCase(this._traceabilityParticipantRepository)
+		return this._removeTraceabilityShareUseCase
+	}
+
+	get listTraceabilityParticipantsUseCase(): ListTraceabilityParticipantsUseCase {
+		if (!this._listTraceabilityParticipantsUseCase)
+			this._listTraceabilityParticipantsUseCase = new ListTraceabilityParticipantsUseCase(this._traceabilityParticipantRepository)
+		return this._listTraceabilityParticipantsUseCase
+	}
+
+	get listMyTraceabilityInvitationsUseCase(): ListMyTraceabilityInvitationsUseCase {
+		if (!this._listMyTraceabilityInvitationsUseCase)
+			this._listMyTraceabilityInvitationsUseCase = new ListMyTraceabilityInvitationsUseCase(this._traceabilityParticipantRepository)
+		return this._listMyTraceabilityInvitationsUseCase
+	}
+
+	get openOrCreateChatForTraceabilityUseCase(): OpenOrCreateChatForTraceabilityUseCase {
+		if (!this._openOrCreateChatForTraceabilityUseCase)
+			this._openOrCreateChatForTraceabilityUseCase = new OpenOrCreateChatForTraceabilityUseCase(
+				this._traceabilityParticipantRepository,
+				this._traceabilityRepository,
+				this._chatRepository
+			)
+		return this._openOrCreateChatForTraceabilityUseCase
 	}
 
 	// ==========================================

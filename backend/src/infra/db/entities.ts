@@ -1,5 +1,5 @@
 import 'reflect-metadata'
-import { Entity, PrimaryColumn, Column } from 'typeorm'
+import { Entity, PrimaryColumn, Column, Index } from 'typeorm'
 
 @Entity('users')
 export class UserEntity {
@@ -143,6 +143,49 @@ export class AgentEntity {
 
 	@Column({ name: 'updated_at', type: 'text' })
 	updatedAt!: string
+}
+
+@Entity('agent_groups')
+export class AgentGroupEntity {
+	@PrimaryColumn({ type: 'text' })
+	id!: string
+
+	@Column({ type: 'text' })
+	name!: string
+
+	@Column({ type: 'text', unique: true })
+	slug!: string
+
+	@Column({ type: 'text', nullable: true })
+	description!: string | null
+
+	@Column({ type: 'text', nullable: true })
+	icon!: string | null
+
+	@Column({ type: 'text', nullable: true })
+	color!: string | null
+
+	@Column({ name: 'created_at', type: 'text' })
+	createdAt!: string
+
+	@Column({ name: 'updated_at', type: 'text' })
+	updatedAt!: string
+}
+
+@Entity('agent_group_assignments')
+@Index('uq_agent_group_assignments_agent_group', ['agentId', 'groupId'], { unique: true })
+export class AgentGroupAssignmentEntity {
+	@PrimaryColumn({ type: 'text' })
+	id!: string
+
+	@Column({ name: 'agent_id', type: 'text' })
+	agentId!: string
+
+	@Column({ name: 'group_id', type: 'text' })
+	groupId!: string
+
+	@Column({ name: 'created_at', type: 'text' })
+	createdAt!: string
 }
 
 @Entity('agent_subagents')
@@ -611,6 +654,28 @@ export class TraceabilityEntity {
 
 	@Column({ name: 'updated_at', type: 'text' })
 	updatedAt!: string
+}
+
+@Entity('traceability_participants')
+@Index('uq_traceability_participants_trac_user', ['traceabilityId', 'userId'], { unique: true })
+export class TraceabilityParticipantEntity {
+	@PrimaryColumn({ type: 'text' })
+	id!: string
+
+	@Column({ name: 'traceability_id', type: 'text' })
+	traceabilityId!: string
+
+	@Column({ name: 'user_id', type: 'text' })
+	userId!: string
+
+	@Column({ name: 'chat_id', type: 'text', nullable: true })
+	chatId!: string | null
+
+	@Column({ name: 'invited_by', type: 'text' })
+	invitedBy!: string
+
+	@Column({ name: 'created_at', type: 'text' })
+	createdAt!: string
 }
 
 @Entity('traceability_stages')

@@ -75,7 +75,19 @@ export const removeAgentFromRole = (roleId: string, agentId: string) =>
 	request<any>(`/roles/${roleId}/agents/${agentId}`, { method: 'DELETE' })
 
 // Agents
-export const getAgents = () => request<{ success: boolean; data: any[] }>('/agents')
+export const getAgents = (options?: { group?: string }) => {
+	const qs = options?.group ? `?group=${encodeURIComponent(options.group)}` : ''
+	return request<{ success: boolean; data: any[] }>(`/agents${qs}`)
+}
+
+// Agent Groups
+export const getAgentGroups = () => request<{ success: boolean; data: any[] }>('/agent-groups')
+export const createAgentGroup = (data: { name: string; slug: string; description?: string | null }) =>
+	request<{ success: boolean; data: any }>('/agent-groups', { method: 'POST', body: JSON.stringify(data) })
+export const updateAgentGroup = (id: string, data: { name?: string; slug?: string; description?: string | null }) =>
+	request<{ success: boolean; data: any }>(`/agent-groups/${id}`, { method: 'PUT', body: JSON.stringify({ id, ...data }) })
+export const deleteAgentGroup = (id: string) =>
+	request<{ success: boolean }>(`/agent-groups/${id}`, { method: 'DELETE' })
 export const getAgentsForChat = () =>
 	request<{ success: boolean; data: Array<{ id: string; name: string; slug: string; description: string | null }> }>('/agents/for-chat')
 export const getAgentById = (id: string) => request<any>(`/agents/${id}`)
@@ -250,6 +262,21 @@ export const updateTraceabilityDocument = (id: string, data: { name?: string; co
 export const deleteTraceabilityDocument = (id: string) =>
 	request<{ success: boolean }>(`/traceability/documents/${id}`, { method: 'DELETE' })
 
+// Traceability Participants (sharing)
+export const listTraceabilityParticipants = (traceabilityId: string) =>
+	request<{ success: boolean; data: any[] }>(`/traceability/${traceabilityId}/participants`)
+export const addTraceabilityParticipant = (traceabilityId: string, userId: string) =>
+	request<{ success: boolean; data: any }>(`/traceability/${traceabilityId}/participants`, {
+		method: 'POST',
+		body: JSON.stringify({ userId })
+	})
+export const removeTraceabilityParticipant = (traceabilityId: string, userId: string) =>
+	request<{ success: boolean }>(`/traceability/${traceabilityId}/participants/${userId}`, { method: 'DELETE' })
+export const listTraceabilityInvitations = () =>
+	request<{ success: boolean; data: any[] }>('/chat/traceability-invitations')
+export const openTraceabilityInvitation = (traceabilityId: string) =>
+	request<{ success: boolean; data: any }>(`/chat/traceability-invitations/${traceabilityId}/open`, { method: 'POST' })
+
 // Effort & Assignment
 export const getUsersByRoleWithEffort = (roleId: string) =>
 	request<{ success: boolean; data: any[] }>(`/traceability/stages/users-by-role?role=${encodeURIComponent(roleId)}`)
@@ -356,3 +383,26 @@ export function streamMessage(conversationId: string, content: string, signal?: 
 		signal
 	})
 }
+
+// Notifications
+export interface NotificationItem {
+	id: string
+	userId: string
+	type: 'stage_activated' | 'stage_assigned' | 'generic'
+	title: string
+	message: string
+	link: string | null
+	readAt: string | null
+	createdAt: string
+}
+
+export const getNotifications = (unreadOnly = false) => {
+	const qs = unreadOnly ? '?unreadOnly=true' : ''
+	return request<{ success: boolean; data: { items: NotificationItem[]; unreadCount: number } }>(`/notifications${qs}`)
+}
+
+export const markNotificationRead = (id: string) =>
+	request<{ success: boolean }>(`/notifications/${id}/read`, { method: 'PUT' })
+
+export const markAllNotificationsRead = () =>
+	request<{ success: boolean }>(`/notifications/read-all`, { method: 'PUT' })
