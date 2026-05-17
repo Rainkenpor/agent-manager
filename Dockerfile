@@ -1,21 +1,24 @@
 ARG NODE_VERSION=20
 
-# ─── Stage 1: build frontend (el CI solo compila backend; el frontend se
-#     compila aquí para no depender de artefactos externos) ────────────────
-FROM node:${NODE_VERSION}-bookworm-slim AS frontend-builder
+# ─── Stage 1: build backend + frontend (el CI no garantiza los artefactos,
+#     así que los generamos dentro de la imagen) ────────────────────────────
+FROM node:${NODE_VERSION}-bookworm-slim AS builder
 WORKDIR /build
 
+# Manifiestos y lockfile para instalar workspaces
 COPY package.json package-lock.json ./
 COPY backend/package.json ./backend/
 COPY frontend/package.json ./frontend/
 
-# Instala TODAS las deps (incluye dev) para poder ejecutar vue-tsc y vite build
+# Instala TODAS las deps (incluye dev) para poder ejecutar tsc, vue-tsc y vite
 RUN npm ci
 
-# Copia fuentes del frontend + archivos compartidos que vite necesita
+# Fuentes
+COPY backend ./backend
 COPY frontend ./frontend
 
-RUN npm run ui:build
+# Compila ambos workspaces (genera backend/dist y frontend/dist)
+RUN npm run build
 
 # ─── Stage 2: runtime ─────────────────────────────────────────────────────
 FROM node:${NODE_VERSION}-bookworm-slim AS runtime
@@ -36,18 +39,14 @@ COPY --chown=nodejs:nodejs package.json package-lock.json ./
 COPY --chown=nodejs:nodejs backend/package.json ./backend/
 COPY --chown=nodejs:nodejs frontend/package.json ./frontend/
 
-# Incluye devDependencies (el CI deja node_modules en la raíz tras `npm ci`)
-COPY --chown=nodejs:nodejs node_modules ./node_modules
+# Deps de runtime — reinstaladas en limpio para no depender de node_modules del CI
+RUN npm ci --omit=dev --ignore-scripts \
+ && npm cache clean --force \
+ && chown -R nodejs:nodejs node_modules
 
-# Artefacto del backend compilado por el CI
-COPY --chown=nodejs:nodejs backend/dist ./backend/dist
-
-# Artefacto del frontend compilado en la stage anterior
-COPY --from=frontend-builder --chown=nodejs:nodejs /build/frontend/dist ./frontend/dist
-
-# Poda devDependencies. --ignore-scripts
-#RUN npm prune --omit=dev --ignore-scripts \
-# && npm cache clean --force
+# Artefactos compilados en la stage `builder`
+COPY --from=builder --chown=nodejs:nodejs /build/backend/dist ./backend/dist
+COPY --from=builder --chown=nodejs:nodejs /build/frontend/dist ./frontend/dist
 
 # Cambiar permisos
 RUN chown -R nodejs:nodejs /app

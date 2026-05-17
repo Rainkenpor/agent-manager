@@ -1,5 +1,7 @@
-# El pipeline deja node_modules en la raíz tras `npm ci` y lo copiamos
-# al contenedor. Workspaces anidados sí se ignoran (npm los vincula en la raíz).
+# Las dos stages del Dockerfile ejecutan su propio `npm ci`; no necesitamos
+# arrastrar node_modules del host al contexto (ahorra GBs y evita conflictos
+# de plataforma host/imagen).
+node_modules
 backend/node_modules
 frontend/node_modules
 
@@ -9,11 +11,9 @@ frontend/node_modules
 **/.env.*
 !**/.env.example
 
-# Fuente TS del backend (compilada por el CI; el Dockerfile solo copia dist)
-backend/src
-backend/tsconfig.json
-# OJO: las fuentes del frontend SÍ deben llegar al contexto porque el Dockerfile
-# las compila en la stage `frontend-builder` (el CI no compila el frontend).
+# OJO: backend/src y frontend/src SÍ deben llegar al contexto porque el
+# Dockerfile compila ambos workspaces en la stage `builder` (no dependemos
+# de artefactos generados por el CI).
 
 # Build / coverage / logs
 **/coverage
