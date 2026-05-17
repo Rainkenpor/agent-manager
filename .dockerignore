@@ -9,13 +9,11 @@ frontend/node_modules
 **/.env.*
 !**/.env.example
 
-# Fuente TS (el CI compila a dist; el Dockerfile solo copia dist)
+# Fuente TS del backend (compilada por el CI; el Dockerfile solo copia dist)
 backend/src
 backend/tsconfig.json
-frontend/src
-frontend/index.html
-frontend/vite.config.ts
-frontend/tsconfig*.json
+# OJO: las fuentes del frontend SÍ deben llegar al contexto porque el Dockerfile
+# las compila en la stage `frontend-builder` (el CI no compila el frontend).
 
 # Build / coverage / logs
 **/coverage
