@@ -1,33 +1,41 @@
-# Las dos stages del Dockerfile ejecutan su propio `npm ci`; no necesitamos
-# arrastrar node_modules del host al contexto (ahorra GBs y evita conflictos
-# de plataforma host/imagen).
-node_modules
+# El pipeline deja node_modules en la raíz tras `npm ci` y lo copiamos
+
+# al contenedor. Workspaces anidados sí se ignoran (npm los vincula en la raíz).
+
 backend/node_modules
 frontend/node_modules
 
 **/.git
 **/.gitignore
 **/.env
-**/.env.*
-!**/.env.example
+**/.env.\*
+!\*\*/.env.example
 
-# OJO: backend/src y frontend/src SÍ deben llegar al contexto porque el
-# Dockerfile compila ambos workspaces en la stage `builder` (no dependemos
-# de artefactos generados por el CI).
+# Fuente TS (el CI compila a dist; el Dockerfile solo copia dist)
+
+backend/src
+backend/tsconfig.json
+frontend/src
+frontend/index.html
+frontend/vite.config.ts
+frontend/tsconfig\*.json
 
 # Build / coverage / logs
+
 **/coverage
-**/dist/**/*.map
-**/*.log
+**/dist/**/\*.map
+**/\*.log
 logs
 
 # Editor / OS
+
 .vscode
 .idea
 .DS_Store
 Thumbs.db
 
 # Docs y herramientas que no van al runtime
+
 README*.md
 CLAUDE.md
 *.pen
@@ -37,6 +45,7 @@ test
 .claude
 
 # Docker / CI propios
+
 Dockerfile
 .dockerignore
-azure-pipelines*.yml
+azure-pipelines\*.yml
