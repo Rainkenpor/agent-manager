@@ -11,7 +11,8 @@ import {
 	TraceabilityDocumentEntity,
 	AgentEntity,
 	UserEntity,
-	UserRoleEntity
+	UserRoleEntity,
+	TraceabilityParticipantEntity
 } from '@infra/db/entities.js'
 import { In, Not } from 'typeorm'
 import { v4 as uuidv4 } from 'uuid'
@@ -438,8 +439,16 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 
 	async findByConversationId(chatId: string): Promise<Traceability[]> {
 		const tracRepo = AppDataSource.getRepository(TraceabilityEntity)
-		const tracs = await tracRepo.findBy({ chatId })
-		const results = await Promise.all(tracs.map((t) => this.findById(t.id)))
+		const participantRepo = AppDataSource.getRepository(TraceabilityParticipantEntity)
+		const [ownerTracs, participantRows] = await Promise.all([
+			tracRepo.findBy({ chatId }),
+			participantRepo.findBy({ chatId })
+		])
+		const ids = new Set<string>([
+			...ownerTracs.map((t) => t.id),
+			...participantRows.map((p) => p.traceabilityId)
+		])
+		const results = await Promise.all([...ids].map((id) => this.findById(id)))
 		return results.filter((t): t is Traceability => t !== null)
 	}
 

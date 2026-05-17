@@ -255,9 +255,9 @@ async function toggleRole(roleId: string) {
   </PageLayout>
 
   <!-- User Create/Edit Modal -->
-  <form @submit.prevent="saveUser">
-    <AppModal v-if="showUserModal" size="5xl" :full-height="true" :scroll-body="false"
-      :title="editingUser ? 'Edit User' : 'Create User'" @close="closeUserModal">
+  <AppModal v-if="showUserModal" size="5xl" :full-height="true" :scroll-body="false"
+    :title="editingUser ? 'Edit User' : 'Create User'" @close="closeUserModal">
+    <form id="user-form" class="space-y-4" @submit.prevent="saveUser">
       <div class="grid grid-cols-2 gap-4">
         <div>
           <label class="block text-sm font-medium text-slate-400 mb-1.5">First Name</label>
@@ -286,19 +286,18 @@ async function toggleRole(roleId: string) {
         <input v-model="userForm.password" type="password" placeholder="Password" :required="!editingUser"
           class="input w-full " />
       </div>
-      <template #footer>
-        <div class="flex justify-end">
-          <button type="button" class="btn" @click="closeUserModal">
-            Cancel
-          </button>
-          <button type="submit" :disabled="saving" class="btn">
-            {{ saving ? 'Saving...' : editingUser ? 'Save Changes' : 'Create User' }}
-          </button>
-        </div>
-      </template>
-
-    </AppModal>
-  </form>
+    </form>
+    <template #footer>
+      <div class="flex justify-end gap-2">
+        <button type="button" class="btn" @click="closeUserModal">
+          Cancel
+        </button>
+        <button type="submit" form="user-form" :disabled="saving" class="btn">
+          {{ saving ? 'Saving...' : editingUser ? 'Save Changes' : 'Create User' }}
+        </button>
+      </div>
+    </template>
+  </AppModal>
 
   <!-- Roles Modal -->
 

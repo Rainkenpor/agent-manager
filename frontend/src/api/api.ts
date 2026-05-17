@@ -274,6 +274,8 @@ export const removeTraceabilityParticipant = (traceabilityId: string, userId: st
 	request<{ success: boolean }>(`/traceability/${traceabilityId}/participants/${userId}`, { method: 'DELETE' })
 export const listTraceabilityInvitations = () =>
 	request<{ success: boolean; data: any[] }>('/chat/traceability-invitations')
+export const getTraceabilityGroupsForUser = () =>
+	request<{ success: boolean; data: Record<string, { traceabilityId: string; title: string; ownerUserId: string | null; participants: Array<{ userId: string; chatId: string | null }> }> }>('/chat/traceability-groups')
 export const openTraceabilityInvitation = (traceabilityId: string) =>
 	request<{ success: boolean; data: any }>(`/chat/traceability-invitations/${traceabilityId}/open`, { method: 'POST' })
 

@@ -755,7 +755,11 @@ export class Container {
 
 	get listTraceabilityParticipantsUseCase(): ListTraceabilityParticipantsUseCase {
 		if (!this._listTraceabilityParticipantsUseCase)
-			this._listTraceabilityParticipantsUseCase = new ListTraceabilityParticipantsUseCase(this._traceabilityParticipantRepository)
+			this._listTraceabilityParticipantsUseCase = new ListTraceabilityParticipantsUseCase(
+				this._traceabilityParticipantRepository,
+				this._traceabilityRepository,
+				this._userRepository
+			)
 		return this._listTraceabilityParticipantsUseCase
 	}
 

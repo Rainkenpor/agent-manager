@@ -85,6 +85,7 @@ interface LinkedTraceability {
 interface Participant {
   userId: string
   chatId: string | null
+  hasRoleMatch?: boolean
 }
 interface TraceabilityInvitation {
   traceabilityId: string
@@ -105,6 +106,21 @@ const participants = ref<Participant[]>([])
 const invitations = ref<TraceabilityInvitation[]>([])
 const allUsers = ref<UserSummary[]>([])
 const showShareModal = ref(false)
+
+interface ChatGroupInfo {
+  traceabilityId: string
+  title: string
+  ownerUserId: string | null
+  participants: Array<{ userId: string; chatId: string | null }>
+}
+const chatGroups = ref<Record<string, ChatGroupInfo>>({})
+
+const groupPalette = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#06b6d4', '#a855f7', '#ef4444', '#22c55e']
+function groupColor(traceabilityId: string): string {
+  let h = 0
+  for (let i = 0; i < traceabilityId.length; i++) h = (h * 31 + traceabilityId.charCodeAt(i)) >>> 0
+  return groupPalette[h % groupPalette.length]
+}
 
 const canShareTraceability = computed(() => {
   if (!linkedTraceability.value) return false
@@ -147,20 +163,35 @@ async function fetchInitialData() {
     allUsers.value = usersData as UserSummary[]
     const invData: any = (invitationsRes as any)?.data ?? []
     invitations.value = (invData as TraceabilityInvitation[]).filter((i) => !i.chatId)
+    await refreshChatGroups()
   } catch (e: any) {
     error.value = e.message
   }
 }
 
+async function refreshChatGroups() {
+  try {
+    const res = await api.getTraceabilityGroupsForUser()
+    chatGroups.value = res?.data ?? {}
+  } catch {
+    chatGroups.value = {}
+  }
+}
+
 async function openInvitation(inv: TraceabilityInvitation) {
   try {
-    const res = await api.openTraceabilityInvitation(inv.traceabilityId)
+    const res: any = await api.openTraceabilityInvitation(inv.traceabilityId)
+    if (!res?.success || !res?.data?.id) {
+      error.value = res?.error || 'No se pudo abrir la trazabilidad compartida'
+      return
+    }
     const conv: any = res.data
     if (!conversations.value.find((c) => c.id === conv.id)) {
       conversations.value.unshift(conv)
     }
     invitations.value = invitations.value.filter((i) => i.traceabilityId !== inv.traceabilityId)
     await openConversation(conv)
+    await refreshChatGroups()
   } catch (e: any) {
     error.value = e.message
   }
@@ -177,6 +208,7 @@ async function fetchParticipants(traceabilityId: string) {
 
 async function onShareSaved() {
   if (linkedTraceability.value) await fetchParticipants(linkedTraceability.value.id)
+  await refreshChatGroups()
 }
 
 async function removeParticipant(userId: string) {
@@ -184,6 +216,7 @@ async function removeParticipant(userId: string) {
   try {
     await api.removeTraceabilityParticipant(linkedTraceability.value.id, userId)
     participants.value = participants.value.filter((p) => p.userId !== userId)
+    await refreshChatGroups()
   } catch (e: any) {
     error.value = e.message
   }
@@ -750,17 +783,49 @@ onMounted(fetchInitialData)
           Sin conversaciones
         </div>
         <button v-for="conv in conversations" :key="conv.id"
-          class="w-full text-left px-4 py-3 border-b border-slate-800/60 hover:bg-slate-800/50 transition-colors group"
-          :class="activeConversation?.id === conv.id ? 'bg-slate-800' : ''" @click="openConversation(conv)">
+          class="w-full text-left px-4 py-3 border-b border-slate-800/60 hover:bg-slate-800/50 transition-colors group relative"
+          :class="[
+            activeConversation?.id === conv.id ? 'bg-slate-800' : '',
+            chatGroups[conv.id] ? 'pl-5' : ''
+          ]"
+          @click="openConversation(conv)">
+          <span v-if="chatGroups[conv.id]"
+            class="absolute left-0 top-0 bottom-0 w-1"
+            :style="{ backgroundColor: groupColor(chatGroups[conv.id].traceabilityId) }"
+            :title="`Trazabilidad: ${chatGroups[conv.id].title}`"></span>
           <div class="flex items-start justify-between gap-2">
             <div class="min-w-0 flex-1 pr-2">
-              <p class="text-sm font-medium text-white truncate">{{ conv.title }}</p>
+              <div class="flex items-center gap-1.5">
+                <span v-if="chatGroups[conv.id]" class="mdi mdi-clipboard-text-outline text-[13px] shrink-0"
+                  :style="{ color: groupColor(chatGroups[conv.id].traceabilityId) }"
+                  :title="`Trazabilidad: ${chatGroups[conv.id].title}`"></span>
+                <p class="text-sm font-medium text-white truncate">{{ conv.title }}</p>
+              </div>
               <div class="flex items-center gap-2 mt-0.5">
-                <!-- <p class="text-xs text-slate-500 truncate">{{ new Date(conv.updatedAt).toLocaleDateString() }}</p> -->
-                <!-- <span class="text-slate-700">•</span> -->
                 <p class="text-xs text-indigo-400 truncate" :title="agentsMap.get(conv.agentId) || conv.agentId">
                   {{ agentsMap.get(conv.agentId) || 'Agente' }}
                 </p>
+              </div>
+              <div v-if="chatGroups[conv.id]" class="flex items-center gap-1 mt-1.5">
+                <p class="text-[10px] uppercase tracking-wider text-slate-500 truncate mr-1"
+                  :title="chatGroups[conv.id].title">{{ chatGroups[conv.id].title }}</p>
+                <div class="flex items-center">
+                  <span v-if="chatGroups[conv.id].ownerUserId"
+                    class="w-5 h-5 -ml-1 first:ml-0 rounded-full ring-2 ring-base-100 flex items-center justify-center text-[9px] font-bold text-white"
+                    :style="{ backgroundColor: groupColor(chatGroups[conv.id].traceabilityId) }"
+                    :title="`${userDisplayName(chatGroups[conv.id].ownerUserId!)} (propietario)`">
+                    {{ userInitials(chatGroups[conv.id].ownerUserId!) }}
+                  </span>
+                  <span v-for="p in chatGroups[conv.id].participants.slice(0, 4)" :key="p.userId"
+                    class="w-5 h-5 -ml-1 rounded-full bg-slate-700 ring-2 ring-base-100 flex items-center justify-center text-[9px] font-bold text-slate-200"
+                    :title="userDisplayName(p.userId)">
+                    {{ userInitials(p.userId) }}
+                  </span>
+                  <span v-if="chatGroups[conv.id].participants.length > 4"
+                    class="w-5 h-5 -ml-1 rounded-full bg-slate-700 ring-2 ring-base-100 flex items-center justify-center text-[9px] font-bold text-slate-300">
+                    +{{ chatGroups[conv.id].participants.length - 4 }}
+                  </span>
+                </div>
               </div>
             </div>
             <button class="shrink-0 opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-400 transition-all"
@@ -795,8 +860,11 @@ onMounted(fetchInitialData)
           <div v-if="hasLinkedTraceability && linkedTraceability" class="flex items-center gap-1 shrink-0">
             <div v-for="p in participants" :key="p.userId"
               class="w-7 h-7 -ml-1 first:ml-0 rounded-full bg-slate-700 ring-2 ring-base-100 flex items-center justify-center text-[10px] font-bold text-slate-200 group relative"
-              :title="userDisplayName(p.userId)">
+              :title="`${userDisplayName(p.userId)} — ${p.hasRoleMatch ? 'rol coincide con la trazabilidad' : 'sin coincidencia de rol con la trazabilidad'}`">
               {{ userInitials(p.userId) }}
+              <span
+                class="absolute -bottom-0 -right-0 w-1.5 h-1.5 rounded-full ring-2 ring-base-100 pointer-events-none"
+                :class="p.hasRoleMatch ? 'bg-emerald-500' : 'bg-red-500'"></span>
               <button v-if="canShareTraceability" @click.stop="removeParticipant(p.userId)"
                 class="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-red-600 hover:bg-red-500 text-white text-[9px] leading-none opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
                 title="Quitar acceso">×</button>
