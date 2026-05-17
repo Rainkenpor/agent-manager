@@ -472,6 +472,19 @@ export function registerTraceabilityRoutes(): void {
 	})
 
 	registry.register({
+		useBy: ['server', 'mcp'],
+		method: 'GET',
+		path: '/api/traceability/documents/:id/history',
+		toolName: 'get_traceability_document_history',
+		toolDescription:
+			'Devuelve todas las versiones (activas e inactivas) de un documento, ordenadas de más reciente a más antigua.',
+		inputSchema: z.object({ id: z.string().describe('ID de cualquier versión del documento') }).shape,
+		requiresAuth: true,
+		requiredPermission: { resource: 'traceability', action: 'read' },
+		handler: async ({ input }) => container.getDocumentHistoryUseCase.execute(input.id)
+	})
+
+	registry.register({
 		useBy: ['server'],
 		method: 'GET',
 		path: '/api/traceability/stages/users-by-role',

@@ -1,5 +1,5 @@
 <template>
-  <div class="w-auto h-auto relative">
+  <div :class="`w-auto h-auto relative ${$props.class || ''}`">
     <div ref="containerRef" class="w-full relative">
       <!-- AI toggle button -->
       <div v-show="!showInput && !showResult && !loading"
@@ -28,7 +28,8 @@
     </div>
 
     <!-- Textarea -->
-    <textarea v-model="model" :placeholder="placeholder" :rows="$props.rows ?? 10" class="textarea w-full" />
+    <textarea v-model="model" :placeholder="placeholder" :rows="$props.rows ?? 10"
+      :class="`textarea w-full ${$props.class || ''}`" />
 
     <!-- Loading state -->
     <div v-if="loading" class="mt-2 bg-neutral-900 border border-neutral-700 rounded-lg p-4">
@@ -143,6 +144,7 @@ const props = defineProps<{
   placeholder: string
   systemPrompt?: string
   rows?: number
+  class?: string
 }>()
 
 const model = defineModel<string>()

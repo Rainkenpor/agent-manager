@@ -102,6 +102,8 @@ export interface TraceabilityDocument {
 	stageId: string
 	name: string
 	content: string
+	active: boolean
+	originalId: string | null
 	createdAt: string
 	updatedAt: string
 }

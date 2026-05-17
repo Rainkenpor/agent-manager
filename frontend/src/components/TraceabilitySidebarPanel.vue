@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import * as api from '@/api/api'
-import TextAreaComplete from '@/components/TextAreaComplete.vue'
+import DocumentViewerModal from '@/components/DocumentViewerModal.vue'
 
 interface TraceabilityTask {
   id: string
@@ -42,7 +42,7 @@ interface LinkedTraceability {
   stages: TraceabilityStage[]
 }
 
-const props = defineProps<{ conversationId: string }>()
+const props = defineProps<{ conversationId: string; activeStageId?: string | null }>()
 
 const emit = defineEmits<{
   close: []
@@ -59,11 +59,7 @@ const expandedStages = ref<Set<string>>(new Set())
 const togglingTaskId = ref<string | null>(null)
 
 // Document viewer
-const activeDocument = ref<any>(null)
-const docViewerLoading = ref(false)
-const editingDocument = ref(false)
-const editDocForm = ref({ name: '', content: '' })
-const savingDocument = ref(false)
+const viewingDocumentId = ref<string | null>(null)
 
 // ── Lookups ───────────────────────────────────────────────────────────────────
 
@@ -122,6 +118,7 @@ async function load(conversationId: string) {
     linkedTraceabilities.value = Array.isArray(res.data) ? res.data : res.data ? [res.data] : []
     if (linkedTraceabilities.value.length > 0) {
       expandedTraceabilities.value = new Set([linkedTraceabilities.value[0].id])
+      if (props.activeStageId) expandedStages.value = new Set([props.activeStageId])
     }
     emit('loaded', linkedTraceabilities.value.length > 0)
   } catch {
@@ -133,6 +130,11 @@ async function load(conversationId: string) {
 }
 
 watch(() => props.conversationId, (id) => { if (id) load(id) }, { immediate: true })
+watch(() => props.activeStageId, (id) => {
+  if (id) {
+    expandedStages.value = new Set([...expandedStages.value, id])
+  }
+})
 
 // ── Tasks ─────────────────────────────────────────────────────────────────────
 
@@ -176,44 +178,22 @@ function toggleStage(stageId: string) {
 
 // ── Documents ─────────────────────────────────────────────────────────────────
 
-async function openDocument(doc: TraceabilityDocument) {
-  docViewerLoading.value = true
-  editingDocument.value = false
-  activeDocument.value = { ...doc }
-  try {
-    const res = await api.getTraceabilityDocument(doc.id)
-    activeDocument.value = res.data
-    editDocForm.value = { name: res.data.name, content: res.data.content ?? '' }
-  } catch (e: any) {
-    emit('error', e.message)
-  } finally {
-    docViewerLoading.value = false
-  }
+function openDocument(doc: TraceabilityDocument) {
+  viewingDocumentId.value = doc.id
 }
 
-async function saveDocument() {
-  if (!activeDocument.value) return
-  savingDocument.value = true
-  try {
-    const res = await api.updateTraceabilityDocument(activeDocument.value.id, editDocForm.value)
-    activeDocument.value = res.data
-    editingDocument.value = false
-    for (const trac of linkedTraceabilities.value) {
-      for (const stage of trac.stages) {
-        const idx = stage.documents.findIndex((d) => d.id === activeDocument.value.id)
-        if (idx !== -1) { stage.documents[idx] = { id: res.data.id, name: res.data.name }; break }
+function onDocumentSaved(savedDoc: { id: string; name: string }) {
+  for (const trac of linkedTraceabilities.value) {
+    for (const stage of trac.stages) {
+      const idx = stage.documents.findIndex((d) => d.id === viewingDocumentId.value || d.id === savedDoc.id)
+      if (idx !== -1) {
+        stage.documents[idx] = { id: savedDoc.id, name: savedDoc.name }
+        viewingDocumentId.value = savedDoc.id
+        return
       }
     }
-  } catch (e: any) {
-    emit('error', e.message)
-  } finally {
-    savingDocument.value = false
   }
-}
-
-function closeDocViewer() {
-  activeDocument.value = null
-  editingDocument.value = false
+  viewingDocumentId.value = savedDoc.id
 }
 </script>
 
@@ -277,18 +257,28 @@ function closeDocViewer() {
         <!-- Traceability stages (expanded) -->
         <div v-if="expandedTraceabilities.has(trac.id)" class="divide-y divide-slate-800/40 bg-slate-900/20">
 
-          <div v-for="stage in topoSort(trac.stages)" :key="stage.id">
+          <div v-for="stage in topoSort(trac.stages)" :key="stage.id"
+            :class="stage.id === activeStageId ? 'bg-indigo-500/10 border-l-2 border-indigo-400' : ''">
 
             <!-- Stage header -->
             <button
               class="w-full pl-6 pr-4 py-2 flex items-center gap-2 hover:bg-slate-800/40 transition-colors text-left"
               @click="toggleStage(stage.id)">
-              <svg class="w-3 h-3 text-slate-500 shrink-0 transition-transform"
-                :class="expandedStages.has(stage.id) ? 'rotate-90' : ''" fill="none" stroke="currentColor"
+              <svg class="w-3 h-3 shrink-0 transition-transform"
+                :class="[
+                  expandedStages.has(stage.id) ? 'rotate-90' : '',
+                  stage.id === activeStageId ? 'text-indigo-300' : 'text-slate-500'
+                ]" fill="none" stroke="currentColor"
                 viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
               </svg>
-              <span class="flex-1 text-xs font-medium text-slate-300 truncate">{{ stage.name }}</span>
+              <span class="flex-1 text-xs font-medium truncate"
+                :class="stage.id === activeStageId ? 'text-white' : 'text-slate-300'">{{ stage.name }}</span>
+              <span v-if="stage.id === activeStageId"
+                class="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wider bg-indigo-500/30 text-indigo-200"
+                title="Este chat está vinculado a este stage">
+                En uso
+              </span>
               <span class="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium"
                 :class="stageStatusClass[stage.status] ?? 'bg-slate-700 text-slate-400'">
                 {{ stageStatusLabel[stage.status] ?? stage.status }}
@@ -369,79 +359,6 @@ function closeDocViewer() {
 
   </div>
 
-  <!-- Document viewer modal (teleported to body to escape overflow:hidden) -->
-  <teleport to="body">
-    <div v-if="activeDocument"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
-      @mousedown.self="closeDocViewer">
-      <div class="bg-slate-900 rounded-2xl border border-slate-700 w-full max-w-3xl max-h-[85vh] flex flex-col">
-
-        <!-- Modal header -->
-        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-700 shrink-0 gap-4">
-          <div class="flex items-center gap-3 flex-1 min-w-0">
-            <svg class="w-5 h-5 text-teal-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <div v-if="!editingDocument" class="flex-1 min-w-0">
-              <h3 class="font-semibold text-white truncate">{{ activeDocument.name }}</h3>
-            </div>
-            <input v-else v-model="editDocForm.name"
-              class="flex-1 bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-          </div>
-          <div class="flex items-center gap-2 shrink-0">
-            <template v-if="!editingDocument">
-              <button
-                @click="editingDocument = true; editDocForm = { name: activeDocument.name, content: activeDocument.content ?? '' }"
-                class="px-3 py-1.5 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors">
-                Editar
-              </button>
-            </template>
-            <template v-else>
-              <button @click="editingDocument = false"
-                class="px-3 py-1.5 text-xs rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors">
-                Cancelar
-              </button>
-              <button @click="saveDocument" :disabled="savingDocument"
-                class="px-3 py-1.5 text-xs rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white transition-colors">
-                {{ savingDocument ? 'Guardando...' : 'Guardar' }}
-              </button>
-            </template>
-            <button @click="closeDocViewer"
-              class="p-1.5 text-slate-500 hover:text-slate-300 transition-colors rounded-lg hover:bg-slate-800">
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        <!-- Modal body -->
-        <div class="flex-1 overflow-y-auto p-6 min-h-0">
-          <div v-if="docViewerLoading" class="flex justify-center py-10">
-            <div class="animate-spin w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full" />
-          </div>
-          <div v-else-if="!editingDocument">
-            <pre v-if="activeDocument.content"
-              class="whitespace-pre-wrap text-sm text-slate-300 font-mono leading-relaxed">{{
-                activeDocument.content }}</pre>
-            <p v-else class="text-slate-500 text-sm italic">Sin contenido. Haz clic en Editar para añadir.</p>
-          </div>
-          <div v-else>
-            <label class="block text-xs text-slate-400 mb-1.5">Contenido (markdown)</label>
-            <TextAreaComplete v-model="editDocForm.content" :rows="20"
-              placeholder="Escribe el contenido en markdown..." />
-          </div>
-        </div>
-
-        <!-- Modal footer -->
-        <div v-if="!editingDocument && activeDocument.updatedAt"
-          class="px-6 py-3 border-t border-slate-800 shrink-0 flex gap-4 text-xs text-slate-600">
-          <span>Creado: {{ new Date(activeDocument.createdAt).toLocaleString() }}</span>
-          <span>Actualizado: {{ new Date(activeDocument.updatedAt).toLocaleString() }}</span>
-        </div>
-
-      </div>
-    </div>
-  </teleport>
+  <DocumentViewerModal v-if="viewingDocumentId" :document-id="viewingDocumentId" :can-edit="true"
+    @close="viewingDocumentId = null" @saved="onDocumentSaved" @error="emit('error', $event)" />
 </template>

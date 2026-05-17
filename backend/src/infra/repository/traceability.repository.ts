@@ -12,7 +12,8 @@ import {
 	AgentEntity,
 	UserEntity,
 	UserRoleEntity,
-	TraceabilityParticipantEntity
+	TraceabilityParticipantEntity,
+	TraceabilityParticipantStageChatEntity
 } from '@infra/db/entities.js'
 import { In, Not } from 'typeorm'
 import { v4 as uuidv4 } from 'uuid'
@@ -393,7 +394,7 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 		const [allTasks, allLinks, allDocuments, allPredecessors] = await Promise.all([
 			stageIds.length ? taskRepo.findBy({ stageId: In(stageIds) }) : Promise.resolve([]),
 			stageIds.length ? linkRepo.findBy({ stageId: In(stageIds) }) : Promise.resolve([]),
-			stageIds.length ? docRepo.findBy({ stageId: In(stageIds) }) : Promise.resolve([]),
+			stageIds.length ? docRepo.findBy({ stageId: In(stageIds), active: true }) : Promise.resolve([]),
 			stageIds.length ? predRepo.findBy({ stageId: In(stageIds) }) : Promise.resolve([])
 		])
 
@@ -440,13 +441,16 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 	async findByConversationId(chatId: string): Promise<Traceability[]> {
 		const tracRepo = AppDataSource.getRepository(TraceabilityEntity)
 		const participantRepo = AppDataSource.getRepository(TraceabilityParticipantEntity)
-		const [ownerTracs, participantRows] = await Promise.all([
+		const stageChatRepo = AppDataSource.getRepository(TraceabilityParticipantStageChatEntity)
+		const [ownerTracs, participantRows, stageChatRows] = await Promise.all([
 			tracRepo.findBy({ chatId }),
-			participantRepo.findBy({ chatId })
+			participantRepo.findBy({ chatId }),
+			stageChatRepo.findBy({ chatId })
 		])
 		const ids = new Set<string>([
 			...ownerTracs.map((t) => t.id),
-			...participantRows.map((p) => p.traceabilityId)
+			...participantRows.map((p) => p.traceabilityId),
+			...stageChatRows.map((s) => s.traceabilityId)
 		])
 		const results = await Promise.all([...ids].map((id) => this.findById(id)))
 		return results.filter((t): t is Traceability => t !== null)
@@ -623,7 +627,7 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 		const s = await tsRepo.findOneByOrFail({ id: stageId })
 		const [links, documents, predRows] = await Promise.all([
 			linkRepo.findBy({ stageId }),
-			docRepo.findBy({ stageId }),
+			docRepo.findBy({ stageId, active: true }),
 			predRepo.findBy({ stageId })
 		])
 
@@ -788,11 +792,14 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 	async createDocument(data: CreateDocumentDTO): Promise<TraceabilityDocument> {
 		const docRepo = AppDataSource.getRepository(TraceabilityDocumentEntity)
 		const now = new Date().toISOString()
+		const id = uuidv4()
 		const entity = docRepo.create({
-			id: uuidv4(),
+			id,
 			stageId: data.stageId,
 			name: data.name,
 			content: data.content ?? '',
+			active: true,
+			originalId: id,
 			createdAt: now,
 			updatedAt: now
 		})
@@ -802,15 +809,45 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 
 	async updateDocument(data: UpdateDocumentDTO): Promise<TraceabilityDocument | null> {
 		const docRepo = AppDataSource.getRepository(TraceabilityDocumentEntity)
-		const { id, ...rest } = data
-		await docRepo.update(id, { ...rest, updatedAt: new Date().toISOString() })
-		const row = await docRepo.findOneBy({ id })
-		return (row as TraceabilityDocument) ?? null
+		const current = await docRepo.findOneBy({ id: data.id })
+		if (!current) return null
+
+		const now = new Date().toISOString()
+		const originalId = current.originalId ?? current.id
+
+		// Deactivate every version in this lineage (defensive: include legacy rows where originalId is null)
+		await docRepo
+			.createQueryBuilder()
+			.update(TraceabilityDocumentEntity)
+			.set({ active: false, updatedAt: now })
+			.where('original_id = :oid OR id = :oid', { oid: originalId })
+			.execute()
+
+		const newEntity = docRepo.create({
+			id: uuidv4(),
+			stageId: current.stageId,
+			name: data.name ?? current.name,
+			content: data.content ?? current.content,
+			active: true,
+			originalId,
+			createdAt: now,
+			updatedAt: now
+		})
+		await docRepo.save(newEntity)
+		return newEntity as TraceabilityDocument
 	}
 
 	async deleteDocument(id: string): Promise<void> {
 		const docRepo = AppDataSource.getRepository(TraceabilityDocumentEntity)
-		await docRepo.delete(id)
+		const current = await docRepo.findOneBy({ id })
+		if (!current) return
+		const originalId = current.originalId ?? current.id
+		await docRepo
+			.createQueryBuilder()
+			.delete()
+			.from(TraceabilityDocumentEntity)
+			.where('original_id = :oid OR id = :oid', { oid: originalId })
+			.execute()
 	}
 
 	async getDocument(id: string): Promise<TraceabilityDocument | null> {
@@ -819,13 +856,26 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 		return (row as TraceabilityDocument) ?? null
 	}
 
+	async getDocumentHistory(id: string): Promise<TraceabilityDocument[]> {
+		const docRepo = AppDataSource.getRepository(TraceabilityDocumentEntity)
+		const current = await docRepo.findOneBy({ id })
+		if (!current) return []
+		const originalId = current.originalId ?? current.id
+		const rows = await docRepo
+			.createQueryBuilder('d')
+			.where('d.original_id = :oid OR d.id = :oid', { oid: originalId })
+			.orderBy('d.created_at', 'DESC')
+			.getMany()
+		return rows as TraceabilityDocument[]
+	}
+
 	async getDocumentByTraceabilityId(traceabilityId: string): Promise<TraceabilityDocument[]> {
 		const tsRepo = AppDataSource.getRepository(TraceabilityStageEntity)
 		const docRepo = AppDataSource.getRepository(TraceabilityDocumentEntity)
 		const stages = await tsRepo.findBy({ traceabilityId })
 		const stageIds = stages.map((s) => s.id)
 		if (!stageIds.length) return []
-		const rows = await docRepo.findBy({ stageId: In(stageIds) })
+		const rows = await docRepo.findBy({ stageId: In(stageIds), active: true })
 		return rows as TraceabilityDocument[]
 	}
 
@@ -885,7 +935,7 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 			const [tasks, links, docs, preds] = await Promise.all([
 				taskRepo.findBy({ stageId: stage.id }),
 				linkRepo.findBy({ stageId: stage.id }),
-				docRepo.findBy({ stageId: stage.id }),
+				docRepo.findBy({ stageId: stage.id, active: true }),
 				predRepo.findBy({ stageId: stage.id })
 			])
 

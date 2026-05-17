@@ -102,6 +102,7 @@ import {
 	UpdateDocumentUseCase,
 	DeleteDocumentUseCase,
 	GetDocumentUseCase,
+	GetDocumentHistoryUseCase,
 	GetTemplateByCodeUseCase,
 	GetUsersByRoleWithEffortUseCase,
 	AssignStageUserUseCase,
@@ -247,6 +248,7 @@ export class Container {
 	private _updateDocumentUseCase?: UpdateDocumentUseCase
 	private _deleteDocumentUseCase?: DeleteDocumentUseCase
 	private _getDocumentUseCase?: GetDocumentUseCase
+	private _getDocumentHistoryUseCase?: GetDocumentHistoryUseCase
 	private _getTemplateByCodeUseCase?: GetTemplateByCodeUseCase
 	private _getUsersByRoleWithEffortUseCase?: GetUsersByRoleWithEffortUseCase
 	private _assignStageUserUseCase?: AssignStageUserUseCase
@@ -702,6 +704,12 @@ export class Container {
 		return this._getDocumentUseCase
 	}
 
+	get getDocumentHistoryUseCase(): GetDocumentHistoryUseCase {
+		if (!this._getDocumentHistoryUseCase)
+			this._getDocumentHistoryUseCase = new GetDocumentHistoryUseCase(this._traceabilityRepository)
+		return this._getDocumentHistoryUseCase
+	}
+
 	get getTemplateByCodeUseCase(): GetTemplateByCodeUseCase {
 		if (!this._getTemplateByCodeUseCase) this._getTemplateByCodeUseCase = new GetTemplateByCodeUseCase(this._traceabilityRepository)
 		return this._getTemplateByCodeUseCase
@@ -749,7 +757,10 @@ export class Container {
 
 	get removeTraceabilityShareUseCase(): RemoveTraceabilityShareUseCase {
 		if (!this._removeTraceabilityShareUseCase)
-			this._removeTraceabilityShareUseCase = new RemoveTraceabilityShareUseCase(this._traceabilityParticipantRepository)
+			this._removeTraceabilityShareUseCase = new RemoveTraceabilityShareUseCase(
+				this._traceabilityParticipantRepository,
+				this._chatRepository
+			)
 		return this._removeTraceabilityShareUseCase
 	}
 
@@ -774,7 +785,8 @@ export class Container {
 			this._openOrCreateChatForTraceabilityUseCase = new OpenOrCreateChatForTraceabilityUseCase(
 				this._traceabilityParticipantRepository,
 				this._traceabilityRepository,
-				this._chatRepository
+				this._chatRepository,
+				this._userRepository
 			)
 		return this._openOrCreateChatForTraceabilityUseCase
 	}

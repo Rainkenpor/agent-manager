@@ -24,4 +24,5 @@ export interface TraceabilityInvitation {
 	chatId: string | null
 	agentId: string | null
 	createdAt: string
+	remainingStagesCount: number
 }

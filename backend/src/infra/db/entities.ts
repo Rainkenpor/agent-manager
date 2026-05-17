@@ -678,6 +678,29 @@ export class TraceabilityParticipantEntity {
 	createdAt!: string
 }
 
+@Entity('traceability_participant_stage_chats')
+@Index('uq_tpsc_trac_user_stage', ['traceabilityId', 'userId', 'stageId'], { unique: true })
+@Index('uq_tpsc_chat', ['chatId'], { unique: true })
+export class TraceabilityParticipantStageChatEntity {
+	@PrimaryColumn({ type: 'text' })
+	id!: string
+
+	@Column({ name: 'traceability_id', type: 'text' })
+	traceabilityId!: string
+
+	@Column({ name: 'user_id', type: 'text' })
+	userId!: string
+
+	@Column({ name: 'stage_id', type: 'text' })
+	stageId!: string
+
+	@Column({ name: 'chat_id', type: 'text' })
+	chatId!: string
+
+	@Column({ name: 'created_at', type: 'text' })
+	createdAt!: string
+}
+
 @Entity('traceability_stages')
 export class TraceabilityStageEntity {
 	@PrimaryColumn({ type: 'text' })
@@ -787,6 +810,7 @@ export class TraceabilityLinkEntity {
 }
 
 @Entity('traceability_documents')
+@Index('idx_traceability_documents_active', ['stageId', 'active'])
 export class TraceabilityDocumentEntity {
 	@PrimaryColumn({ type: 'text' })
 	id!: string
@@ -799,6 +823,12 @@ export class TraceabilityDocumentEntity {
 
 	@Column({ type: 'text', default: '' })
 	content!: string
+
+	@Column({ type: 'boolean', default: true })
+	active!: boolean
+
+	@Column({ name: 'original_id', type: 'text', nullable: true })
+	originalId!: string | null
 
 	@Column({ name: 'created_at', type: 'text' })
 	createdAt!: string

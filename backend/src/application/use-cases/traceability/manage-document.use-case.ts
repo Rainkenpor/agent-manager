@@ -74,3 +74,16 @@ export class GetDocumentUseCase {
 		}
 	}
 }
+
+export class GetDocumentHistoryUseCase {
+	constructor(private readonly repo: ITraceabilityRepository) {}
+
+	async execute(id: string) {
+		try {
+			const versions = await this.repo.getDocumentHistory(id)
+			return { success: true as const, data: versions }
+		} catch (error) {
+			return { success: false as const, error: error instanceof Error ? error.message : 'Unknown error' }
+		}
+	}
+}

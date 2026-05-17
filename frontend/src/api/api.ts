@@ -257,6 +257,8 @@ export const deleteTraceabilityLink = (id: string) => request<{ success: boolean
 export const createTraceabilityDocument = (data: { stageId: string; name: string; content?: string }) =>
 	request<{ success: boolean; data: any }>('/traceability/documents', { method: 'POST', body: JSON.stringify(data) })
 export const getTraceabilityDocument = (id: string) => request<{ success: boolean; data: any }>(`/traceability/documents/${id}`)
+export const getTraceabilityDocumentHistory = (id: string) =>
+	request<{ success: boolean; data: Array<{ id: string; stageId: string; name: string; content: string; active: boolean; originalId: string | null; createdAt: string; updatedAt: string }> }>(`/traceability/documents/${id}/history`)
 export const updateTraceabilityDocument = (id: string, data: { name?: string; content?: string }) =>
 	request<{ success: boolean; data: any }>(`/traceability/documents/${id}`, { method: 'PUT', body: JSON.stringify({ id, ...data }) })
 export const deleteTraceabilityDocument = (id: string) =>
@@ -275,9 +277,30 @@ export const removeTraceabilityParticipant = (traceabilityId: string, userId: st
 export const listTraceabilityInvitations = () =>
 	request<{ success: boolean; data: any[] }>('/chat/traceability-invitations')
 export const getTraceabilityGroupsForUser = () =>
-	request<{ success: boolean; data: Record<string, { traceabilityId: string; title: string; ownerUserId: string | null; participants: Array<{ userId: string; chatId: string | null }> }> }>('/chat/traceability-groups')
-export const openTraceabilityInvitation = (traceabilityId: string) =>
-	request<{ success: boolean; data: any }>(`/chat/traceability-invitations/${traceabilityId}/open`, { method: 'POST' })
+	request<{
+		success: boolean
+		data: Record<string, {
+			traceabilityId: string
+			title: string
+			ownerUserId: string | null
+			participants: Array<{ userId: string; chatId: string | null }>
+			stageId: string | null
+			stageName: string | null
+			myEligibleStages: Array<{ stageId: string; stageName: string; chatId: string | null }>
+		}>
+	}>('/chat/traceability-groups')
+export const openTraceabilityInvitation = (traceabilityId: string, stageId?: string | null) =>
+	request<{
+		success: boolean
+		data?: any
+		stageId?: string
+		requireStageSelection?: boolean
+		stages?: Array<{ id: string; name: string; role: string | null; hasChat?: boolean }>
+		error?: string
+	}>(`/chat/traceability-invitations/${traceabilityId}/open`, {
+		method: 'POST',
+		body: JSON.stringify({ stageId: stageId ?? null })
+	})
 
 // Effort & Assignment
 export const getUsersByRoleWithEffort = (roleId: string) =>

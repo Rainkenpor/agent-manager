@@ -93,6 +93,7 @@ interface TraceabilityInvitation {
   description: string | null
   chatId: string | null
   agentId: string | null
+  remainingStagesCount?: number
 }
 interface UserSummary {
   id: string
@@ -112,8 +113,83 @@ interface ChatGroupInfo {
   title: string
   ownerUserId: string | null
   participants: Array<{ userId: string; chatId: string | null }>
+  stageId: string | null
+  stageName: string | null
+  myEligibleStages: Array<{ stageId: string; stageName: string; chatId: string | null }>
 }
 const chatGroups = ref<Record<string, ChatGroupInfo>>({})
+
+interface PendingStageSelection {
+  traceabilityId: string
+  title: string
+  stages: Array<{ id: string; name: string; role: string | null; hasChat?: boolean }>
+}
+const pendingStageSelection = ref<PendingStageSelection | null>(null)
+const switchingStage = ref(false)
+
+// For each traceabilityId, remember which chatId the user last opened so the
+// grouped sidebar entry picks that chat when re-clicked.
+const lastOpenedChatByTraceability = ref<Record<string, string>>({})
+
+interface SidebarEntry {
+  kind: 'chat' | 'group'
+  id: string // conversationId for 'chat'; traceabilityId for 'group'
+  conversation: Conversation
+  groupChats?: Conversation[] // populated for 'group'
+}
+
+const sidebarEntries = computed<SidebarEntry[]>(() => {
+  const entries: SidebarEntry[] = []
+  const groupBuckets = new Map<string, Conversation[]>()
+  const seenGroupOrder: string[] = []
+  for (const conv of conversations.value) {
+    const grp = chatGroups.value[conv.id]
+    if (grp) {
+      const tid = grp.traceabilityId
+      if (!groupBuckets.has(tid)) {
+        groupBuckets.set(tid, [])
+        seenGroupOrder.push(tid)
+      }
+      groupBuckets.get(tid)!.push(conv)
+    } else {
+      entries.push({ kind: 'chat', id: conv.id, conversation: conv })
+    }
+  }
+  // Insert group entries in the order they first appeared
+  for (const tid of seenGroupOrder) {
+    const chats = groupBuckets.get(tid)!
+    const preferredId = lastOpenedChatByTraceability.value[tid]
+    const active = activeConversation.value && chatGroups.value[activeConversation.value.id]?.traceabilityId === tid
+      ? activeConversation.value
+      : null
+    const representative = active
+      ?? chats.find((c) => c.id === preferredId)
+      ?? chats[0]
+    entries.push({ kind: 'group', id: tid, conversation: representative, groupChats: chats })
+  }
+  return entries
+})
+
+function entryGroupInfo(entry: SidebarEntry) {
+  return chatGroups.value[entry.conversation.id] ?? null
+}
+
+function isEntryActive(entry: SidebarEntry): boolean {
+  if (!activeConversation.value) return false
+  if (entry.kind === 'chat') return activeConversation.value.id === entry.conversation.id
+  return entry.groupChats?.some((c) => c.id === activeConversation.value!.id) ?? false
+}
+
+async function openEntry(entry: SidebarEntry) {
+  if (entry.kind === 'chat') {
+    await openConversation(entry.conversation)
+    return
+  }
+  const tid = entry.id
+  const preferredId = lastOpenedChatByTraceability.value[tid]
+  const target = entry.groupChats?.find((c) => c.id === preferredId) ?? entry.conversation
+  await openConversation(target)
+}
 
 const groupPalette = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#06b6d4', '#a855f7', '#ef4444', '#22c55e']
 function groupColor(traceabilityId: string): string {
@@ -162,7 +238,9 @@ async function fetchInitialData() {
     const usersData: any = Array.isArray(usersRes) ? usersRes : usersRes?.data ?? []
     allUsers.value = usersData as UserSummary[]
     const invData: any = (invitationsRes as any)?.data ?? []
-    invitations.value = (invData as TraceabilityInvitation[]).filter((i) => !i.chatId)
+    invitations.value = (invData as TraceabilityInvitation[]).filter(
+      (i) => (i.remainingStagesCount ?? (i.chatId ? 0 : 1)) > 0
+    )
     await refreshChatGroups()
   } catch (e: any) {
     error.value = e.message
@@ -178,22 +256,112 @@ async function refreshChatGroups() {
   }
 }
 
-async function openInvitation(inv: TraceabilityInvitation) {
+async function openInvitation(inv: TraceabilityInvitation, stageId?: string | null) {
   try {
-    const res: any = await api.openTraceabilityInvitation(inv.traceabilityId)
-    if (!res?.success || !res?.data?.id) {
+    const res: any = await api.openTraceabilityInvitation(inv.traceabilityId, stageId ?? null)
+    if (!res?.success) {
       error.value = res?.error || 'No se pudo abrir la trazabilidad compartida'
+      return
+    }
+    if (res.requireStageSelection) {
+      pendingStageSelection.value = {
+        traceabilityId: inv.traceabilityId,
+        title: inv.title,
+        stages: res.stages ?? []
+      }
+      return
+    }
+    if (!res?.data?.id) {
+      error.value = 'Respuesta inválida del servidor'
       return
     }
     const conv: any = res.data
     if (!conversations.value.find((c) => c.id === conv.id)) {
       conversations.value.unshift(conv)
     }
-    invitations.value = invitations.value.filter((i) => i.traceabilityId !== inv.traceabilityId)
+    // Only remove the invitation entry once the user no longer has remaining stages to open
+    if (stageId) {
+      const remaining = (res.stages ?? []).some((s: any) => !s.hasChat && s.id !== stageId)
+      if (!remaining) {
+        invitations.value = invitations.value.filter((i) => i.traceabilityId !== inv.traceabilityId)
+      }
+    } else {
+      invitations.value = invitations.value.filter((i) => i.traceabilityId !== inv.traceabilityId)
+    }
     await openConversation(conv)
     await refreshChatGroups()
   } catch (e: any) {
     error.value = e.message
+  }
+}
+
+async function pickStageFromModal(stageId: string) {
+  if (!pendingStageSelection.value) return
+  const pending = pendingStageSelection.value
+  try {
+    const res: any = await api.openTraceabilityInvitation(pending.traceabilityId, stageId)
+    if (!res?.success || !res?.data?.id) {
+      error.value = res?.error || 'No se pudo abrir el chat del stage'
+      return
+    }
+    const conv: any = res.data
+    if (!conversations.value.find((c) => c.id === conv.id)) {
+      conversations.value.unshift(conv)
+    }
+    // Mark this stage as having a chat in the modal so the user can keep opening others
+    pendingStageSelection.value = {
+      ...pending,
+      stages: pending.stages.map((s) => (s.id === stageId ? { ...s, hasChat: true } : s))
+    }
+    await openConversation(conv)
+    await refreshChatGroups()
+    // If no remaining stages to open, close the modal and remove invitation
+    const remaining = pendingStageSelection.value.stages.some((s) => !s.hasChat)
+    if (!remaining) {
+      invitations.value = invitations.value.filter((i) => i.traceabilityId !== pending.traceabilityId)
+      pendingStageSelection.value = null
+    }
+  } catch (e: any) {
+    error.value = e.message
+  }
+}
+
+async function switchStage(targetStageId: string) {
+  if (!activeConversation.value) return
+  const group = chatGroups.value[activeConversation.value.id]
+  if (!group) return
+  if (targetStageId === group.stageId) return
+  const target = group.myEligibleStages.find((s) => s.stageId === targetStageId)
+  if (!target) return
+  switchingStage.value = true
+  try {
+    if (target.chatId) {
+      const conv = conversations.value.find((c) => c.id === target.chatId)
+      if (conv) await openConversation(conv)
+      else {
+        // chat exists in DB but not in our local list — refresh and retry
+        const res = await api.getConversations()
+        conversations.value = res.data ?? []
+        const fresh = conversations.value.find((c) => c.id === target.chatId)
+        if (fresh) await openConversation(fresh)
+      }
+    } else {
+      const res: any = await api.openTraceabilityInvitation(group.traceabilityId, targetStageId)
+      if (!res?.success || !res?.data?.id) {
+        error.value = res?.error || 'No se pudo abrir el chat del stage'
+        return
+      }
+      const conv: any = res.data
+      if (!conversations.value.find((c) => c.id === conv.id)) {
+        conversations.value.unshift(conv)
+      }
+      await openConversation(conv)
+    }
+    await refreshChatGroups()
+  } catch (e: any) {
+    error.value = e.message
+  } finally {
+    switchingStage.value = false
   }
 }
 
@@ -247,6 +415,8 @@ async function openConversation(conv: Conversation) {
     initFormAnswersFromMessages()
     await scrollToBottom()
     fetchHasLinkedTraceability(conv.id)
+    const grp = chatGroups.value[conv.id]
+    if (grp) lastOpenedChatByTraceability.value[grp.traceabilityId] = conv.id
   } catch (e: any) {
     error.value = e.message
   } finally {
@@ -523,7 +693,7 @@ function renderMarkdown(text: string): string {
           '</tr>'
       )
       .join('')
-    return `<table style="border-collapse:collapse;width:100%;font-size:0.8rem;margin:8px 0;background:#0f172a;border-radius:8px;overflow:hidden"><thead><tr>${th}</tr></thead><tbody>${trs}</tbody></table>`
+    return `<div class="overflow-auto"><table style="border-collapse:collapse;width:100%;font-size:0.8rem;margin:8px 0;background:#0f172a;border-radius:8px;overflow:hidden"><thead><tr>${th}</tr></thead><tbody>${trs}</tbody></table></div>`
   }
 
   const lines = text.split('\n')
@@ -778,58 +948,70 @@ onMounted(fetchInitialData)
           </button>
         </div>
 
-        <div v-if="conversations.length === 0 && invitations.length === 0"
+        <div v-if="sidebarEntries.length === 0 && invitations.length === 0"
           class="px-4 py-8 text-center text-slate-500 text-sm">
           Sin conversaciones
         </div>
-        <button v-for="conv in conversations" :key="conv.id"
+        <button v-for="entry in sidebarEntries" :key="entry.kind + ':' + entry.id"
           class="w-full text-left px-4 py-3 border-b border-slate-800/60 hover:bg-slate-800/50 transition-colors group relative"
           :class="[
-            activeConversation?.id === conv.id ? 'bg-slate-800' : '',
-            chatGroups[conv.id] ? 'pl-5' : ''
-          ]"
-          @click="openConversation(conv)">
-          <span v-if="chatGroups[conv.id]"
-            class="absolute left-0 top-0 bottom-0 w-1"
-            :style="{ backgroundColor: groupColor(chatGroups[conv.id].traceabilityId) }"
-            :title="`Trazabilidad: ${chatGroups[conv.id].title}`"></span>
+            isEntryActive(entry) ? 'bg-slate-800' : '',
+            entryGroupInfo(entry) ? 'pl-5' : ''
+          ]" @click="openEntry(entry)">
+          <span v-if="entryGroupInfo(entry)" class="absolute left-0 top-0 bottom-0 w-1"
+            :style="{ backgroundColor: groupColor(entryGroupInfo(entry)!.traceabilityId) }"
+            :title="`Trazabilidad: ${entryGroupInfo(entry)!.title}`"></span>
           <div class="flex items-start justify-between gap-2">
             <div class="min-w-0 flex-1 pr-2">
               <div class="flex items-center gap-1.5">
-                <span v-if="chatGroups[conv.id]" class="mdi mdi-clipboard-text-outline text-[13px] shrink-0"
-                  :style="{ color: groupColor(chatGroups[conv.id].traceabilityId) }"
-                  :title="`Trazabilidad: ${chatGroups[conv.id].title}`"></span>
-                <p class="text-sm font-medium text-white truncate">{{ conv.title }}</p>
+                <span v-if="entryGroupInfo(entry)" class="mdi mdi-clipboard-text-outline text-[13px] shrink-0"
+                  :style="{ color: groupColor(entryGroupInfo(entry)!.traceabilityId) }"
+                  :title="`Trazabilidad: ${entryGroupInfo(entry)!.title}`"></span>
+                <p class="text-sm font-medium text-white truncate">
+                  {{ entry.kind === 'group' ? entryGroupInfo(entry)!.title : entry.conversation.title }}
+                </p>
+                <span v-if="entry.kind === 'group' && (entry.groupChats?.length ?? 0) > 1"
+                  class="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full bg-slate-700 text-slate-300 font-medium"
+                  :title="`${entry.groupChats!.length} chats (uno por stage)`">
+                  {{ entry.groupChats!.length }}
+                </span>
               </div>
               <div class="flex items-center gap-2 mt-0.5">
-                <p class="text-xs text-indigo-400 truncate" :title="agentsMap.get(conv.agentId) || conv.agentId">
-                  {{ agentsMap.get(conv.agentId) || 'Agente' }}
+                <p class="text-xs text-indigo-400 truncate"
+                  :title="agentsMap.get(entry.conversation.agentId) || entry.conversation.agentId">
+                  {{ agentsMap.get(entry.conversation.agentId) || 'Agente' }}
                 </p>
+                <span v-if="entryGroupInfo(entry)?.stageName"
+                  class="text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0" :style="{
+                    backgroundColor: groupColor(entryGroupInfo(entry)!.traceabilityId) + '22',
+                    color: groupColor(entryGroupInfo(entry)!.traceabilityId)
+                  }" :title="`Stage: ${entryGroupInfo(entry)!.stageName}`">
+                  {{ entryGroupInfo(entry)!.stageName }}
+                </span>
               </div>
-              <div v-if="chatGroups[conv.id]" class="flex items-center gap-1 mt-1.5">
-                <p class="text-[10px] uppercase tracking-wider text-slate-500 truncate mr-1"
-                  :title="chatGroups[conv.id].title">{{ chatGroups[conv.id].title }}</p>
+              <div v-if="entryGroupInfo(entry)" class="flex items-center gap-1 mt-1.5">
                 <div class="flex items-center">
-                  <span v-if="chatGroups[conv.id].ownerUserId"
+                  <span v-if="entryGroupInfo(entry)!.ownerUserId"
                     class="w-5 h-5 -ml-1 first:ml-0 rounded-full ring-2 ring-base-100 flex items-center justify-center text-[9px] font-bold text-white"
-                    :style="{ backgroundColor: groupColor(chatGroups[conv.id].traceabilityId) }"
-                    :title="`${userDisplayName(chatGroups[conv.id].ownerUserId!)} (propietario)`">
-                    {{ userInitials(chatGroups[conv.id].ownerUserId!) }}
+                    :style="{ backgroundColor: groupColor(entryGroupInfo(entry)!.traceabilityId) }"
+                    :title="`${userDisplayName(entryGroupInfo(entry)!.ownerUserId!)} (propietario)`">
+                    {{ userInitials(entryGroupInfo(entry)!.ownerUserId!) }}
                   </span>
-                  <span v-for="p in chatGroups[conv.id].participants.slice(0, 4)" :key="p.userId"
+                  <span v-for="p in entryGroupInfo(entry)!.participants.slice(0, 4)" :key="p.userId"
                     class="w-5 h-5 -ml-1 rounded-full bg-slate-700 ring-2 ring-base-100 flex items-center justify-center text-[9px] font-bold text-slate-200"
                     :title="userDisplayName(p.userId)">
                     {{ userInitials(p.userId) }}
                   </span>
-                  <span v-if="chatGroups[conv.id].participants.length > 4"
+                  <span v-if="entryGroupInfo(entry)!.participants.length > 4"
                     class="w-5 h-5 -ml-1 rounded-full bg-slate-700 ring-2 ring-base-100 flex items-center justify-center text-[9px] font-bold text-slate-300">
-                    +{{ chatGroups[conv.id].participants.length - 4 }}
+                    +{{ entryGroupInfo(entry)!.participants.length - 4 }}
                   </span>
                 </div>
               </div>
             </div>
-            <button class="shrink-0 opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-400 transition-all"
-              title="Eliminar" @click.stop="deleteConversation(conv)">
+            <button v-if="entry.kind === 'chat'"
+              class="shrink-0 opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-400 transition-all"
+              title="Eliminar" @click.stop="deleteConversation(entry.conversation)">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -853,7 +1035,20 @@ onMounted(fetchInitialData)
             </svg>
           </div>
           <div class="flex-1 min-w-0">
-            <p class="text-sm font-semibold text-white">{{ activeConversation.title }}</p>
+            <div class="flex items-center gap-2">
+              <p class="text-sm font-semibold text-white truncate">{{ activeConversation.title }}</p>
+              <select v-if="(chatGroups[activeConversation.id]?.myEligibleStages?.length ?? 0) > 1"
+                :value="chatGroups[activeConversation.id].stageId ?? ''"
+                @change="(e) => switchStage((e.target as HTMLSelectElement).value)" :disabled="switchingStage"
+                class="text-xs bg-slate-800 border border-slate-700 rounded px-2 py-1 text-white focus:outline-none focus:border-indigo-500"
+                :title="'Cambiar de stage'">
+                <option v-if="!chatGroups[activeConversation.id].stageId" value="" disabled>Selecciona stage…</option>
+                <option v-for="s in chatGroups[activeConversation.id].myEligibleStages" :key="s.stageId"
+                  :value="s.stageId">
+                  {{ s.stageName }}{{ s.chatId ? '' : ' · nuevo' }}
+                </option>
+              </select>
+            </div>
             <p class="text-xs text-slate-400">Agente: {{ activeAgent?.name ?? activeConversation.agentId }}</p>
           </div>
           <!-- Participants strip (when traceability is linked) -->
@@ -935,12 +1130,12 @@ onMounted(fetchInitialData)
 
             <!-- Bubble + metadata -->
             <div class="flex flex-col gap-1"
-              :class="getRequestQuestions(msg) && !submittedForms.includes(msg.id) ? 'max-w-[88%]' : 'max-w-[70%]'"
+              :class="getRequestQuestions(msg) && !submittedForms.includes(msg.id) ? 'max-w-[88%]' : 'max-w-[80%]'"
               :style="msg.role === 'user' ? 'align-items:flex-end' : ''">
 
               <!-- ── Bubble ─────────────────────────────────── -->
               <div class="rounded-2xl text-sm leading-relaxed" :class="[
-                editingMessageId === msg.id ? 'p-0' : 'px-4 py-2.5',
+                editingMessageId === msg.id ? 'p-0 w-120' : 'px-4 py-2.5',
                 msg.role === 'user'
                   ? 'bg-indigo-600 text-white rounded-tr-sm'
                   : 'bg-slate-800 text-slate-100 rounded-tl-sm border border-slate-700/50'
@@ -1107,7 +1302,7 @@ onMounted(fetchInitialData)
               </div>
 
               <!-- Timestamp + response time + action buttons -->
-              <div v-if="editingMessageId !== msg.id" class="flex items-center gap-2 px-1">
+              <div v-if="editingMessageId !== msg.id" class="flex items-center gap-2 px-1 h-2.5">
                 <span class="text-xs text-slate-600">{{ formatTime(msg.createdAt) }}</span>
                 <span v-if="msg.role === 'assistant' && msg.responseTime != null && !msg.streaming"
                   class="flex items-center gap-1 text-xs text-slate-600">
@@ -1134,10 +1329,7 @@ onMounted(fetchInitialData)
                 <button v-if="msg.role === 'user' && hoveredMessageId === msg.id && !sending" @click="editMessage(msg)"
                   class="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs text-slate-500 hover:text-indigo-400 hover:bg-slate-800 transition-colors"
                   title="Editar mensaje">
-                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
+                  <span class="mdi mdi-pencil"></span>
                   Editar
                 </button>
               </div>
@@ -1181,7 +1373,8 @@ onMounted(fetchInitialData)
     <!-- Traceability sidebar -->
     <transition name="sidebar">
       <TraceabilitySidebarPanel v-if="showTraceabilitySidebar && activeConversation"
-        :conversation-id="activeConversation.id" @close="showTraceabilitySidebar = false" @error="error = $event" />
+        :conversation-id="activeConversation.id" :active-stage-id="chatGroups[activeConversation.id]?.stageId ?? null"
+        @close="showTraceabilitySidebar = false" @error="error = $event" />
     </transition>
 
   </div>
@@ -1193,6 +1386,38 @@ onMounted(fetchInitialData)
       ...(linkedTraceability.createdBy ? [linkedTraceability.createdBy] : []),
       ...(auth.user?.id ? [auth.user.id] : [])
     ]" @close="showShareModal = false" @saved="onShareSaved" />
+
+  <!-- Stage selection modal (multi-stage invitations) -->
+  <div v-if="pendingStageSelection"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+    @click.self="pendingStageSelection = null">
+    <div class="bg-slate-900 rounded-2xl border border-slate-700 w-full max-w-md p-6">
+      <h2 class="text-lg font-semibold text-white mb-1">Selecciona un stage</h2>
+      <p class="text-xs text-slate-400 mb-4 truncate">Trazabilidad: {{ pendingStageSelection.title }}</p>
+      <p class="text-sm text-slate-300 mb-3">Tienes acceso a varios stages. Cada uno abrirá su propio chat:</p>
+      <div class="space-y-2 max-h-80 overflow-y-auto">
+        <button v-for="s in pendingStageSelection.stages" :key="s.id"
+          class="w-full text-left px-3 py-3 rounded-lg border transition-colors" :class="s.hasChat
+            ? 'border-emerald-700/50 bg-emerald-900/10 hover:bg-emerald-900/20'
+            : 'border-slate-700 bg-slate-800 hover:bg-slate-700'" @click="pickStageFromModal(s.id)">
+          <div class="flex items-center justify-between gap-2">
+            <div class="min-w-0">
+              <p class="text-sm font-medium text-white truncate">{{ s.name }}</p>
+              <p v-if="s.role" class="text-[11px] text-slate-400 truncate">Rol: {{ s.role }}</p>
+            </div>
+            <span v-if="s.hasChat" class="text-[10px] uppercase tracking-wider text-emerald-400 shrink-0">Abierto</span>
+            <span v-else class="text-[10px] uppercase tracking-wider text-indigo-400 shrink-0">Crear</span>
+          </div>
+        </button>
+      </div>
+      <div class="flex justify-end gap-2 mt-5">
+        <button @click="pendingStageSelection = null"
+          class="px-4 py-2 rounded-lg text-sm text-slate-300 hover:text-white hover:bg-slate-800 transition-colors">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- Credential modal -->
   <AppModal v-if="showCredentialModal" title="Establecer credenciales" @close="showCredentialModal = false">

@@ -5,6 +5,7 @@ import { useToastStore } from '@/store/useToast'
 import PageLayout from '@/components/PageLayout.vue'
 import * as api from '@/api/api'
 import AppModal from '@/components/AppModal.vue'
+import DocumentViewerModal from '@/components/DocumentViewerModal.vue'
 
 interface ITask {
   id: string;
@@ -311,10 +312,7 @@ const docForm = ref({ name: '', content: '' })
 const stageUsers = ref<any[]>([])
 const loadingUsers = ref(false)
 // Document viewer modal
-const activeDocument = ref<any>(null)
-const docViewerLoading = ref(false)
-const editingDocument = ref(false)
-const editDocForm = ref({ name: '', content: '' })
+const viewingDocumentId = ref<string | null>(null)
 
 function openStagePanel(stage: any) {
   activeStage.value = activeStage.value?.id === stage.id ? null : stage
@@ -448,38 +446,22 @@ async function createDoc() {
   }
 }
 
-async function openDocument(doc: any) {
-  docViewerLoading.value = true
-  editingDocument.value = false
-  activeDocument.value = doc
-  try {
-    const res = await api.getTraceabilityDocument(doc.id)
-    activeDocument.value = res.data
-    editDocForm.value = { name: res.data.name, content: res.data.content }
-  } catch (e: any) {
-    toast.error(e.message)
-  } finally {
-    docViewerLoading.value = false
-  }
+function openDocument(doc: any) {
+  viewingDocumentId.value = doc.id
 }
 
-async function saveDocument() {
-  if (!activeDocument.value) return
-  try {
-    const res = await api.updateTraceabilityDocument(activeDocument.value.id, editDocForm.value)
-    activeDocument.value = res.data
-    editingDocument.value = false
-    // Sync in stage
-    const idx = activeTrac.value?.stages?.findIndex((s: any) => s.id === activeStage.value?.id)
-    if (idx >= 0) {
-      const dIdx = activeTrac.value.stages[idx].documents?.findIndex((d: any) => d.id === activeDocument.value.id)
-      if (dIdx >= 0) activeTrac.value.stages[idx].documents[dIdx] = res.data
-      activeStage.value = activeTrac.value.stages[idx]
-    }
-    toast.success('Documento actualizado')
-  } catch (e: any) {
-    toast.error(e.message)
+function onDocumentSaved(savedDoc: any) {
+  // Replace the entry in the stage's documents list (id may change on each version)
+  const idx = activeTrac.value?.stages?.findIndex((s: any) => s.id === activeStage.value?.id)
+  if (idx !== undefined && idx >= 0) {
+    const docs = activeTrac.value.stages[idx].documents ?? []
+    const dIdx = docs.findIndex((d: any) => d.id === viewingDocumentId.value || d.id === savedDoc.id)
+    if (dIdx >= 0) docs[dIdx] = savedDoc
+    else docs.push(savedDoc)
+    activeStage.value = activeTrac.value.stages[idx]
   }
+  viewingDocumentId.value = savedDoc.id
+  toast.success('Documento actualizado')
 }
 
 async function deleteDoc(doc: any) {
@@ -490,7 +472,7 @@ async function deleteDoc(doc: any) {
       activeTrac.value.stages[idx].documents = activeTrac.value.stages[idx].documents?.filter((d: any) => d.id !== doc.id) ?? []
       activeStage.value = activeTrac.value.stages[idx]
     }
-    if (activeDocument.value?.id === doc.id) activeDocument.value = null
+    if (viewingDocumentId.value === doc.id) viewingDocumentId.value = null
     toast.success('Documento eliminado')
   } catch (e: any) {
     toast.error(e.message)
@@ -614,7 +596,7 @@ async function saveStage() {
     order: stageForm.value.order,
     parallelGroup: stageForm.value.parallelGroup || undefined,
     type: stageForm.value.type,
-    agentId: stageForm.value.type === 'agent' ? (stageForm.value.agentId || null) : null,
+    agentId: stageForm.value.agentId || null,
     predecessors: stageForm.value.predecessors,
     documentSchema,
   }
@@ -1237,6 +1219,17 @@ onMounted(fetchAll)
                 </div>
               </div>
 
+              <!-- Helper agent for manual stages -->
+              <div v-if="stageForm.type === 'manual'">
+                <label class="block text-xs text-slate-400 mb-1">Agente de ayuda (opcional)</label>
+                <select v-model="stageForm.agentId"
+                  class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-violet-500">
+                  <option :value="null">Sin agente de ayuda</option>
+                  <option v-for="a in agents" :key="a.id" :value="a.id">{{ a.name }}</option>
+                </select>
+                <p class="text-xs text-slate-500 mt-1">El chat de este stage usará este agente automáticamente.</p>
+              </div>
+
               <!-- Predecessors multi-select -->
               <div v-if="activeTemplate?.stages?.length">
                 <label class="block text-xs text-slate-400 mb-1.5">Predecesores</label>
@@ -1299,6 +1292,11 @@ onMounted(fetchAll)
                           <span v-if="stage.role && stage.type !== 'agent'"
                             class="text-xs px-2 py-0.5 rounded-full bg-slate-700 text-slate-300">
                             {{ roleNameById(stage.role) }}
+                          </span>
+                          <span v-if="stage.type !== 'agent' && stage.agentId"
+                            class="text-xs px-2 py-0.5 rounded-full bg-violet-900/40 text-violet-300"
+                            :title="'Agente de ayuda'">
+                            🤖 {{ agentNameById(stage.agentId) }}
                           </span>
                         </div>
                         <p v-if="stage.description" class="text-xs text-slate-500 mt-1">{{ stage.description }}</p>
@@ -1484,77 +1482,9 @@ onMounted(fetchAll)
 
   </PageLayout>
 
-  <!-- ══════════════════════════════════════════════════════════════════════ -->
-  <!-- DOCUMENT VIEWER MODAL -->
-  <!-- ══════════════════════════════════════════════════════════════════════ -->
-  <div v-if="activeDocument"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
-    @click.self="activeDocument = null; editingDocument = false">
-    <div class="bg-slate-900 rounded-2xl border border-slate-700 w-full max-w-3xl max-h-[85vh] flex flex-col">
-
-      <!-- Modal header -->
-      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-700 shrink-0">
-        <div class="flex items-center gap-3 flex-1 min-w-0">
-          <svg class="w-5 h-5 text-teal-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          <div v-if="!editingDocument" class="flex-1 min-w-0">
-            <h3 class="font-semibold text-white truncate">{{ activeDocument.name }}</h3>
-            <p class="text-xs text-slate-500 mt-0.5">{{ activeStage?.name }}</p>
-          </div>
-          <input v-else v-model="editDocForm.name"
-            class="flex-1 bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-        </div>
-        <div class="flex items-center gap-2 shrink-0 ml-4">
-          <template v-if="!editingDocument">
-            <button v-if="canUpdate"
-              @click="editingDocument = true; editDocForm = { name: activeDocument.name, content: activeDocument.content }"
-              class="px-3 py-1.5 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors">
-              Editar
-            </button>
-          </template>
-          <template v-else>
-            <button @click="editingDocument = false"
-              class="px-3 py-1.5 text-xs rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors">Cancelar</button>
-            <button @click="saveDocument"
-              class="px-3 py-1.5 text-xs rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-colors">Guardar</button>
-          </template>
-          <button @click="activeDocument = null; editingDocument = false"
-            class="p-1.5 text-slate-500 hover:text-slate-300 transition-colors rounded-lg hover:bg-slate-800">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      <!-- Modal body -->
-      <div class="flex-1 overflow-y-auto p-6 min-h-0">
-        <div v-if="docViewerLoading" class="flex justify-center py-10">
-          <div class="animate-spin w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full" />
-        </div>
-        <div v-else-if="!editingDocument">
-          <pre v-if="activeDocument.content"
-            class="whitespace-pre-wrap text-sm text-slate-300 font-mono leading-relaxed">
-          {{ activeDocument.content }}</pre>
-          <p v-else class="text-slate-500 text-sm italic">Sin contenido. Haz clic en Editar para añadir.</p>
-        </div>
-        <div v-else>
-          <label class="block text-xs text-slate-400 mb-1.5">Contenido (markdown)</label>
-          <textarea v-model="editDocForm.content" rows="20"
-            class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none leading-relaxed"
-            placeholder="Escribe el contenido en markdown..." />
-        </div>
-      </div>
-
-      <!-- Modal footer metadata -->
-      <div v-if="!editingDocument && activeDocument.updatedAt"
-        class="px-6 py-3 border-t border-slate-800 shrink-0 flex gap-4 text-xs text-slate-600">
-        <span>Creado: {{ new Date(activeDocument.createdAt).toLocaleString() }}</span>
-        <span>Actualizado: {{ new Date(activeDocument.updatedAt).toLocaleString() }}</span>
-      </div>
-    </div>
-  </div>
+  <!-- Document viewer (shared component) -->
+  <DocumentViewerModal v-if="viewingDocumentId" :document-id="viewingDocumentId" :can-edit="canUpdate"
+    :subtitle="activeStage?.name ?? null" @close="viewingDocumentId = null"
+    @saved="onDocumentSaved" @error="toast.error($event)" />
 
 </template>

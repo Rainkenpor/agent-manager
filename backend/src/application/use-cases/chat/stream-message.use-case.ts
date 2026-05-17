@@ -2,6 +2,28 @@ import type { IChatRepository } from '@domain/repositories/chat.repository.js'
 import type { IAgentRepository } from '@domain/repositories/agent.repository.js'
 import { MCPAgentService } from '@infra/service/mcp-agent.service'
 import type { IMcpServerRepository, IMcpUserCredentialRepository } from '@domain/repositories'
+import { AppDataSource } from '@infra/db/database.js'
+import {
+	TraceabilityEntity,
+	TraceabilityParticipantEntity,
+	TraceabilityParticipantStageChatEntity
+} from '@infra/db/entities.js'
+
+async function resolveTraceabilityContext(conversationId: string): Promise<{ traceabilityId: string | null; stageId: string | null }> {
+	const stageChatRepo = AppDataSource.getRepository(TraceabilityParticipantStageChatEntity)
+	const stageChat = await stageChatRepo.findOneBy({ chatId: conversationId })
+	if (stageChat) return { traceabilityId: stageChat.traceabilityId, stageId: stageChat.stageId }
+
+	const tracRepo = AppDataSource.getRepository(TraceabilityEntity)
+	const trac = await tracRepo.findOneBy({ chatId: conversationId })
+	if (trac) return { traceabilityId: trac.id, stageId: null }
+
+	const partRepo = AppDataSource.getRepository(TraceabilityParticipantEntity)
+	const participant = await partRepo.findOneBy({ chatId: conversationId })
+	if (participant) return { traceabilityId: participant.traceabilityId, stageId: null }
+
+	return { traceabilityId: null, stageId: null }
+}
 
 export type SseEvent =
 	| { type: 'chunk'; content: string }
@@ -101,8 +123,13 @@ export class StreamMessageUseCase {
 
 		const allChunks: string[] = []
 
+		const { traceabilityId, stageId } = await resolveTraceabilityContext(conversationId)
+		const contextLines = [`ChatId: ${conversationId}`]
+		if (traceabilityId) contextLines.push(`TraceabilityId: ${traceabilityId}`)
+		if (stageId) contextLines.push(`StageId: ${stageId}`)
+
 		for await (const chunk of MCPAgentService.asyncCall(
-			{ ...agent, addContext: `\n\nChatId: ${conversationId}` },
+			{ ...agent, addContext: `\n\n${contextLines.join('\n')}` },
 			{
 				instruction: userContent,
 				history,

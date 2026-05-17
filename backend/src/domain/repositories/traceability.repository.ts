@@ -74,5 +74,6 @@ export interface ITraceabilityRepository {
 	updateDocument(data: UpdateDocumentDTO): Promise<TraceabilityDocument | null>
 	deleteDocument(id: string): Promise<void>
 	getDocument(id: string): Promise<TraceabilityDocument | null>
+	getDocumentHistory(id: string): Promise<TraceabilityDocument[]>
 	getDocumentByTraceabilityId(traceabilityId: string): Promise<TraceabilityDocument[]>
 }
