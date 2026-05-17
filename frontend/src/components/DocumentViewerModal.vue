@@ -240,23 +240,25 @@ onMounted(loadDocument)
         </div>
 
         <!-- Body -->
-        <div class="flex-1 overflow-hidden">
+        <div class="flex-1 overflow-hidden min-h-0">
           <!-- Loading -->
           <div v-if="loading" class="flex justify-center py-10">
             <div class="animate-spin w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full" />
           </div>
 
-          <!-- Content tab -->
-          <div v-else-if="tab === 'content'" class="h-full overflow-y-auto p-6">
-            <div v-if="!editing">
-              <pre v-if="activeDocument?.content" class="whitespace-pre-wrap text-sm text-slate-300 font-mono">{{
-                activeDocument.content }}</pre>
-              <p v-else class="text-slate-500 text-sm italic">Sin contenido. Haz clic en Editar para añadir.</p>
-            </div>
-            <div v-else class="h-full pb-5">
-              <label class="block text-xs text-slate-400 mb-1.5">Contenido (markdown)</label>
+          <!-- Content tab — view mode -->
+          <div v-else-if="tab === 'content' && !editing" class="h-full overflow-y-auto p-6">
+            <pre v-if="activeDocument?.content" class="whitespace-pre-wrap text-sm text-slate-300 font-mono">{{
+              activeDocument.content }}</pre>
+            <p v-else class="text-slate-500 text-sm italic">Sin contenido. Haz clic en Editar para añadir.</p>
+          </div>
+
+          <!-- Content tab — edit mode -->
+          <div v-else-if="tab === 'content' && editing" class="h-full flex flex-col p-6 min-h-0">
+            <label class="block text-xs text-slate-400 mb-1.5 shrink-0">Contenido (markdown)</label>
+            <div class="flex-1 min-h-0">
               <TextAreaComplete v-model="editForm.content"
-                class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none leading-relaxed h-full"
+                class="w-full h-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none leading-relaxed"
                 placeholder="Escribe el contenido en markdown..." />
             </div>
           </div>

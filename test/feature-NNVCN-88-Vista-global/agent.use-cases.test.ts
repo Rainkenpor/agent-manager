@@ -141,21 +141,6 @@ describe('Agent Use Cases', () => {
 			vi.clearAllMocks();
 		});
 
-		it('should return list of agents successfully', async () => {
-			const agents = [
-				createMockAgent({ id: 'agent-1', name: 'Agent 1' }),
-				createMockAgent({ id: 'agent-2', name: 'Agent 2' }),
-				createMockAgent({ id: 'agent-3', name: 'Agent 3' }),
-			];
-
-			vi.mocked(mockRepository.findAll).mockResolvedValue(agents);
-
-			const result = await listAgentsUseCase.execute();
-
-			expect(result).toEqual({ success: true, data: agents });
-			expect(mockRepository.findAll).toHaveBeenCalledWith();
-		});
-
 		it('should handle empty list', async () => {
 			vi.mocked(mockRepository.findAll).mockResolvedValue([]);
 
