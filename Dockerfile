@@ -22,7 +22,7 @@ COPY --chown=nodejs:nodejs frontend/package.json ./frontend/
 COPY --chown=nodejs:nodejs node_modules ./node_modules
 
 # Artefactos ya compilados por el CI
-COPY --chown=nodejs:nodejs backend/dist ./backend/dist/src
+COPY --chown=nodejs:nodejs backend/dist/src ./backend/dist
 
 COPY --chown=nodejs:nodejs frontend/dist ./frontend/dist
 
