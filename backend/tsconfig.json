@@ -6,7 +6,7 @@
     "esModuleInterop": true,
     "strict": false,
     "skipLibCheck": true,
-    "outDir": "./dist",
+    "outDir": "../dist/backend",
     "rootDir": ".",
     "declaration": true,
     "resolveJsonModule": true,

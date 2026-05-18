@@ -22,8 +22,8 @@ COPY --chown=nodejs:nodejs frontend/package.json ./frontend/
 COPY --chown=nodejs:nodejs node_modules ./node_modules
 
 # Artefactos ya compilados por el CI
-COPY --chown=nodejs:nodejs backend/dist ./backend/dist
-COPY --chown=nodejs:nodejs frontend/dist ./frontend/dist
+COPY --chown=nodejs:nodejs dist/backend/src ./backend/dist
+COPY --chown=nodejs:nodejs dist/frontend ./frontend/dist
 
 # Poda devDependencies. --ignore-scripts
 #RUN npm prune --omit=dev --ignore-scripts \
@@ -40,4 +40,4 @@ USER nodejs
 
 EXPOSE 8080 8081
 
-CMD ["node", "./backend/dist/src/index.js", "--ui", "--api"]
+CMD ["node", "./backend/dist/index.js", "--ui", "--api"]
