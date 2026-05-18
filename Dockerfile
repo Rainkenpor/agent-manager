@@ -20,8 +20,12 @@ COPY --chown=nodejs:nodejs package.json package-lock.json ./
 COPY --chown=nodejs:nodejs node_modules ./node_modules
 
 # Artefactos ya compilados por el CI
-COPY --chown=nodejs:nodejs dist/backend/src ./backend/dist
+COPY --chown=nodejs:nodejs dist/backend ./backend/dist
 COPY --chown=nodejs:nodejs dist/frontend ./frontend/dist
+
+# tsc emite el backend como CommonJS (NodeNext + backend/package.json sin "type").
+# La raíz tiene "type": "module", así que sin este marker Node confunde el formato.
+RUN echo '{"type":"commonjs"}' > /app/backend/dist/package.json
 
 # Poda devDependencies. --ignore-scripts
 #RUN npm prune --omit=dev --ignore-scripts \
@@ -38,4 +42,4 @@ USER nodejs
 
 EXPOSE 8080 8081
 
-CMD ["node", "./backend/dist/index.js", "--ui", "--api"]
+CMD ["node", "./backend/dist/src/index.js", "--ui", "--api"]
