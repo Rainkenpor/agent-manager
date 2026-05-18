@@ -13,12 +13,10 @@ ENV NODE_ENV=production \
 RUN groupadd --system --gid 1001 nodejs \
  && useradd  --system --uid 1001 --gid nodejs nodejs
 
-# workspaces
+# Manifests (solo los que el pipeline copia a publish/)
 COPY --chown=nodejs:nodejs package.json package-lock.json ./
-COPY --chown=nodejs:nodejs backend/package.json ./backend/
-COPY --chown=nodejs:nodejs frontend/package.json ./frontend/
 
-# Incluye devDependencies 
+# node_modules ya preinstalado por el pipeline (npm ci --only=production)
 COPY --chown=nodejs:nodejs node_modules ./node_modules
 
 # Artefactos ya compilados por el CI
