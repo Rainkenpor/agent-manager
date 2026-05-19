@@ -145,19 +145,24 @@ class McpCredentialProviderAdapter implements IMcpCredentialProvider {
  */
 export class Container {
 	// Repository instances
-	private _userRepository: IUserRepository
-	private _roleRepository: IRoleRepository
-	private _permissionRepository: IPermissionRepository
+	private readonly _userRepository: IUserRepository
+	private readonly _roleRepository: IRoleRepository
+	private readonly _permissionRepository: IPermissionRepository
+	private readonly _agentRepository: IAgentRepository
+	private readonly _agentGroupRepository: IAgentGroupRepository
+	// MCP Server Repository
+	private readonly _mcpServerRepository: IMcpServerRepository
+	// Chat Repository
+	private readonly _chatRepository: IChatRepository
 
 	// Auth Use Cases
-	private _createUserUseCase?: CreateUserUseCase
-	private _loginUseCase?: LoginUseCase
-	private _checkPermissionUseCase?: CheckPermissionUseCase
-	private _assignRoleUseCase?: AssignRoleUseCase
-	private _assignPermissionUseCase?: AssignPermissionUseCase
+	private  _createUserUseCase?: CreateUserUseCase
+	private  _loginUseCase?: LoginUseCase
+	private  _checkPermissionUseCase?: CheckPermissionUseCase
+	private  _assignRoleUseCase?: AssignRoleUseCase
+	private  _assignPermissionUseCase?: AssignPermissionUseCase
 
 	// Agent Use Cases
-	private _agentRepository: IAgentRepository
 	private _createAgentUseCase?: CreateAgentUseCase
 	private _listAgentsUseCase?: ListAgentsUseCase
 	private _getAgentUseCase?: GetAgentUseCase
@@ -166,17 +171,12 @@ export class Container {
 	private _duplicateAgentUseCase?: DuplicateAgentUseCase
 
 	// Agent Group Repository & Use Cases
-	private _agentGroupRepository: IAgentGroupRepository
 	private _listAgentGroupsUseCase?: ListAgentGroupsUseCase
 	private _createAgentGroupUseCase?: CreateAgentGroupUseCase
 	private _updateAgentGroupUseCase?: UpdateAgentGroupUseCase
 	private _deleteAgentGroupUseCase?: DeleteAgentGroupUseCase
 
-	// MCP Server Repository
-	private _mcpServerRepository: IMcpServerRepository
-
-	// Chat Repository
-	private _chatRepository: IChatRepository
+	
 
 	// Chat Use Cases
 	private _createConversationUseCase?: CreateConversationUseCase
@@ -187,13 +187,13 @@ export class Container {
 	private _truncateMessagesUseCase?: TruncateMessagesUseCase
 
 	// MCP User Credential Repository & Use Cases
-	private _mcpUserCredentialRepository: IMcpUserCredentialRepository
+	private readonly _mcpUserCredentialRepository: IMcpUserCredentialRepository
 	private _getMcpCredentialsUseCase?: GetMcpCredentialsUseCase
 	private _upsertMcpCredentialUseCase?: UpsertMcpCredentialUseCase
 	private _deleteMcpCredentialUseCase?: DeleteMcpCredentialUseCase
 
 	// Governance Repository & Use Cases
-	private _governanceRepository: IGovernanceRepository
+	private readonly _governanceRepository: IGovernanceRepository
 	private _listGovernanceUseCase?: ListGovernanceUseCase
 	private _getGovernanceUseCase?: GetGovernanceUseCase
 	private _createGovernanceUseCase?: CreateGovernanceUseCase
@@ -201,7 +201,7 @@ export class Container {
 	private _deleteGovernanceUseCase?: DeleteGovernanceUseCase
 
 	// Skill Repository & Use Cases
-	private _skillRepository: ISkillRepository
+	private readonly _skillRepository: ISkillRepository
 	private _createSkillUseCase?: CreateSkillUseCase
 	private _listSkillsUseCase?: ListSkillsUseCase
 	private _getSkillsAllowedForUserUseCase?: GetSkillsAllowedForUserUseCase
@@ -210,11 +210,11 @@ export class Container {
 	private _deleteSkillUseCase?: DeleteSkillUseCase
 
 	// Hook Server Repository & Dispatcher
-	private _hookServerRepository: IHookServerRepository
+	private readonly _hookServerRepository: IHookServerRepository
 	private _hookDispatcher?: HookDispatcherService
 
 	// Event Listener Repository, Use Cases & Executor
-	private _eventListenerRepository: IEventListenerRepository
+	private readonly _eventListenerRepository: IEventListenerRepository
 	private _createEventListenerUseCase?: CreateEventListenerUseCase
 	private _listEventListenersUseCase?: ListEventListenersUseCase
 	private _getEventListenerUseCase?: GetEventListenerUseCase
@@ -223,7 +223,7 @@ export class Container {
 	private _eventListenerExecutor?: EventListenerExecutorService
 
 	// Traceability Repository & Use Cases
-	private _traceabilityRepository: ITraceabilityRepository
+	private readonly _traceabilityRepository: ITraceabilityRepository
 	private _tracTriggerService?: TraceabilityAgentTriggerService
 	private _listTemplatesUseCase?: ListTemplatesUseCase
 	private _getTemplateUseCase?: GetTemplateUseCase
@@ -254,7 +254,7 @@ export class Container {
 	private _assignStageUserUseCase?: AssignStageUserUseCase
 	private _getMyStagesUseCase?: GetMyStagesUseCase
 	private _getTraceabilityByConversationUseCase?: GetTraceabilityByConversationUseCase
-	private _traceabilityParticipantRepository: ITraceabilityParticipantRepository
+	private readonly _traceabilityParticipantRepository: ITraceabilityParticipantRepository
 	private _shareTraceabilityUseCase?: ShareTraceabilityUseCase
 	private _removeTraceabilityShareUseCase?: RemoveTraceabilityShareUseCase
 	private _listTraceabilityParticipantsUseCase?: ListTraceabilityParticipantsUseCase
