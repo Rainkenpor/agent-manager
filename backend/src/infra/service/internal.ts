@@ -19,13 +19,13 @@
 import fs from 'node:fs'
 import nodePath from 'node:path'
 import type { IAgentService, IAgentServiceExecute } from '@domain/entities/agent.entity.js'
+import { container } from '../../application/container.js'
 import { envs } from '../../envs.js'
-import { agentLogger } from './logger.service.js'
 import { buildToolDefinitions, executeToolCall } from '../utils/tools.js'
+import { agentLogger } from './logger.service.js'
 import { mcpExternalManager } from './mcp-external.js'
 import { providerAuthService } from './provider-auth.service.js'
 import { tokenAuditService } from './token-audit.service.js'
-import { container } from '../../application/container.js'
 
 // ── Local types ───────────────────────────────────────────────────────────────
 

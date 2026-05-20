@@ -1,6 +1,6 @@
+import type { GovernanceData, IAgentServiceExecute, ToolCallbacks } from '@domain/entities/agent.entity.js'
 import { systemPrompt } from '../../const'
 import { AgentService } from './agent.service'
-import type { GovernanceData, IAgentServiceExecute, ToolCallbacks } from '@domain/entities/agent.entity.js'
 
 async function fetchActiveGovernance(): Promise<{ governance: GovernanceData[]; promptSection: string }> {
 	try {
