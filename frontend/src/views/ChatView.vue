@@ -1334,19 +1334,17 @@ onMounted(fetchInitialData)
                 <!-- ── Plain text content ── -->
                 <template v-else>
                   <span class="whitespace-pre-wrap" v-html="renderMarkdown(msg.content)" />
+                  <transition name="disti-fade">
+                    <DistiLoader
+                      v-if="msg === lastAssistantMsg && distiState !== 'idle'"
+                      :state="distiState"
+                      size="xs"
+                      theme="dark"
+                      class="block mt-2"
+                    />
+                  </transition>
                 </template>
               </div>
-
-              <!-- DistiLoader: companion emocional del último mensaje del agente -->
-              <transition name="disti-fade">
-                <DistiLoader
-                  v-if="msg.role === 'assistant' && msg === lastAssistantMsg && distiState !== 'idle'"
-                  :state="distiState"
-                  size="xs"
-                  theme="dark"
-                  class="self-start mt-0.5 opacity-90"
-                />
-              </transition>
 
               <!-- Timestamp + response time + action buttons -->
               <div v-if="editingMessageId !== msg.id" class="flex items-center gap-2 px-1 h-2.5">
