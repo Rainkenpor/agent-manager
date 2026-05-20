@@ -226,6 +226,10 @@ const formAnswers = ref<Record<string, Record<string, { textValue: string; selec
 const submittedForms = ref<string[]>([])
 
 const activeAgent = computed(() => agents.value.find((a) => a.id === activeConversation.value?.agentId))
+const lastAssistantMsg = computed(() => {
+  const assistantMsgs = messages.value.filter((m) => m.role === 'assistant')
+  return assistantMsgs.length > 0 ? assistantMsgs[assistantMsgs.length - 1] : null
+})
 
 async function fetchInitialData() {
   try {
@@ -1336,7 +1340,7 @@ onMounted(fetchInitialData)
               <!-- DistiLoader: companion emocional del último mensaje del agente -->
               <transition name="disti-fade">
                 <DistiLoader
-                  v-if="msg.role === 'assistant' && msg === messages.filter(m => m.role === 'assistant').at(-1) && distiState !== 'idle'"
+                  v-if="msg.role === 'assistant' && msg === lastAssistantMsg && distiState !== 'idle'"
                   :state="distiState"
                   size="xs"
                   theme="dark"
