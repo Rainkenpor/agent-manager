@@ -66,7 +66,9 @@ async function seedDefaultPermissions() {
 		{ resource: 'event_listeners', action: 'create', description: 'Crear event listeners' },
 		{ resource: 'event_listeners', action: 'read', description: 'Ver event listeners' },
 		{ resource: 'event_listeners', action: 'update', description: 'Actualizar y disparar event listeners' },
-		{ resource: 'event_listeners', action: 'delete', description: 'Eliminar event listeners' }
+		{ resource: 'event_listeners', action: 'delete', description: 'Eliminar event listeners' },
+		// log_streams
+		{ resource: 'log_streams', action: 'read', description: 'Permite ver la consola de logs' },
 	]
 
 	for (const perm of defaultPermissions) {

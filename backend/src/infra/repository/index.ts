@@ -13,3 +13,4 @@ export * from "./traceability.repository.js";
 export * from "./traceability-participant.repository.js";
 export * from "./hook-server.repository.js";
 export * from "./event-listener.repository.js";
+export * from "./token-audit.repository.js";

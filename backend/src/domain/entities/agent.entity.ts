@@ -54,6 +54,9 @@ export interface IAgentServiceExecute {
 	toolsCallbacks?: ToolCallbacks // Callbacks para invocar herramientas y manejar borradores
 	userId?: string // ID del usuario que inicia la ejecución (para inyección de credenciales MCP)
 	signal?: AbortSignal // Señal para cancelar la ejecución del agente
+	auditSourceType?: 'chat' | 'agent' | 'tool' // Tipo de origen para la auditoría de tokens
+	auditAgentId?: string // ID del agente para la auditoría de tokens
+	auditAgentName?: string // Nombre del agente para la auditoría de tokens
 }
 
 export interface IAgentService {

@@ -47,6 +47,9 @@ export class MCPAgentService {
 						.map(([toolName]) => toolName)
 				),
 				history: args.history || [],
+				auditSourceType: 'tool',
+				auditAgentId: agentEntity.data.id,
+				auditAgentName: agentEntity.data.name,
 				toolsCallbacks: {
 					onToolCall: async () => {},
 					draftCallbacks: { onUpdate: async () => {}, onRead: async () => null },
@@ -85,6 +88,7 @@ export class MCPAgentService {
 			toolsCallbacks?: ToolCallbacks
 			userId?: string
 			signal?: AbortSignal
+			auditSourceType?: 'chat' | 'agent' | 'tool'
 		}
 	): AsyncGenerator<any> {
 		try {
@@ -110,6 +114,9 @@ export class MCPAgentService {
 				history: args.history || [],
 				userId: args.userId,
 				signal: args.signal,
+				auditSourceType: args.auditSourceType ?? 'chat',
+				auditAgentId: agentEntity.data.id,
+				auditAgentName: agentEntity.data.name,
 				toolsCallbacks: {
 					...args.toolsCallbacks,
 					onToolCall: args.toolsCallbacks?.onToolCall ?? (async () => {}),

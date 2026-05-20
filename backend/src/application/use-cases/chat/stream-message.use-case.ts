@@ -135,7 +135,8 @@ export class StreamMessageUseCase {
 				history,
 				toolsCallbacks,
 				userId,
-				signal
+				signal,
+				auditSourceType: 'chat'
 			}
 		)) {
 			allChunks.push(chunk)

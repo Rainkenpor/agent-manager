@@ -926,3 +926,36 @@ export class EventListenerEntity {
 	@Column({ name: 'updated_at', type: 'text' })
 	updatedAt!: string
 }
+
+@Entity('token_audit')
+export class TokenAuditEntity {
+	@PrimaryColumn({ type: 'text' })
+	id!: string
+
+	@Column({ name: 'user_id', type: 'text', nullable: true })
+	userId!: string | null
+
+	@Column({ name: 'agent_id', type: 'text', nullable: true })
+	agentId!: string | null
+
+	@Column({ name: 'llm_model', type: 'text' })
+	llmModel!: string
+
+	@Column({ name: 'input_tokens', type: 'integer' })
+	inputTokens!: number
+
+	@Column({ name: 'output_tokens', type: 'integer' })
+	outputTokens!: number
+
+	@Column({ name: 'source_type', type: 'text' })
+	sourceType!: string
+
+	@Column({ type: 'text' })
+	source!: string
+
+	@Column({ name: 'created_at', type: 'text' })
+	createdAt!: string
+
+	@Column({ name: 'updated_at', type: 'text' })
+	updatedAt!: string
+}

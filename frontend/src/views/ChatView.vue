@@ -7,6 +7,7 @@ import NewCredential from '@/components/NewCredential.vue'
 import ShareTraceabilityModal from '@/components/ShareTraceabilityModal.vue'
 import { useAuthStore } from '@/store/useAuth'
 import type { McpServer } from '@/types/types'
+import DistiLoader from '@/components/DistiLoader.vue'
 
 const auth = useAuthStore()
 
@@ -63,6 +64,7 @@ const selectedAgentId = ref('')
 const newChatTitle = ref('')
 const messageInput = ref('')
 const sending = ref(false)
+const distiState = ref<'loading' | 'thinking' | 'happy' | 'sad' | 'idle'>('idle')
 const loadingConversation = ref(false)
 const showNewChatModal = ref(false)
 const loadingChatAgents = ref(false)
@@ -467,21 +469,44 @@ async function sendMessage() {
   await scrollToBottom()
 
   abortController = new AbortController()
+  distiState.value = 'loading'
 
   try {
-    const response = await api.streamMessage(activeConversation.value.id, content, abortController.signal)
-
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({ error: response.statusText }))
-      throw new Error(err.error || response.statusText)
+    let response: Response
+    try {
+      response = await api.streamMessage(activeConversation.value.id, content, abortController.signal)
+    } catch (fetchErr: any) {
+      if (fetchErr.name === 'AbortError') throw fetchErr
+      throw new Error('No se pudo conectar con el servidor. Verifica tu conexión e intenta de nuevo.')
     }
 
-    const reader = response.body!.getReader()
+    if (!response.ok) {
+      let errMsg = `Error del servidor (${response.status})`
+      try {
+        const body = await response.json()
+        if (body?.error) errMsg = body.error
+        else if (body?.message) errMsg = body.message
+      } catch {
+        if (response.statusText) errMsg = `${errMsg}: ${response.statusText}`
+      }
+      throw new Error(errMsg)
+    }
+
+    if (!response.body) throw new Error('El servidor no devolvió contenido.')
+
+    const reader = response.body.getReader()
     const decoder = new TextDecoder()
     let buffer = ''
 
     while (true) {
-      const { done, value } = await reader.read()
+      let done: boolean
+      let value: Uint8Array | undefined
+      try {
+        ;({ done, value } = await reader.read())
+      } catch (readErr: any) {
+        if (readErr.name === 'AbortError') throw readErr
+        throw new Error('La conexión con el servidor se interrumpió inesperadamente.')
+      }
       if (done) break
 
       buffer += decoder.decode(value, { stream: true })
@@ -499,12 +524,14 @@ async function sendMessage() {
         }
 
         if (event.type === 'chunk') {
+          distiState.value = 'loading'
           const idx = messages.value.findIndex((m) => m.id === streamingId)
           if (idx !== -1) {
             messages.value[idx] = { ...messages.value[idx], content: messages.value[idx].content + event.content }
             await scrollToBottom()
           }
         } else if (event.type === 'tool') {
+          distiState.value = 'thinking'
           const idx = messages.value.findIndex((m) => m.id === streamingId)
           if (idx !== -1) {
             const existing = messages.value[idx].toolCalls ?? []
@@ -513,6 +540,7 @@ async function sendMessage() {
             }
           }
         } else if (event.type === 'done') {
+          distiState.value = 'happy'
           const idx = messages.value.findIndex((m) => m.id === streamingId)
           if (idx !== -1) {
             messages.value[idx] = {
@@ -522,17 +550,23 @@ async function sendMessage() {
               toolCalls: messages.value[idx].toolCalls
             }
           }
+          setTimeout(() => { distiState.value = 'idle' }, 1200)
         } else if (event.type === 'draft_updated') {
           draft.value = event.draft
         } else if (event.type === 'error') {
-          throw new Error(event.error)
+          throw new Error(event.error || 'El agente reportó un error inesperado.')
         }
       }
     }
   } catch (e: any) {
-    // Remove streaming placeholder on abort or error
     messages.value = messages.value.filter((m) => m.id !== streamingId)
-    if (e.name !== 'AbortError') error.value = e.message
+    if (e.name !== 'AbortError') {
+      error.value = e.message
+      distiState.value = 'sad'
+      setTimeout(() => { distiState.value = 'idle' }, 2500)
+    } else {
+      distiState.value = 'idle'
+    }
   } finally {
     abortController = null
     sending.value = false
@@ -1349,6 +1383,16 @@ onMounted(fetchInitialData)
       <div class="px-6 pb-5 pt-2">
         <div class="flex items-end gap-3 rounded-2xl border bg-slate-900 px-4 py-3 transition-colors"
           :class="activeConversation ? 'border-slate-700 focus-within:border-indigo-500/60' : 'border-slate-800 opacity-50'">
+          <!-- Disti mascot — visible only while agent is responding -->
+          <transition name="disti-fade">
+            <DistiLoader
+              v-if="sending"
+              :state="distiState"
+              size="xs"
+              theme="dark"
+              class="shrink-0 self-center opacity-80"
+            />
+          </transition>
           <textarea v-model="messageInput" :disabled="!activeConversation || sending" rows="3"
             placeholder="Escribe un mensaje... (Enter para enviar, Shift+Enter para salto de línea)"
             class="flex-1 resize-none bg-transparent text-sm text-white placeholder-slate-500 focus:outline-none max-h-36"
@@ -1502,5 +1546,15 @@ onMounted(fetchInitialData)
 .sidebar-leave-from {
   width: 18rem;
   opacity: 1;
+}
+
+.disti-fade-enter-active,
+.disti-fade-leave-active {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.disti-fade-enter-from,
+.disti-fade-leave-to {
+  opacity: 0;
+  transform: scale(0.7);
 }
 </style>

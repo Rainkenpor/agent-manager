@@ -24,6 +24,8 @@ import { agentLogger } from './logger.service.js'
 import { buildToolDefinitions, executeToolCall } from '../utils/tools.js'
 import { mcpExternalManager } from './mcp-external.js'
 import { providerAuthService } from './provider-auth.service.js'
+import { tokenAuditService } from './token-audit.service.js'
+import { container } from '../../application/container.js'
 
 // ── Local types ───────────────────────────────────────────────────────────────
 
@@ -924,6 +926,17 @@ export class InternalAgentService implements IAgentService {
 		try {
 			const result = await this.runLoop(parsed, config, messages, tools, params, 60)
 			agentLogger.info(`[${this.agentType}] ══════ END agent=${agentType} ══════`)
+
+			void tokenAuditService.record(container.tokenAuditRepository, {
+				userId: params.userId,
+				agentId: params.auditAgentId,
+				llmModel: envs.AGENT_MODEL,
+				sourceType: params.auditSourceType ?? 'agent',
+				source: params.auditAgentName ?? agentType,
+				inputText: `${systemPrompt ?? ''}\n${query}`,
+				outputText: typeof result === 'string' ? result : JSON.stringify(result)
+			})
+
 			return result
 		} finally {
 			agentLogger.info(`[${this.agentType}] ══════ END stream agent=${agentType} ══════`)
@@ -957,8 +970,22 @@ export class InternalAgentService implements IAgentService {
 			{ role: 'user', content: userContent }
 		]
 
+		const outputChunks: string[] = []
 		try {
-			yield* this.runLoopStream(parsed, config, messages, tools, params, 60)
+			for await (const chunk of this.runLoopStream(parsed, config, messages, tools, params, 60)) {
+				outputChunks.push(chunk)
+				yield chunk
+			}
+
+			void tokenAuditService.record(container.tokenAuditRepository, {
+				userId: params.userId,
+				agentId: params.auditAgentId,
+				llmModel: envs.AGENT_MODEL,
+				sourceType: params.auditSourceType ?? 'chat',
+				source: params.auditAgentName ?? agentType,
+				inputText: `${systemPrompt ?? ''}\n${history?.map((h) => h.content).join('\n') ?? ''}\n${userContent}`,
+				outputText: outputChunks.join('')
+			})
 		} finally {
 			agentLogger.info(`[${this.agentType}] ══════ END stream agent=${agentType} ══════`)
 		}

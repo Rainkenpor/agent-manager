@@ -13,7 +13,8 @@ import type {
 	IHookServerRepository,
 	IEventListenerRepository,
 	IGovernanceRepository,
-	ITraceabilityParticipantRepository
+	ITraceabilityParticipantRepository,
+	ITokenAuditRepository
 } from '@domain/repositories/index.js'
 import { mcpExternalManager } from '@infra/service/mcp-external.js'
 
@@ -31,7 +32,8 @@ import {
 	TraceabilityRepository,
 	TraceabilityParticipantRepository,
 	HookServerRepository,
-	EventListenerRepository
+	EventListenerRepository,
+	TokenAuditRepository
 } from '@infra/repository/index.js'
 import { HookDispatcherService } from '@infra/service/hook-dispatcher.service.js'
 import { EventListenerExecutorService } from '@infra/service/event-listener-executor.service.js'
@@ -267,6 +269,9 @@ export class Container {
 	private _exportConfigUseCase?: ExportConfigUseCase
 	private _importConfigUseCase?: ImportConfigUseCase
 
+	// Token Audit Repository
+	readonly tokenAuditRepository: ITokenAuditRepository
+
 	constructor() {
 		// Initialize repositories with concrete implementations
 		this._userRepository = new UserRepository()
@@ -283,6 +288,7 @@ export class Container {
 		this._traceabilityParticipantRepository = new TraceabilityParticipantRepository()
 		this._hookServerRepository = new HookServerRepository()
 		this._eventListenerRepository = new EventListenerRepository()
+		this.tokenAuditRepository = new TokenAuditRepository()
 
 		// Inyectar el adaptador de credenciales en McpExternalManager (dependency inversion)
 		mcpExternalManager.setCredentialProvider(new McpCredentialProviderAdapter(this._mcpUserCredentialRepository))

@@ -8,7 +8,7 @@ export function registerLogsRoutes(): void {
 		path: '/api/logs/stream',
 		inputSchema: {},
 		requiresAuth: true,
-		requiredPermission: { resource: 'agents', action: 'read' },
+		requiredPermission: { resource: 'log_streams', action: 'read' },
 		handler: async ({ context: { req, res } }) => {
 			res.setHeader('Content-Type', 'text/event-stream')
 			res.setHeader('Cache-Control', 'no-cache')

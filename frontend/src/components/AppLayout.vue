@@ -2,6 +2,9 @@
 import { RouterView } from 'vue-router'
 import SidebarNav from './SidebarNav.vue'
 import AgentLogsPanel from './AgentLogsPanel.vue'
+import { useAuthStore } from '@/store/useAuth'
+
+const auth = useAuthStore()
 </script>
 
 <template>
@@ -12,7 +15,7 @@ import AgentLogsPanel from './AgentLogsPanel.vue'
         <div class="flex-1 overflow-auto">
           <RouterView />
         </div>
-        <AgentLogsPanel />
+        <AgentLogsPanel v-if="auth.hasPermission('log_streams', 'read')" />
       </main>
     </div>
   </div>

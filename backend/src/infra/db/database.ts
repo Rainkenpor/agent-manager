@@ -40,7 +40,8 @@ import {
 	TraceabilityDocumentEntity,
 	HookServerEntity,
 	HookAssignmentEntity,
-	EventListenerEntity
+	EventListenerEntity,
+	TokenAuditEntity
 } from './entities.js'
 
 const entities = [
@@ -80,7 +81,8 @@ const entities = [
 	TraceabilityDocumentEntity,
 	HookServerEntity,
 	HookAssignmentEntity,
-	EventListenerEntity
+	EventListenerEntity,
+	TokenAuditEntity
 ]
 
 let AppDataSource: DataSource
