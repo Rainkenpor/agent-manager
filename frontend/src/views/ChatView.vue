@@ -1330,10 +1330,19 @@ onMounted(fetchInitialData)
                 <!-- ── Plain text content ── -->
                 <template v-else>
                   <span class="whitespace-pre-wrap" v-html="renderMarkdown(msg.content)" />
-                  <span v-if="msg.streaming"
-                    class="inline-block w-0.5 h-4 bg-slate-300 ml-0.5 align-middle animate-pulse" />
                 </template>
               </div>
+
+              <!-- DistiLoader: companion emocional del último mensaje del agente -->
+              <transition name="disti-fade">
+                <DistiLoader
+                  v-if="msg.role === 'assistant' && msg === messages.filter(m => m.role === 'assistant').at(-1) && distiState !== 'idle'"
+                  :state="distiState"
+                  size="xs"
+                  theme="dark"
+                  class="self-start mt-0.5 opacity-90"
+                />
+              </transition>
 
               <!-- Timestamp + response time + action buttons -->
               <div v-if="editingMessageId !== msg.id" class="flex items-center gap-2 px-1 h-2.5">
@@ -1383,16 +1392,6 @@ onMounted(fetchInitialData)
       <div class="px-6 pb-5 pt-2">
         <div class="flex items-end gap-3 rounded-2xl border bg-slate-900 px-4 py-3 transition-colors"
           :class="activeConversation ? 'border-slate-700 focus-within:border-indigo-500/60' : 'border-slate-800 opacity-50'">
-          <!-- Disti mascot — visible only while agent is responding -->
-          <transition name="disti-fade">
-            <DistiLoader
-              v-if="sending"
-              :state="distiState"
-              size="xs"
-              theme="dark"
-              class="shrink-0 self-center opacity-80"
-            />
-          </transition>
           <textarea v-model="messageInput" :disabled="!activeConversation || sending" rows="3"
             placeholder="Escribe un mensaje... (Enter para enviar, Shift+Enter para salto de línea)"
             class="flex-1 resize-none bg-transparent text-sm text-white placeholder-slate-500 focus:outline-none max-h-36"
