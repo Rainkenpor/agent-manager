@@ -187,6 +187,14 @@ export const updateGovernance = (id: string, data: any) =>
 	request<{ success: boolean; data: any }>(`/governance/${id}`, { method: 'PUT', body: JSON.stringify({ id, ...data }) })
 export const deleteGovernance = (id: string) => request<{ success: boolean }>(`/governance/${id}`, { method: 'DELETE' })
 
+// Governance Suggestions
+export const getGovernanceSuggestions = () =>
+	request<{ success: boolean; data: any[] }>('/governance-suggestions')
+export const getGovernanceSuggestionById = (id: string) =>
+	request<{ success: boolean; data: any }>(`/governance-suggestions/${id}`)
+export const deleteGovernanceSuggestion = (id: string) =>
+	request<{ success: boolean }>(`/governance-suggestions/${id}`, { method: 'DELETE' })
+
 export const getSkills = () => request<{ success: boolean; data: any[] }>('/skills')
 export const getSkillById = (id: string) => request<{ success: boolean; data: any }>(`/skills/${id}`)
 export const createSkill = (data: any) =>

@@ -1,132 +1,136 @@
 import type {
-	IUserRepository,
-	IRoleRepository,
-	IPermissionRepository,
-	IAgentRepository,
 	IAgentGroupRepository,
-	IMcpServerRepository,
+	IAgentRepository,
 	IChatRepository,
-	IMcpUserCredentialRepository,
-	IMcpCredentialProvider,
-	ISkillRepository,
-	ITraceabilityRepository,
-	IHookServerRepository,
 	IEventListenerRepository,
 	IGovernanceRepository,
+	IGovernanceSuggestionRepository,
+	IHookServerRepository,
+	IMcpCredentialProvider,
+	IMcpServerRepository,
+	IMcpUserCredentialRepository,
+	IPermissionRepository,
+	IRoleRepository,
+	ISkillRepository,
+	ITokenAuditRepository,
 	ITraceabilityParticipantRepository,
-	ITokenAuditRepository
+	ITraceabilityRepository,
+	IUserRepository
 } from '@domain/repositories/index.js'
-import { mcpExternalManager } from '@infra/service/mcp-external.js'
-
 import {
-	AgentRepository,
 	AgentGroupRepository,
-	UserRepository,
-	RoleRepository,
-	PermissionRepository,
-	McpServerRepository,
+	AgentRepository,
 	ChatRepository,
-	McpUserCredentialRepository,
-	SkillRepository,
-	GovernanceRepository,
-	TraceabilityRepository,
-	TraceabilityParticipantRepository,
-	HookServerRepository,
 	EventListenerRepository,
-	TokenAuditRepository
+	GovernanceRepository,
+	GovernanceSuggestionRepository,
+	HookServerRepository,
+	McpServerRepository,
+	McpUserCredentialRepository,
+	PermissionRepository,
+	RoleRepository,
+	SkillRepository,
+	TokenAuditRepository,
+	TraceabilityParticipantRepository,
+	TraceabilityRepository,
+	UserRepository
 } from '@infra/repository/index.js'
-import { HookDispatcherService } from '@infra/service/hook-dispatcher.service.js'
 import { EventListenerExecutorService } from '@infra/service/event-listener-executor.service.js'
-
+import { HookDispatcherService } from '@infra/service/hook-dispatcher.service.js'
+import { mcpExternalManager } from '@infra/service/mcp-external.js'
+import { TraceabilityAgentTriggerService } from '@infra/service/traceability-agent-trigger.service.js'
 import {
-	// User
-	CreateUserUseCase,
-	LoginUseCase,
-	CheckPermissionUseCase,
-	AssignRoleUseCase,
 	AssignPermissionUseCase,
+	AssignRoleUseCase,
+	AssignStageUserUseCase,
+	CheckPermissionUseCase,
+	CompleteTaskUseCase,
+	CreateAgentGroupUseCase,
 	// Agent Use Cases
 	CreateAgentUseCase,
-	ListAgentsUseCase,
-	GetAgentUseCase,
-	UpdateAgentUseCase,
-	DeleteAgentUseCase,
-	DuplicateAgentUseCase,
-	// Agent Group Use Cases
-	ListAgentGroupsUseCase,
-	CreateAgentGroupUseCase,
-	UpdateAgentGroupUseCase,
-	DeleteAgentGroupUseCase,
 	// Chat Use Cases
 	CreateConversationUseCase,
-	ListConversationsUseCase,
-	GetConversationUseCase,
-	DeleteConversationUseCase,
-	StreamMessageUseCase,
-	TruncateMessagesUseCase,
-	// MCP Credential Use Cases
-	GetMcpCredentialsUseCase,
-	UpsertMcpCredentialUseCase,
-	DeleteMcpCredentialUseCase,
-	// Skill Use Cases
-	CreateSkillUseCase,
-	ListSkillsUseCase,
-	GetSkillUseCase,
-	UpdateSkillUseCase,
-	DeleteSkillUseCase,
+	CreateDocumentUseCase,
 	// Event Listener Use Cases
 	CreateEventListenerUseCase,
-	ListEventListenersUseCase,
-	GetEventListenerUseCase,
-	UpdateEventListenerUseCase,
+	CreateGovernanceSuggestionUseCase,
+	CreateGovernanceUseCase,
+	CreateLinkUseCase,
+	// Skill Use Cases
+	CreateSkillUseCase,
+	CreateTaskUseCase,
+	CreateTemplateStageUseCase,
+	CreateTemplateUseCase,
+	CreateTraceabilityUseCase,
+	// User
+	CreateUserUseCase,
+	DeleteAgentGroupUseCase,
+	DeleteAgentUseCase,
+	DeleteConversationUseCase,
+	DeleteDocumentUseCase,
 	DeleteEventListenerUseCase,
+	DeleteGovernanceSuggestionUseCase,
+	DeleteGovernanceUseCase,
+	DeleteLinkUseCase,
+	DeleteMcpCredentialUseCase,
+	DeleteSkillUseCase,
+	DeleteTaskUseCase,
+	DeleteTemplateStageUseCase,
+	DeleteTemplateUseCase,
+	DeleteTraceabilityUseCase,
+	DuplicateAgentUseCase,
+	ExportConfigUseCase,
+	GetAgentUseCase,
+	GetConversationUseCase,
+	GetDocumentHistoryUseCase,
+	GetDocumentUseCase,
+	GetEventListenerUseCase,
+	GetGovernanceSuggestionUseCase,
+	GetGovernanceUseCase,
+	// MCP Credential Use Cases
+	GetMcpCredentialsUseCase,
+	GetMyStagesUseCase,
+	GetSkillUseCase,
+	GetTemplateByCodeUseCase,
+	GetTemplateUseCase,
+	GetTraceabilityByConversationUseCase,
+	GetTraceabilityUseCase,
+	GetUsersByRoleWithEffortUseCase,
+	ImportConfigUseCase,
+	// Agent Group Use Cases
+	ListAgentGroupsUseCase,
+	ListAgentsUseCase,
+	ListConversationsUseCase,
+	ListEventListenersUseCase,
+	ListGovernanceSuggestionsUseCase,
+	ListGovernanceUseCase,
+	ListMyTraceabilityInvitationsUseCase,
+	ListSkillsUseCase,
 	// Traceability Use Cases
 	ListTemplatesUseCase,
-	GetTemplateUseCase,
-	CreateTemplateUseCase,
-	UpdateTemplateUseCase,
-	DeleteTemplateUseCase,
-	CreateTemplateStageUseCase,
-	UpdateTemplateStageUseCase,
-	DeleteTemplateStageUseCase,
 	ListTraceabilitiesUseCase,
-	GetTraceabilityUseCase,
-	CreateTraceabilityUseCase,
-	UpdateTraceabilityUseCase,
-	DeleteTraceabilityUseCase,
-	CreateTaskUseCase,
-	UpdateTaskUseCase,
-	CompleteTaskUseCase,
-	DeleteTaskUseCase,
-	CreateLinkUseCase,
-	DeleteLinkUseCase,
-	CreateDocumentUseCase,
-	UpdateDocumentUseCase,
-	DeleteDocumentUseCase,
-	GetDocumentUseCase,
-	GetDocumentHistoryUseCase,
-	GetTemplateByCodeUseCase,
-	GetUsersByRoleWithEffortUseCase,
-	AssignStageUserUseCase,
-	GetMyStagesUseCase,
-	GetTraceabilityByConversationUseCase,
-	ShareTraceabilityUseCase,
-	RemoveTraceabilityShareUseCase,
 	ListTraceabilityParticipantsUseCase,
-	ListMyTraceabilityInvitationsUseCase,
+	LoginUseCase,
 	OpenOrCreateChatForTraceabilityUseCase,
+	RemoveTraceabilityShareUseCase,
+	ShareTraceabilityUseCase,
 	StreamAgentLogsUseCase,
-	ExportConfigUseCase,
-	ImportConfigUseCase,
 	StreamAiAssistUseCase,
-	ListGovernanceUseCase,
-	GetGovernanceUseCase,
-	CreateGovernanceUseCase,
+	StreamMessageUseCase,
+	TruncateMessagesUseCase,
+	UpdateAgentGroupUseCase,
+	UpdateAgentUseCase,
+	UpdateDocumentUseCase,
+	UpdateEventListenerUseCase,
 	UpdateGovernanceUseCase,
-	DeleteGovernanceUseCase
+	UpdateSkillUseCase,
+	UpdateTaskUseCase,
+	UpdateTemplateStageUseCase,
+	UpdateTemplateUseCase,
+	UpdateTraceabilityUseCase,
+	UpsertMcpCredentialUseCase
 } from './use-cases/index.js'
 import { GetSkillsAllowedForUserUseCase } from './use-cases/skill/get-skills-allowed-user.js'
-import { TraceabilityAgentTriggerService } from '@infra/service/traceability-agent-trigger.service.js'
 
 /**
  * Adaptador que implementa IMcpCredentialProvider usando IMcpUserCredentialRepository.
@@ -158,11 +162,11 @@ export class Container {
 	private readonly _chatRepository: IChatRepository
 
 	// Auth Use Cases
-	private  _createUserUseCase?: CreateUserUseCase
-	private  _loginUseCase?: LoginUseCase
-	private  _checkPermissionUseCase?: CheckPermissionUseCase
-	private  _assignRoleUseCase?: AssignRoleUseCase
-	private  _assignPermissionUseCase?: AssignPermissionUseCase
+	private _createUserUseCase?: CreateUserUseCase
+	private _loginUseCase?: LoginUseCase
+	private _checkPermissionUseCase?: CheckPermissionUseCase
+	private _assignRoleUseCase?: AssignRoleUseCase
+	private _assignPermissionUseCase?: AssignPermissionUseCase
 
 	// Agent Use Cases
 	private _createAgentUseCase?: CreateAgentUseCase
@@ -177,8 +181,6 @@ export class Container {
 	private _createAgentGroupUseCase?: CreateAgentGroupUseCase
 	private _updateAgentGroupUseCase?: UpdateAgentGroupUseCase
 	private _deleteAgentGroupUseCase?: DeleteAgentGroupUseCase
-
-	
 
 	// Chat Use Cases
 	private _createConversationUseCase?: CreateConversationUseCase
@@ -201,6 +203,13 @@ export class Container {
 	private _createGovernanceUseCase?: CreateGovernanceUseCase
 	private _updateGovernanceUseCase?: UpdateGovernanceUseCase
 	private _deleteGovernanceUseCase?: DeleteGovernanceUseCase
+
+	// Governance Suggestion Repository & Use Cases
+	private readonly _governanceSuggestionRepository: IGovernanceSuggestionRepository
+	private _createGovernanceSuggestionUseCase?: CreateGovernanceSuggestionUseCase
+	private _listGovernanceSuggestionsUseCase?: ListGovernanceSuggestionsUseCase
+	private _getGovernanceSuggestionUseCase?: GetGovernanceSuggestionUseCase
+	private _deleteGovernanceSuggestionUseCase?: DeleteGovernanceSuggestionUseCase
 
 	// Skill Repository & Use Cases
 	private readonly _skillRepository: ISkillRepository
@@ -284,6 +293,7 @@ export class Container {
 		this._mcpUserCredentialRepository = new McpUserCredentialRepository()
 		this._skillRepository = new SkillRepository()
 		this._governanceRepository = new GovernanceRepository()
+		this._governanceSuggestionRepository = new GovernanceSuggestionRepository()
 		this._traceabilityRepository = new TraceabilityRepository()
 		this._traceabilityParticipantRepository = new TraceabilityParticipantRepository()
 		this._hookServerRepository = new HookServerRepository()
@@ -711,8 +721,7 @@ export class Container {
 	}
 
 	get getDocumentHistoryUseCase(): GetDocumentHistoryUseCase {
-		if (!this._getDocumentHistoryUseCase)
-			this._getDocumentHistoryUseCase = new GetDocumentHistoryUseCase(this._traceabilityRepository)
+		if (!this._getDocumentHistoryUseCase) this._getDocumentHistoryUseCase = new GetDocumentHistoryUseCase(this._traceabilityRepository)
 		return this._getDocumentHistoryUseCase
 	}
 
@@ -856,42 +865,68 @@ export class Container {
 	}
 
 	// ==========================================
+	// GOVERNANCE SUGGESTION USE CASES
+	// ==========================================
+
+	get governanceSuggestionRepository(): IGovernanceSuggestionRepository {
+		return this._governanceSuggestionRepository
+	}
+
+	get createGovernanceSuggestionUseCase(): CreateGovernanceSuggestionUseCase {
+		if (!this._createGovernanceSuggestionUseCase)
+			this._createGovernanceSuggestionUseCase = new CreateGovernanceSuggestionUseCase(this._governanceSuggestionRepository)
+		return this._createGovernanceSuggestionUseCase
+	}
+
+	get listGovernanceSuggestionsUseCase(): ListGovernanceSuggestionsUseCase {
+		if (!this._listGovernanceSuggestionsUseCase)
+			this._listGovernanceSuggestionsUseCase = new ListGovernanceSuggestionsUseCase(this._governanceSuggestionRepository)
+		return this._listGovernanceSuggestionsUseCase
+	}
+
+	get getGovernanceSuggestionUseCase(): GetGovernanceSuggestionUseCase {
+		if (!this._getGovernanceSuggestionUseCase)
+			this._getGovernanceSuggestionUseCase = new GetGovernanceSuggestionUseCase(this._governanceSuggestionRepository)
+		return this._getGovernanceSuggestionUseCase
+	}
+
+	get deleteGovernanceSuggestionUseCase(): DeleteGovernanceSuggestionUseCase {
+		if (!this._deleteGovernanceSuggestionUseCase)
+			this._deleteGovernanceSuggestionUseCase = new DeleteGovernanceSuggestionUseCase(this._governanceSuggestionRepository)
+		return this._deleteGovernanceSuggestionUseCase
+	}
+
+	// ==========================================
 	// EVENT LISTENER USE CASES & EXECUTOR
 	// ==========================================
 
 	get createEventListenerUseCase(): CreateEventListenerUseCase {
-		if (!this._createEventListenerUseCase)
-			this._createEventListenerUseCase = new CreateEventListenerUseCase(this._eventListenerRepository)
+		if (!this._createEventListenerUseCase) this._createEventListenerUseCase = new CreateEventListenerUseCase(this._eventListenerRepository)
 		return this._createEventListenerUseCase
 	}
 
 	get listEventListenersUseCase(): ListEventListenersUseCase {
-		if (!this._listEventListenersUseCase)
-			this._listEventListenersUseCase = new ListEventListenersUseCase(this._eventListenerRepository)
+		if (!this._listEventListenersUseCase) this._listEventListenersUseCase = new ListEventListenersUseCase(this._eventListenerRepository)
 		return this._listEventListenersUseCase
 	}
 
 	get getEventListenerUseCase(): GetEventListenerUseCase {
-		if (!this._getEventListenerUseCase)
-			this._getEventListenerUseCase = new GetEventListenerUseCase(this._eventListenerRepository)
+		if (!this._getEventListenerUseCase) this._getEventListenerUseCase = new GetEventListenerUseCase(this._eventListenerRepository)
 		return this._getEventListenerUseCase
 	}
 
 	get updateEventListenerUseCase(): UpdateEventListenerUseCase {
-		if (!this._updateEventListenerUseCase)
-			this._updateEventListenerUseCase = new UpdateEventListenerUseCase(this._eventListenerRepository)
+		if (!this._updateEventListenerUseCase) this._updateEventListenerUseCase = new UpdateEventListenerUseCase(this._eventListenerRepository)
 		return this._updateEventListenerUseCase
 	}
 
 	get deleteEventListenerUseCase(): DeleteEventListenerUseCase {
-		if (!this._deleteEventListenerUseCase)
-			this._deleteEventListenerUseCase = new DeleteEventListenerUseCase(this._eventListenerRepository)
+		if (!this._deleteEventListenerUseCase) this._deleteEventListenerUseCase = new DeleteEventListenerUseCase(this._eventListenerRepository)
 		return this._deleteEventListenerUseCase
 	}
 
 	get eventListenerExecutor(): EventListenerExecutorService {
-		if (!this._eventListenerExecutor)
-			this._eventListenerExecutor = new EventListenerExecutorService(this._eventListenerRepository)
+		if (!this._eventListenerExecutor) this._eventListenerExecutor = new EventListenerExecutorService(this._eventListenerRepository)
 		return this._eventListenerExecutor
 	}
 

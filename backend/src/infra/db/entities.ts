@@ -533,6 +533,36 @@ export class GovernanceEntity {
 	updatedAt!: string
 }
 
+@Entity('governance_suggestion')
+export class GovernanceSuggestionEntity {
+	@PrimaryColumn({ type: 'text' })
+	id!: string
+
+	@Column({ type: 'text' })
+	type!: string
+
+	@Column({ type: 'text' })
+	title!: string
+
+	@Column({ type: 'text', default: '' })
+	content!: string
+
+	@Column({ type: 'text', nullable: true })
+	reason!: string | null
+
+	@Column({ name: 'agent_slug', type: 'text', nullable: true })
+	agentSlug!: string | null
+
+	@Column({ name: 'user_id', type: 'text', nullable: true })
+	userId!: string | null
+
+	@Column({ name: 'user_email', type: 'text', nullable: true })
+	userEmail!: string | null
+
+	@Column({ name: 'created_at', type: 'text' })
+	createdAt!: string
+}
+
 @Entity('role_governance')
 export class RoleGovernanceEntity {
 	@PrimaryColumn({ type: 'text' })
