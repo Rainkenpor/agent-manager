@@ -8,9 +8,11 @@
  * Convención de nombres de herramientas:  mcp__<serverName>__<toolName>
  */
 import { spawn, type ChildProcess } from 'node:child_process'
+import jwt from 'jsonwebtoken'
 import { agentLogger } from '../service/logger.service.js'
 import { ZodRawShape } from 'zod'
 import type { IMcpCredentialProvider } from '../../domain/repositories/mcp-credential-provider.repository.js'
+import { JWT_SECRET } from './passport.service.js'
 
 // ── MCP config types ──────────────────────────────────────────────────────────
 
@@ -543,6 +545,11 @@ export class McpExternalManager {
 	 * del usuario se inyectan automáticamente:
 	 *   - Servidores HTTP → como cabeceras adicionales en la petición
 	 *   - Servidores stdio → como variables de entorno en un proceso temporal
+	 *
+	 * Además, si hay `userId`, se firma un JWT corto (5 min) con claim `sub: userId`
+	 * y se propaga como header `x-agent-manager-token` a TODOS los MCPs HTTP. Esto
+	 * permite que el MCP llame de vuelta a agent-manager (p.ej. para leer un
+	 * traceability_document) en nombre del usuario, sin tokens estáticos.
 	 */
 	async callTool(toolId: string, args: Record<string, unknown>, userId?: string): Promise<string> {
 		const entry = this.toolMap.get(toolId) ?? parseMcpToolId(toolId) ?? undefined
@@ -554,11 +561,13 @@ export class McpExternalManager {
 		const { serverName, toolName } = entry
 
 		const credentials = await this.resolveCredentials(serverName, userId)
+		const propagated = this.buildPropagatedHeaders(userId)
+		const httpHeaders = { ...credentials, ...propagated }
 
 		const http = this.httpClients.get(serverName)
 		if (http) {
 			try {
-				return await http.callTool(toolName, args, credentials)
+				return await http.callTool(toolName, args, httpHeaders)
 			} catch (err) {
 				return `MCP HTTP error (${serverName}/${toolName}): ${err instanceof Error ? err.message : String(err)}`
 			}
@@ -603,6 +612,22 @@ export class McpExternalManager {
 			return await this.credentialProvider.getCredentials(userId, serverId, true)
 		} catch (err) {
 			agentLogger.warn(`[McpExternal] Failed to resolve credentials for user=${userId} server=${serverName}: ${err}`)
+			return {}
+		}
+	}
+
+	/**
+	 * Construye headers que agent-manager propaga a todos los MCPs HTTP de forma
+	 * transparente. Hoy: un JWT corto firmado con `sub: userId` para que el MCP
+	 * pueda llamar de vuelta a agent-manager en nombre del usuario.
+	 */
+	private buildPropagatedHeaders(userId?: string): Record<string, string> {
+		if (!userId) return {}
+		try {
+			const token = jwt.sign({ sub: userId }, JWT_SECRET, { expiresIn: '5m' })
+			return { 'x-agent-manager-token': token }
+		} catch (err) {
+			agentLogger.warn(`[McpExternal] Failed to sign propagated JWT for user=${userId}: ${err}`)
 			return {}
 		}
 	}
