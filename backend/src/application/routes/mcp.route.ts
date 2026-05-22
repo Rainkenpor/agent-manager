@@ -130,27 +130,37 @@ async function applyRoleBasedTools(server: McpServer, user: Record<string, unkno
 		}
 	}
 
-	// Register MCP tools (local + external)
+	// Track tool names already registered on this MCP session to avoid double-registration
+	// (the MCP SDK throws if you register the same tool name twice, and that throw would
+	// otherwise abort the registration of the remaining external MCPs).
+	const registeredToolNames = new Set<string>()
+
+	const allMcpLocalRoutes = registry
+		.getRoutes()
+		.filter((r) => r.useBy?.includes('mcp') && r.toolName && r.toolDescription && r.inputSchema)
+
+	const tryRegisterLocal = (route: RegisteredRoute) => {
+		if (registeredToolNames.has(route.toolName!)) return
+		registerLocalTool(server, route, sessionId)
+		registeredToolNames.add(route.toolName!)
+	}
+
+	// Register always-available local tools ONCE, regardless of how many MCPs the user has.
+	for (const route of allMcpLocalRoutes) {
+		if (route.toolAlwaysAvailable) tryRegisterLocal(route)
+	}
+
+	// Register MCP tools (local + external) per assigned MCP server
 	for (const [, { mcpServer, allowedTools }] of serverToolMap) {
 		try {
 			if (mcpServer.type === 'local') {
-				// MCP local: obtener tools del registry y filtrar por allowedTools
-				const localRoutes = registry.getRoutes().filter((r) => r.useBy?.includes('mcp') && r.toolName && r.toolDescription && r.inputSchema)
-
-				for (const route of localRoutes) {
+				// MCP local: registrar tools del registry filtradas por allowedTools
+				for (const route of allMcpLocalRoutes) {
 					// Empty allowedTools means "all tools allowed"
 					if (allowedTools.size > 0 && !allowedTools.has(route.toolName!)) continue
-					registerLocalTool(server, route, sessionId)
+					tryRegisterLocal(route)
 				}
 				continue
-			}
-
-			// Local filtrando por toolAlwaysAvailable
-			const localRoutes = registry
-				.getRoutes()
-				.filter((r) => r.useBy?.includes('mcp') && r.toolName && r.toolDescription && r.inputSchema && r.toolAlwaysAvailable)
-			for (const route of localRoutes) {
-				registerLocalTool(server, route, sessionId)
 			}
 
 			// MCPs externos: inicializar y registrar tools via mcpExternalManager
@@ -160,6 +170,7 @@ async function applyRoleBasedTools(server: McpServer, user: Record<string, unkno
 			for (const tool of serverTools) {
 				// Empty allowedTools means "all tools allowed"
 				if (allowedTools.size > 0 && !allowedTools.has(tool.toolName)) continue
+				if (registeredToolNames.has(tool.toolId)) continue
 
 				const inputSchema = jsonSchemaToZodShape(tool.inputSchema as Record<string, unknown>)
 
@@ -167,6 +178,7 @@ async function applyRoleBasedTools(server: McpServer, user: Record<string, unkno
 					const result = await mcpExternalManager.callTool(tool.toolId, args, userId)
 					return { content: [{ type: 'text' as const, text: result }] }
 				})
+				registeredToolNames.add(tool.toolId)
 			}
 		} catch (err) {
 			console.warn(`[MCP] Failed to init server ${mcpServer.name}:`, err)
