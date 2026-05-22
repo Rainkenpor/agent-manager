@@ -40,6 +40,12 @@ const router = createRouter({
 					meta: { resources: ['agents', 'governance'] }
 				},
 				{
+					path: 'gobernanza/sugerencias',
+					name: 'governance-suggestions',
+					component: () => import('@/views/GovernanceSuggestionsView.vue'),
+					meta: { resourceAccess: 'governance_suggestion' }
+				},
+				{
 					path: 'mcps',
 					name: 'mcps',
 					component: () => import('@/views/McpHubView.vue'),
@@ -110,6 +116,11 @@ router.beforeEach(async (to) => {
 
 	const resources = to.meta.resources as string[] | undefined
 	if (resources && auth.isAuthenticated && !auth.hasAnyResourceManageAccess(resources)) {
+		return { name: 'home' }
+	}
+
+	const resourceAccess = to.meta.resourceAccess as string | undefined
+	if (resourceAccess && auth.isAuthenticated && !auth.hasResourceAccess(resourceAccess)) {
 		return { name: 'home' }
 	}
 })

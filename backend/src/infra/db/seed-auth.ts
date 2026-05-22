@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
+import { container } from '../../application/container.js'
 import { AppDataSource } from './database.js'
 import { PermissionEntity } from './entities.js'
-import { container } from '../../application/container.js'
 
 async function seedDefaultPermissions() {
 	await AppDataSource.initialize()
@@ -52,6 +52,9 @@ async function seedDefaultPermissions() {
 		{ resource: 'governance', action: 'read', description: 'Ver gobernanza' },
 		{ resource: 'governance', action: 'update', description: 'Actualizar gobernanza' },
 		{ resource: 'governance', action: 'delete', description: 'Eliminar gobernanza' },
+		// Sugerencias de gobernanza
+		{ resource: 'governance_suggestion', action: 'read', description: 'Ver sugerencias de gobernanza' },
+		{ resource: 'governance_suggestion', action: 'delete', description: 'Eliminar sugerencias de gobernanza' },
 		// Hook Servers
 		{ resource: 'hook_servers', action: 'create', description: 'Crear servidores de hooks' },
 		{ resource: 'hook_servers', action: 'read', description: 'Ver servidores de hooks' },
@@ -68,7 +71,7 @@ async function seedDefaultPermissions() {
 		{ resource: 'event_listeners', action: 'update', description: 'Actualizar y disparar event listeners' },
 		{ resource: 'event_listeners', action: 'delete', description: 'Eliminar event listeners' },
 		// log_streams
-		{ resource: 'log_streams', action: 'read', description: 'Permite ver la consola de logs' },
+		{ resource: 'log_streams', action: 'read', description: 'Permite ver la consola de logs' }
 	]
 
 	for (const perm of defaultPermissions) {
@@ -97,9 +100,15 @@ async function seed() {
 		let editorRole = allRoles.find((r) => r.name === 'editor')
 		let viewerRole = allRoles.find((r) => r.name === 'viewer')
 
-		if (!adminRole) adminRole = await container.roleRepository.create({ name: 'admin', description: 'Administrador con todos los permisos' })
-		if (!editorRole) editorRole = await container.roleRepository.create({ name: 'editor', description: 'Editor que puede crear y modificar documentación' })
-		if (!viewerRole) viewerRole = await container.roleRepository.create({ name: 'viewer', description: 'Usuario que solo puede ver documentación' })
+		if (!adminRole)
+			adminRole = await container.roleRepository.create({ name: 'admin', description: 'Administrador con todos los permisos' })
+		if (!editorRole)
+			editorRole = await container.roleRepository.create({
+				name: 'editor',
+				description: 'Editor que puede crear y modificar documentación'
+			})
+		if (!viewerRole)
+			viewerRole = await container.roleRepository.create({ name: 'viewer', description: 'Usuario que solo puede ver documentación' })
 		console.log('✅ Roles verificados/creados\n')
 
 		console.log('🔐 Asignando permisos a roles...')
