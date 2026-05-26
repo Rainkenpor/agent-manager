@@ -3,7 +3,7 @@
 ## Gobernanza del proyecto
 
 **INSTRUCCIÓN OBLIGATORIA:** Al inicio de cada sesión, usa la herramienta `get_governance`
-con el tipo `typescript` para cargar las reglas de gobernanza activas del proyecto.
+con el tipo `agentManager` para cargar las reglas de gobernanza activas del proyecto.
 Aplica todas esas reglas durante toda la sesión antes de proponer o generar código.
 
 - Si la llamada a la herramienta **se realiza correctamente**: aplica todas las reglas activas devueltas durante toda la sesión.

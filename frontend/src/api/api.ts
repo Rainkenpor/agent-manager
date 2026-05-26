@@ -318,6 +318,10 @@ export const assignStageUser = (stageId: string, userId: string | null) =>
 export const getMyStages = () => request<{ success: boolean; data: any[] }>('/traceability/my-stages')
 export const streamAgentLogs = (signal?: AbortSignal) => requestAsync('/logs/stream', {}, signal)
 
+// Release notes (doc/<version>.md)
+export const getReleaseNotes = () =>
+	request<{ success: boolean; data: Array<{ version: string; title: string | null; date: string | null; content: string }> }>('/release-notes')
+
 // Hook Servers
 export const getHookServers = () => request<{ success: boolean; data: any[] }>('/hook-servers')
 export const getHookServerById = (id: string) => request<{ success: boolean; data: any }>(`/hook-servers/${id}`)

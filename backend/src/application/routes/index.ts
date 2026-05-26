@@ -13,6 +13,7 @@ import { registerLogsRoutes } from './logs.route.js'
 import { registerMcpCredentialRoutes } from './mcp-credential.route.js'
 import { registerMcpServerRoutes } from './mcp-server.route.js'
 import { registerOAuthRoutes } from './oauth.route.js'
+import { registerReleaseNotesRoutes } from './release-notes.route.js'
 import { registerRoleRoutes } from './role.route.js'
 import { registerSkillRoutes } from './skill.route.js'
 import { registerTraceabilityRoutes } from './traceability.route.js'
@@ -44,4 +45,5 @@ export function initializeRegistry(): void {
 	registerGovernanceRoutes()
 	registerGovernanceSuggestionRoutes()
 	registerCredentialsRoutes()
+	registerReleaseNotesRoutes()
 }
