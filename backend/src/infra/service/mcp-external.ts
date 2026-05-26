@@ -71,6 +71,15 @@ export interface AgentTool {
 
 const MCP_PREFIX = 'mcp__'
 
+// ── Resiliency tuning ─────────────────────────────────────────────────────────
+
+/** Tiempo máximo para una petición HTTP a un MCP externo antes de abortar. */
+const MCP_HTTP_TIMEOUT_MS = 30_000
+/** Número de fallos consecutivos antes de abrir el circuit breaker. */
+const MCP_FAILURE_THRESHOLD = 3
+/** Tiempo (ms) que un servidor permanece marcado como no saludable tras abrir el breaker. */
+const MCP_COOLDOWN_MS = 60_000
+
 export function buildMcpToolId(serverName: string, toolName: string): string {
 	return `${MCP_PREFIX}${serverName}__${toolName}`
 }
@@ -106,11 +115,19 @@ class McpHttpClient {
 	}
 
 	private async post(payload: unknown, additionalHeaders?: Record<string, string>): Promise<Response> {
-		return fetch(this.url, {
-			method: 'POST',
-			headers: this.buildHeaders(additionalHeaders),
-			body: JSON.stringify(payload)
-		})
+		try {
+			return await fetch(this.url, {
+				method: 'POST',
+				headers: this.buildHeaders(additionalHeaders),
+				body: JSON.stringify(payload),
+				signal: AbortSignal.timeout(MCP_HTTP_TIMEOUT_MS)
+			})
+		} catch (err) {
+			if (err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError')) {
+				throw new Error(`MCP HTTP request to ${this.url} timed out after ${MCP_HTTP_TIMEOUT_MS}ms`)
+			}
+			throw err
+		}
 	}
 
 	private async sendRequest(
@@ -366,6 +383,8 @@ export class McpExternalManager {
 	private serverConfigs = new Map<string, StoredServerConfig>()
 	/** Puerto para resolver credenciales de usuario (inyectado desde la capa de aplicación) */
 	private credentialProvider?: IMcpCredentialProvider
+	/** Circuit breaker state per server: tracks consecutive failures and cooldown deadline. */
+	private serverHealth = new Map<string, { failures: number; cooldownUntil: number }>()
 
 	/** Inyecta el proveedor de credenciales (llamar desde el contenedor IoC). */
 	setCredentialProvider(provider: IMcpCredentialProvider): void {
@@ -511,6 +530,28 @@ export class McpExternalManager {
 		this.tools = this.tools.filter((t) => !t.function.name.startsWith(prefix))
 	}
 
+	/** Resetea el contador de fallos de un servidor tras una llamada exitosa. */
+	private recordSuccess(serverName: string): void {
+		this.serverHealth.delete(serverName)
+	}
+
+	/**
+	 * Registra un fallo en el servidor. Si se alcanza el umbral, abre el circuit breaker
+	 * (cooldown) y desconecta el cliente para forzar reinicialización en el próximo uso.
+	 */
+	private recordFailure(serverName: string, kind: 'http' | 'stdio'): void {
+		const current = this.serverHealth.get(serverName) ?? { failures: 0, cooldownUntil: 0 }
+		current.failures += 1
+		if (current.failures >= MCP_FAILURE_THRESHOLD) {
+			current.cooldownUntil = Date.now() + MCP_COOLDOWN_MS
+			agentLogger.warn(
+				`[McpExternal] Circuit breaker OPEN for '${serverName}' (${kind}) after ${current.failures} failures — cooldown ${MCP_COOLDOWN_MS / 1000}s`
+			)
+			this.disconnect(serverName)
+		}
+		this.serverHealth.set(serverName, current)
+	}
+
 	/**
 	 * Returns tools belonging to a specific server, with parsed metadata.
 	 */
@@ -560,6 +601,13 @@ export class McpExternalManager {
 
 		const { serverName, toolName } = entry
 
+		// Circuit breaker: bail out immediately if the server is in cooldown after repeated failures.
+		const health = this.serverHealth.get(serverName)
+		if (health && health.cooldownUntil > Date.now()) {
+			const secs = Math.ceil((health.cooldownUntil - Date.now()) / 1000)
+			throw new Error(`MCP server '${serverName}' is unhealthy — retry in ${secs}s`)
+		}
+
 		const credentials = await this.resolveCredentials(serverName, userId)
 		const propagated = this.buildPropagatedHeaders(userId)
 		const httpHeaders = { ...credentials, ...propagated }
@@ -567,9 +615,12 @@ export class McpExternalManager {
 		const http = this.httpClients.get(serverName)
 		if (http) {
 			try {
-				return await http.callTool(toolName, args, httpHeaders)
+				const result = await http.callTool(toolName, args, httpHeaders)
+				this.recordSuccess(serverName)
+				return result
 			} catch (err) {
-				return `MCP HTTP error (${serverName}/${toolName}): ${err instanceof Error ? err.message : String(err)}`
+				this.recordFailure(serverName, 'http')
+				throw new Error(`MCP HTTP error (${serverName}/${toolName}): ${err instanceof Error ? err.message : String(err)}`)
 			}
 		}
 
@@ -585,22 +636,28 @@ export class McpExternalManager {
 					})
 					try {
 						await tempClient.initialize()
-						return await tempClient.callTool(toolName, args)
+						const result = await tempClient.callTool(toolName, args)
+						this.recordSuccess(serverName)
+						return result
 					} catch (err) {
-						return `MCP stdio error (${serverName}/${toolName}): ${err instanceof Error ? err.message : String(err)}`
+						this.recordFailure(serverName, 'stdio')
+						throw new Error(`MCP stdio error (${serverName}/${toolName}): ${err instanceof Error ? err.message : String(err)}`)
 					} finally {
 						tempClient.cleanup()
 					}
 				}
 			}
 			try {
-				return await stdio.callTool(toolName, args)
+				const result = await stdio.callTool(toolName, args)
+				this.recordSuccess(serverName)
+				return result
 			} catch (err) {
-				return `MCP stdio error (${serverName}/${toolName}): ${err instanceof Error ? err.message : String(err)}`
+				this.recordFailure(serverName, 'stdio')
+				throw new Error(`MCP stdio error (${serverName}/${toolName}): ${err instanceof Error ? err.message : String(err)}`)
 			}
 		}
 
-		return `No active client for MCP server '${serverName}'`
+		throw new Error(`No active client for MCP server '${serverName}'`)
 	}
 
 	/** Resuelve las credenciales del usuario para el servidor dado (vacío si no aplica). */

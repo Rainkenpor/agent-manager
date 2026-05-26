@@ -69,7 +69,12 @@ export class EventListenerExecutorService {
 			})
 
 			// 2. Extract data payload
-			const parseJson = typeof sourceResult === 'string' ? JSON.parse(sourceResult) : sourceResult
+			let parseJson: unknown
+			try {
+				parseJson = typeof sourceResult === 'string' ? JSON.parse(sourceResult) : sourceResult
+			} catch {
+				throw new Error(`Source tool returned non-JSON: ${String(sourceResult).slice(0, 200)}`)
+			}
 			const payload = (parseJson as any)?.data ?? parseJson
 
 			// 3. Evaluate condition
