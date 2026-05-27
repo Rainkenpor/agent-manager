@@ -22,6 +22,7 @@ COPY --chown=nodejs:nodejs node_modules ./node_modules
 # Artefactos ya compilados por el CI
 COPY --chown=nodejs:nodejs dist/backend ./backend/dist
 COPY --chown=nodejs:nodejs dist/frontend ./frontend/dist
+COPY --chown=nodejs:nodejs dist/doc ./doc
 
 # tsc emite el backend como CommonJS (NodeNext + backend/package.json sin "type").
 # La raíz tiene "type": "module", así que sin este marker Node confunde el formato.
