@@ -443,3 +443,7 @@ export const markNotificationRead = (id: string) =>
 
 export const markAllNotificationsRead = () =>
 	request<{ success: boolean }>(`/notifications/read-all`, { method: 'PUT' })
+
+// Token Audit
+export const getTokenMetrics = () =>
+	request<{ success: boolean; data: any }>('/token-audit/metrics')

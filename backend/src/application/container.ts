@@ -48,6 +48,7 @@ import {
 	CreateAgentGroupUseCase,
 	// Agent Use Cases
 	CreateAgentUseCase,
+	GetTokenMetricsUseCase,
 	// Chat Use Cases
 	CreateConversationUseCase,
 	CreateDocumentUseCase,
@@ -278,8 +279,9 @@ export class Container {
 	private _exportConfigUseCase?: ExportConfigUseCase
 	private _importConfigUseCase?: ImportConfigUseCase
 
-	// Token Audit Repository
+	// Token Audit Repository & Use Cases
 	readonly tokenAuditRepository: ITokenAuditRepository
+	private _getTokenMetricsUseCase?: GetTokenMetricsUseCase
 
 	constructor() {
 		// Initialize repositories with concrete implementations
@@ -960,6 +962,17 @@ export class Container {
 				this._permissionRepository
 			)
 		return this._importConfigUseCase
+	}
+
+	// ==========================================
+	// TOKEN AUDIT USE CASES
+	// ==========================================
+
+	get getTokenMetricsUseCase(): GetTokenMetricsUseCase {
+		if (!this._getTokenMetricsUseCase) {
+			this._getTokenMetricsUseCase = new GetTokenMetricsUseCase(this.tokenAuditRepository)
+		}
+		return this._getTokenMetricsUseCase
 	}
 }
 

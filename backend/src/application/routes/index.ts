@@ -1,4 +1,5 @@
 import { registerAgentRoutes } from './agent.route.js'
+import { registerTokenAuditRoutes } from './token-audit.route.js'
 import { registerAgentGroupRoutes } from './agent-group.route.js'
 import { registerAiAssistRoutes } from './ai-assist.route.js'
 import { registerAuthRoutes } from './auth.route.js'
@@ -46,4 +47,5 @@ export function initializeRegistry(): void {
 	registerGovernanceSuggestionRoutes()
 	registerCredentialsRoutes()
 	registerReleaseNotesRoutes()
+	registerTokenAuditRoutes()
 }

@@ -67,7 +67,7 @@ const router = createRouter({
 					path: 'admin',
 					name: 'admin',
 					component: () => import('@/views/AdminView.vue'),
-					meta: { resources: ['users', 'roles'] }
+					meta: { resources: ['users', 'roles', 'llm_tokens'] }
 				},
 				{
 					path: 'config',
