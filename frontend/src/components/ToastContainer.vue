@@ -15,7 +15,7 @@ const emit = defineEmits<{ remove: [id: number] }>()
         :class="{
           'bg-emerald-600 text-white': toast.type === 'success',
           'bg-red-600 text-white': toast.type === 'error',
-          'bg-slate-700 text-white': toast.type === 'info',
+          'bg-base-100 text-base-content': toast.type === 'info',
         }"
       >
         <span v-if="toast.type === 'success'" class="text-base shrink-0">✓</span>

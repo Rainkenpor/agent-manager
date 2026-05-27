@@ -129,15 +129,15 @@ onMounted(async () => {
     </template>
 
     <!-- Loading -->
-    <div v-if="loading" class="text-slate-400 text-sm">Cargando...</div>
+    <div v-if="loading" class="text-base-content/60 text-sm">Cargando...</div>
 
     <!-- Empty -->
-    <div v-else-if="credentials.length === 0" class="border border-dashed border-slate-700 rounded-xl p-12 text-center">
-      <svg class="w-10 h-10 mx-auto text-slate-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div v-else-if="credentials.length === 0" class="border border-dashed border-base-300 rounded-xl p-12 text-center">
+      <svg class="w-10 h-10 mx-auto text-base-content/40 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
           d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
       </svg>
-      <p class="text-slate-500 text-sm">No hay credenciales almacenadas.</p>
+      <p class="text-base-content/50 text-sm">No hay credenciales almacenadas.</p>
       <button @click="openAdd" class="mt-3 text-violet-400 hover:text-violet-300 text-sm underline">
         Agregar la primera
       </button>
@@ -146,19 +146,19 @@ onMounted(async () => {
     <!-- Grouped by MCP server -->
     <div v-else class="space-y-6">
       <div v-for="(creds, serverId) in credentialsByServer" :key="serverId"
-        class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-        <div class="px-5 py-3 bg-slate-800/50 border-b border-slate-700 flex items-center gap-2">
+        class="bg-base-300 border border-base-300 rounded-xl overflow-hidden">
+        <div class="px-5 py-3 bg-base-200/50 border-b border-base-300 flex items-center gap-2">
           <svg class="w-4 h-4 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2" />
           </svg>
-          <span class="font-semibold text-slate-100 text-sm">{{ serverLabel(serverId) }}</span>
-          <span class="text-slate-500 text-xs">({{ creds.length }} clave{{ creds.length !== 1 ? 's' : '' }})</span>
+          <span class="font-semibold text-base-content text-sm">{{ serverLabel(serverId) }}</span>
+          <span class="text-base-content/50 text-xs">({{ creds.length }} clave{{ creds.length !== 1 ? 's' : '' }})</span>
         </div>
 
         <table class="w-full text-sm">
           <thead>
-            <tr class="text-slate-500 text-xs border-b border-slate-800">
+            <tr class="text-base-content/50 text-xs border-b border-base-300">
               <th class="px-5 py-2 text-left font-medium">Clave</th>
               <th class="px-5 py-2 text-left font-medium">Valor</th>
               <th class="px-5 py-2 text-left font-medium">Actualizado</th>
@@ -167,13 +167,13 @@ onMounted(async () => {
           </thead>
           <tbody>
             <tr v-for="cred in creds" :key="cred.id"
-              class="border-b border-slate-800/50 last:border-0 hover:bg-slate-800/30 transition-colors">
+              class="border-b border-base-300/50 last:border-0 hover:bg-base-200/30 transition-colors">
               <td class="px-5 py-3 font-mono text-violet-300">{{ cred.key }}</td>
-              <td class="px-5 py-3 font-mono text-slate-300 max-w-xs">
+              <td class="px-5 py-3 font-mono text-base-content max-w-xs">
                 <span v-if="visibleValues.has(cred.id)" class="break-all">{{ cred.value }}</span>
-                <span v-else class="tracking-widest text-slate-500">••••••••</span>
+                <span v-else class="tracking-widest text-base-content/50">••••••••</span>
                 <button @click="toggleVisibility(cred.id)"
-                  class="ml-2 text-slate-500 hover:text-slate-300 transition-colors"
+                  class="ml-2 text-base-content/50 hover:text-base-content transition-colors"
                   :title="visibleValues.has(cred.id) ? 'Ocultar' : 'Mostrar'">
                   <svg class="w-3.5 h-3.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path v-if="!visibleValues.has(cred.id)" stroke-linecap="round" stroke-linejoin="round"
@@ -184,13 +184,13 @@ onMounted(async () => {
                   </svg>
                 </button>
               </td>
-              <td class="px-5 py-3 text-slate-500 text-xs">
+              <td class="px-5 py-3 text-base-content/50 text-xs">
                 {{ new Date(cred.updatedAt).toLocaleString() }}
               </td>
               <td class="px-5 py-3 text-right">
                 <div class="flex items-center justify-end gap-2">
                   <button @click="openEdit(cred)"
-                    class="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded transition-colors"
+                    class="p-1.5 text-base-content/60 hover:text-base-content hover:bg-base-100 rounded transition-colors"
                     title="Editar">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -198,7 +198,7 @@ onMounted(async () => {
                     </svg>
                   </button>
                   <button @click="deleteTarget = cred"
-                    class="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-900/20 rounded transition-colors"
+                    class="p-1.5 text-base-content/60 hover:text-red-400 hover:bg-red-900/20 rounded transition-colors"
                     title="Eliminar">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"

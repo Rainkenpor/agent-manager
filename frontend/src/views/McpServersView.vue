@@ -309,13 +309,13 @@ async function doDelete() {
 
     <!-- Grid -->
     <div v-else>
-      <div v-if="!servers.length" class="text-center py-16 bg-white rounded-xl border border-slate-200">
-        <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
-          <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div v-if="!servers.length" class="text-center py-16 bg-base-100 rounded-xl border border-base-300">
+        <div class="w-12 h-12 rounded-full bg-base-100 flex items-center justify-center mx-auto mb-3">
+          <svg class="w-6 h-6 text-base-content/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7" />
           </svg>
         </div>
-        <p class="text-slate-500 text-sm">No MCP servers configured yet</p>
+        <p class="text-base-content/50 text-sm">No MCP servers configured yet</p>
         <button class="mt-3 text-indigo-600 hover:text-indigo-700 text-sm font-medium" @click="openCreate">
           Add your first server
         </button>
@@ -327,10 +327,10 @@ async function doDelete() {
           <template #header>
             <div class="flex items-start justify-between mb-3">
               <div class="flex-1 min-w-0">
-                <h3 class="font-semibold text-slate-200 truncate">
+                <h3 class="font-semibold text-base-content truncate">
                   {{ server.displayName || server.name }}
                 </h3>
-                <p class="text-xs text-slate-400 font-mono mt-0.5">{{ server.name }}</p>
+                <p class="text-xs text-base-content/60 font-mono mt-0.5">{{ server.name }}</p>
               </div>
 
             </div>
@@ -341,13 +341,13 @@ async function doDelete() {
                   {{ server.type }}
                 </span>
                 <span class="px-2 py-0.5 rounded-full text-xs font-medium"
-                  :class="server.active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'">
+                  :class="server.active ? 'bg-emerald-100 text-emerald-700' : 'bg-base-100 text-base-content/50'">
                   {{ server.active ? 'active' : 'inactive' }}
                 </span>
                 <template v-if="server.type !== 'local'">
                   <!-- Connection status -->
                   <span v-if="connectionStatus[server.id] === 'checking'"
-                    class="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-700 text-slate-400">
+                    class="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-base-100 text-base-content/60">
                     <svg class="w-2.5 h-2.5 animate-spin" fill="none" viewBox="0 0 24 24">
                       <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
                       <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
@@ -382,20 +382,20 @@ async function doDelete() {
 
 
           <!-- Description -->
-          <p v-if="server.description" class="text-sm text-slate-500 mb-3 line-clamp-2">
+          <p v-if="server.description" class="text-sm text-base-content/50 mb-3 line-clamp-2">
             {{ server.description }}
           </p>
 
           <!-- Connection info -->
-          <div class="text-xs text-slate-500 mb-4">
+          <div class="text-xs text-base-content/50 mb-4">
             <template v-if="server.type === 'http' && server.url">
-              <div class=" input rounded-md px-2.5 py-1.5 font-mono truncate w-full text-white">
+              <div class=" input rounded-md px-2.5 py-1.5 font-mono truncate w-full text-base-content">
                 <span class="mdi mdi-link"></span>
                 <span class="truncate">{{ server.url }}</span>
               </div>
             </template>
             <template v-else-if="server.type === 'stdio' && server.command">
-              <div class=" input rounded-md px-2.5 py-1.5 font-mono truncate w-full text-white">
+              <div class=" input rounded-md px-2.5 py-1.5 font-mono truncate w-full text-base-content">
                 <span class="mdi mdi-console"></span>
                 <span class="truncate">{{ server.command }} {{ (server.args ?? []).join(' ') }}</span>
               </div>
@@ -418,14 +418,14 @@ async function doDelete() {
           <!-- Actions -->
           <template #footer>
             <button
-              class="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium text-slate-200 hover:text-violet-400 hover:bg-violet-900/30 transition-colors"
+              class="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium text-base-content hover:text-violet-400 hover:bg-violet-900/30 transition-colors"
               @click="openToolsPanel(server)">
               <span class="mdi mdi-hammer-screwdriver"></span>
               Tools
             </button>
             <template v-if="server.type !== 'local'">
               <button
-                class="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium text-slate-200 hover:text-emerald-400 hover:bg-emerald-900/30 transition-colors disabled:opacity-50"
+                class="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium text-base-content hover:text-emerald-400 hover:bg-emerald-900/30 transition-colors disabled:opacity-50"
                 :disabled="reconnecting[server.id]" @click="reconnect(server)">
                 <svg class="w-3.5 h-3.5" :class="{ 'animate-spin': reconnecting[server.id] }" fill="none"
                   stroke="currentColor" viewBox="0 0 24 24">
@@ -448,16 +448,16 @@ async function doDelete() {
       <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="closeToolsPanel" />
 
       <!-- Drawer -->
-      <div class="relative ml-auto w-full max-w-xl bg-slate-900 shadow-2xl flex flex-col h-full overflow-hidden">
+      <div class="relative ml-auto w-full max-w-xl bg-base-300 shadow-2xl flex flex-col h-full overflow-hidden">
         <!-- Header -->
-        <div class="px-6 py-5 border-b border-slate-700 flex items-center justify-between shrink-0">
+        <div class="px-6 py-5 border-b border-base-300 flex items-center justify-between shrink-0">
           <div>
-            <h2 class="text-base font-semibold text-slate-200">
+            <h2 class="text-base font-semibold text-base-content">
               {{ toolsPanelServer.displayName || toolsPanelServer.name }} — Tools
             </h2>
-            <p class="text-xs text-slate-500 mt-0.5">Browse and call tools exposed by this MCP server</p>
+            <p class="text-xs text-base-content/50 mt-0.5">Browse and call tools exposed by this MCP server</p>
           </div>
-          <button class="p-2 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition"
+          <button class="p-2 text-base-content/60 hover:text-base-content rounded-lg hover:bg-base-200 transition"
             @click="closeToolsPanel">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -476,18 +476,18 @@ async function doDelete() {
           </div>
 
           <!-- Empty -->
-          <div v-else-if="!toolsList.length" class="text-center py-16 text-slate-500 text-sm">
+          <div v-else-if="!toolsList.length" class="text-center py-16 text-base-content/50 text-sm">
             No tools found for this server.
           </div>
 
           <!-- Tools list -->
           <div v-else class="space-y-3">
             <div v-for="tool in toolsList" :key="tool.toolName"
-              class="bg-slate-800 rounded-xl border border-slate-700 p-4">
+              class="bg-base-200 rounded-xl border border-base-300 p-4">
               <div class="flex items-start justify-between gap-3">
                 <div class="flex-1 min-w-0">
-                  <p class="text-sm font-semibold text-slate-200 font-mono">{{ tool.toolName }}</p>
-                  <p v-if="tool.description" class="text-xs text-slate-400 mt-1 leading-relaxed">
+                  <p class="text-sm font-semibold text-base-content font-mono">{{ tool.toolName }}</p>
+                  <p v-if="tool.description" class="text-xs text-base-content/60 mt-1 leading-relaxed">
                     {{ tool.description }}
                   </p>
                   <!-- Parameter summary -->
@@ -495,8 +495,8 @@ async function doDelete() {
                     <span v-for="{ key, schema } in schemaProperties(tool)" :key="key"
                       class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-mono" :class="requiredFields(tool).includes(key)
                         ? 'bg-indigo-900/50 text-indigo-300 ring-1 ring-indigo-700'
-                        : 'bg-slate-700 text-slate-400'">
-                      {{ key }}<span class="text-slate-500">:{{ schema?.type ?? 'any' }}</span>
+                        : 'bg-base-100 text-base-content/60'">
+                      {{ key }}<span class="text-base-content/50">:{{ schema?.type ?? 'any' }}</span>
                     </span>
                   </div>
                 </div>
@@ -524,17 +524,17 @@ async function doDelete() {
     <div v-if="callingTool" class="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="closeCallModal" />
       <div
-        class="relative bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+        class="relative bg-base-300 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
 
         <!-- Header -->
-        <div class="px-6 py-5 border-b border-slate-700 flex items-center justify-between shrink-0">
+        <div class="px-6 py-5 border-b border-base-300 flex items-center justify-between shrink-0">
           <div>
-            <h2 class="text-base font-semibold text-slate-200 font-mono">{{ callingTool.toolName }}</h2>
-            <p v-if="callingTool.description" class="text-xs text-slate-400 mt-0.5 line-clamp-2">
+            <h2 class="text-base font-semibold text-base-content font-mono">{{ callingTool.toolName }}</h2>
+            <p v-if="callingTool.description" class="text-xs text-base-content/60 mt-0.5 line-clamp-2">
               {{ callingTool.description }}
             </p>
           </div>
-          <button class="p-2 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition"
+          <button class="p-2 text-base-content/60 hover:text-base-content rounded-lg hover:bg-base-200 transition"
             @click="closeCallModal">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -547,19 +547,19 @@ async function doDelete() {
           <!-- Parameters -->
           <template v-if="schemaProperties(callingTool).length">
             <div v-for="{ key, schema } in schemaProperties(callingTool)" :key="key">
-              <label class="block text-sm font-medium text-slate-300 mb-1.5">
+              <label class="block text-sm font-medium text-base-content mb-1.5">
                 <span class="font-mono text-violet-400">{{ key }}</span>
                 <span v-if="requiredFields(callingTool).includes(key)" class="text-red-400 ml-0.5">*</span>
-                <span class="text-slate-500 text-xs font-normal ml-2">{{ schema?.type ?? 'any' }}</span>
-                <span v-if="schema?.description" class="text-slate-500 text-xs font-normal block mt-0.5">
+                <span class="text-base-content/50 text-xs font-normal ml-2">{{ schema?.type ?? 'any' }}</span>
+                <span v-if="schema?.description" class="text-base-content/50 text-xs font-normal block mt-0.5">
                   {{ schema.description }}
                 </span>
               </label>
               <textarea v-if="schema?.type === 'object' || schema?.type === 'array'" v-model="callArgs[key]" rows="3"
                 :placeholder="schema?.type === 'object' ? '{ }' : '[ ]'"
-                class="w-full px-3 py-2 rounded-lg border border-slate-600 bg-slate-800 text-slate-200 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-violet-500 resize-y" />
+                class="w-full px-3 py-2 rounded-lg border border-base-content/20 bg-base-200 text-base-content text-sm font-mono focus:outline-none focus:ring-2 focus:ring-violet-500 resize-y" />
               <select v-else-if="schema?.type === 'boolean'" v-model="callArgs[key]"
-                class="w-full px-3 py-2 rounded-lg border border-slate-600 bg-slate-800 text-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500">
+                class="w-full px-3 py-2 rounded-lg border border-base-content/20 bg-base-200 text-base-content text-sm focus:outline-none focus:ring-2 focus:ring-violet-500">
                 <option value="">— optional —</option>
                 <option value="true">true</option>
                 <option value="false">false</option>
@@ -567,10 +567,10 @@ async function doDelete() {
               <input v-else v-model="callArgs[key]"
                 :type="schema?.type === 'number' || schema?.type === 'integer' ? 'number' : 'text'"
                 :placeholder="schema?.examples?.[0] ?? schema?.default ?? ''"
-                class="w-full px-3 py-2 rounded-lg border border-slate-600 bg-slate-800 text-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500" />
+                class="w-full px-3 py-2 rounded-lg border border-base-content/20 bg-base-200 text-base-content text-sm focus:outline-none focus:ring-2 focus:ring-violet-500" />
             </div>
           </template>
-          <p v-else class="text-sm text-slate-500 italic">This tool takes no parameters.</p>
+          <p v-else class="text-sm text-base-content/50 italic">This tool takes no parameters.</p>
 
           <!-- Result -->
           <div v-if="callResult !== null" class="mt-2">
@@ -581,7 +581,7 @@ async function doDelete() {
               Result
             </p>
             <pre
-              class="bg-slate-950 rounded-lg p-3 text-xs text-slate-300 overflow-x-auto whitespace-pre-wrap break-words max-h-60 overflow-y-auto font-mono border border-slate-700">
+              class="bg-base-300 rounded-lg p-3 text-xs text-base-content overflow-x-auto whitespace-pre-wrap break-words max-h-60 overflow-y-auto font-mono border border-base-300">
             {{ formattedResult }}</pre>
           </div>
 
@@ -592,9 +592,9 @@ async function doDelete() {
         </div>
 
         <!-- Footer -->
-        <div class="px-6 py-4 border-t border-slate-700 flex gap-3 shrink-0">
+        <div class="px-6 py-4 border-t border-base-300 flex gap-3 shrink-0">
           <button
-            class="flex-1 px-4 py-2.5 rounded-lg border border-slate-700 text-slate-300 text-sm font-medium hover:bg-slate-800 transition-colors"
+            class="flex-1 px-4 py-2.5 rounded-lg border border-base-300 text-base-content text-sm font-medium hover:bg-base-200 transition-colors"
             @click="closeCallModal">
             Close
           </button>
@@ -625,75 +625,75 @@ async function doDelete() {
       <!-- Name + Display Name -->
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-medium text-slate-400 mb-1.5">
+          <label class="block text-sm font-medium text-base-content/60 mb-1.5">
             ID Name <span class="text-red-500">*</span>
           </label>
           <input v-model="form.name" type="text" placeholder="my-mcp-server" required :disabled="!!editingServer"
-            class="w-full px-3 py-2.5 rounded-lg border border-slate-600 bg-slate-800 text-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50" />
-          <p class="text-xs text-slate-500 mt-1">Lowercase, letters, numbers, hyphens</p>
+            class="w-full px-3 py-2.5 rounded-lg border border-base-content/20 bg-base-200 text-base-content text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50" />
+          <p class="text-xs text-base-content/50 mt-1">Lowercase, letters, numbers, hyphens</p>
         </div>
         <div>
-          <label class="block text-sm font-medium text-slate-400 mb-1.5">Display Name</label>
+          <label class="block text-sm font-medium text-base-content/60 mb-1.5">Display Name</label>
           <input v-model="form.displayName" type="text" placeholder="My MCP Server"
-            class="w-full px-3 py-2.5 rounded-lg border border-slate-600 bg-slate-800 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            class="w-full px-3 py-2.5 rounded-lg border border-base-content/20 bg-base-200 text-base-content text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
         </div>
       </div>
 
       <!-- Description -->
       <div>
-        <label class="block text-sm font-medium text-slate-400 mb-1.5">Description</label>
+        <label class="block text-sm font-medium text-base-content/60 mb-1.5">Description</label>
         <input v-model="form.description" type="text" placeholder="What does this server provide?"
-          class="w-full px-3 py-2.5 rounded-lg border border-slate-600 bg-slate-800 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          class="w-full px-3 py-2.5 rounded-lg border border-base-content/20 bg-base-200 text-base-content text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
       </div>
 
       <!-- Type + Active -->
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-medium text-slate-400 mb-1.5">Type <span
+          <label class="block text-sm font-medium text-base-content/60 mb-1.5">Type <span
               class="text-red-500">*</span></label>
           <select v-model="form.type"
-            class="w-full px-3 py-2.5 rounded-lg border border-slate-600 bg-slate-800 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            class="w-full px-3 py-2.5 rounded-lg border border-base-content/20 bg-base-200 text-base-content text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
             <option value="http">HTTP</option>
             <option value="stdio">stdio</option>
           </select>
         </div>
         <div class="flex flex-col">
-          <label class="block text-sm font-medium text-slate-400 mb-1.5">Status</label>
+          <label class="block text-sm font-medium text-base-content/60 mb-1.5">Status</label>
           <label class="flex items-center gap-2.5 cursor-pointer mt-2">
-            <input v-model="form.active" type="checkbox" class="w-4 h-4 text-indigo-600 rounded border-slate-600" />
-            <span class="text-sm text-slate-300">Active</span>
+            <input v-model="form.active" type="checkbox" class="w-4 h-4 text-indigo-600 rounded border-base-content/20" />
+            <span class="text-sm text-base-content">Active</span>
           </label>
         </div>
       </div>
 
       <!-- HTTP: URL -->
       <div v-if="form.type === 'http'">
-        <label class="block text-sm font-medium text-slate-400 mb-1.5">URL</label>
+        <label class="block text-sm font-medium text-base-content/60 mb-1.5">URL</label>
         <input v-model="form.url" type="text" placeholder="https://mcp.example.com/v1/mcp"
-          class="w-full px-3 py-2.5 rounded-lg border border-slate-600 bg-slate-800 text-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          class="w-full px-3 py-2.5 rounded-lg border border-base-content/20 bg-base-200 text-base-content text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500" />
       </div>
 
       <!-- stdio: Command + Args -->
       <template v-else>
         <div>
-          <label class="block text-sm font-medium text-slate-400 mb-1.5">Command</label>
+          <label class="block text-sm font-medium text-base-content/60 mb-1.5">Command</label>
           <input v-model="form.command" type="text" placeholder="npx"
-            class="w-full px-3 py-2.5 rounded-lg border border-slate-600 bg-slate-800 text-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            class="w-full px-3 py-2.5 rounded-lg border border-base-content/20 bg-base-200 text-base-content text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500" />
         </div>
         <div>
-          <label class="block text-sm font-medium text-slate-400 mb-1.5">Arguments</label>
+          <label class="block text-sm font-medium text-base-content/60 mb-1.5">Arguments</label>
           <input v-model="form.args" type="text" placeholder="-y, mcp-remote, https://mcp.example.com"
-            class="w-full px-3 py-2.5 rounded-lg border border-slate-600 bg-slate-800 text-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-          <p class="text-xs text-slate-500 mt-1">Comma-separated</p>
+            class="w-full px-3 py-2.5 rounded-lg border border-base-content/20 bg-base-200 text-base-content text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          <p class="text-xs text-base-content/50 mt-1">Comma-separated</p>
         </div>
       </template>
 
       <!-- Credential Fields -->
       <div>
         <div class="flex items-center justify-between mb-2">
-          <label class="block text-sm font-medium text-slate-400">
+          <label class="block text-sm font-medium text-base-content/60">
             Credential Fields
-            <span class="text-xs text-slate-500 font-normal ml-1">— fields agents will request from the user</span>
+            <span class="text-xs text-base-content/50 font-normal ml-1">— fields agents will request from the user</span>
           </label>
           <button type="button"
             class="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 transition-colors"
@@ -704,16 +704,16 @@ async function doDelete() {
             Add field
           </button>
         </div>
-        <div v-if="form.credentialFields.length === 0" class="text-xs text-slate-600 italic py-1">
+        <div v-if="form.credentialFields.length === 0" class="text-xs text-base-content/40 italic py-1">
           No credential fields defined.
         </div>
         <div v-for="(field, i) in form.credentialFields" :key="i" class="flex items-center gap-2 mb-2">
           <input v-model="field.key" type="text" placeholder="key (e.g. mcp_token)"
-            class="w-32 px-2.5 py-1.5 rounded-lg border border-slate-600 bg-slate-800 text-white text-xs font-mono focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+            class="w-32 px-2.5 py-1.5 rounded-lg border border-base-content/20 bg-base-200 text-base-content text-xs font-mono focus:outline-none focus:ring-1 focus:ring-indigo-500" />
           <input v-model="field.description" type="text" placeholder="Description shown to the user"
-            class="flex-1 px-2.5 py-1.5 rounded-lg border border-slate-600 bg-slate-800 text-white text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+            class="flex-1 px-2.5 py-1.5 rounded-lg border border-base-content/20 bg-base-200 text-base-content text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500" />
           <button type="button" @click="removeCredentialField(i)"
-            class="p-1 text-slate-500 hover:text-red-400 transition-colors">
+            class="p-1 text-base-content/50 hover:text-red-400 transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -725,7 +725,7 @@ async function doDelete() {
     <template #footer>
       <div class="flex gap-3">
         <button type="button"
-          class="flex-1 px-4 py-2.5 rounded-lg border border-slate-600 text-slate-300 text-sm font-medium hover:bg-slate-800 transition-colors"
+          class="flex-1 px-4 py-2.5 rounded-lg border border-base-content/20 text-base-content text-sm font-medium hover:bg-base-200 transition-colors"
           @click="closeModal">
           Cancel
         </button>

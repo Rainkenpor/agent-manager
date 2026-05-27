@@ -38,14 +38,14 @@ function handleBackdropClick() {
 
         <!-- Header -->
         <div v-if="title || $slots.title"
-          class="px-6 py-4 border-b border-slate-700/60 flex items-center justify-between shrink-0">
+          class="px-6 py-4 border-b border-base-300/60 flex items-center justify-between shrink-0">
           <slot name="title">
             <div>
-              <h2 class="text-base font-semibold text-white">{{ title }}</h2>
+              <h2 class="text-base font-semibold text-base-content">{{ title }}</h2>
               {{ description }}
             </div>
           </slot>
-          <button class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+          <button class="p-1.5 text-base-content/60 hover:text-base-content rounded-lg hover:bg-base-200 transition-colors"
             @click="emit('close')">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -60,7 +60,7 @@ function handleBackdropClick() {
         </div>
 
         <!-- Footer -->
-        <div v-if="$slots.footer" class="px-6 py-4 border-t border-slate-700/60 shrink-0">
+        <div v-if="$slots.footer" class="px-6 py-4 border-t border-base-300/60 shrink-0">
           <slot name="footer" />
         </div>
       </div>

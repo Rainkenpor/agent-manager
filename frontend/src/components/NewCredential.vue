@@ -1,9 +1,9 @@
 <template>
   <form @submit.prevent="saveCredentials" class="space-y-4">
     <div>
-      <label class="block text-xs font-medium text-slate-400 mb-1.5">Servidor MCP</label>
+      <label class="block text-xs font-medium text-base-content/60 mb-1.5">Servidor MCP</label>
       <select v-model="selectedServerId" :disabled="!!editing"
-        class="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-violet-500 disabled:opacity-50">
+        class="w-full bg-base-200 border border-base-content/20 text-base-content rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-violet-500 disabled:opacity-50">
         <option v-for="s in servers" :key="s.id" :value="s.id">
           {{ s.displayName || s.name }}
         </option>
@@ -28,32 +28,32 @@
     <!-- Dynamic fields from credentialFields -->
     <template v-if="selectedServerFields.length > 0">
       <div v-for="field in selectedServerFields" :key="field.key">
-        <label class="block text-xs font-medium text-slate-400 mb-1.5">
+        <label class="block text-xs font-medium text-base-content/60 mb-1.5">
           {{ field.key }}
-          <span v-if="field.description" class="text-slate-500 font-normal ml-1">— {{ field.description }}</span>
+          <span v-if="field.description" class="text-base-content/50 font-normal ml-1">— {{ field.description }}</span>
         </label>
         <input v-model="fieldValues[field.key]" type="password" :placeholder="`Valor para ${field.key}`"
-          class="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-violet-500" />
+          class="w-full bg-base-200 border border-base-content/20 text-base-content rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-violet-500" />
       </div>
     </template>
 
     <!-- Fallback: manual key/value when server has no credentialFields defined -->
     <template v-else>
       <div>
-        <label class="block text-xs font-medium text-slate-400 mb-1.5">Clave</label>
+        <label class="block text-xs font-medium text-base-content/60 mb-1.5">Clave</label>
         <input v-model="manualKey" :disabled="!!editing" type="text" placeholder="ej: email, token, api_key"
-          class="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-violet-500 disabled:opacity-50" />
+          class="w-full bg-base-200 border border-base-content/20 text-base-content rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-violet-500 disabled:opacity-50" />
       </div>
       <div>
-        <label class="block text-xs font-medium text-slate-400 mb-1.5">Valor</label>
+        <label class="block text-xs font-medium text-base-content/60 mb-1.5">Valor</label>
         <input v-model="manualValue" type="password" placeholder="Valor de la credencial"
-          class="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-violet-500" />
+          class="w-full bg-base-200 border border-base-content/20 text-base-content rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-violet-500" />
       </div>
     </template>
 
     <div class="flex gap-3 pt-2">
       <button type="button" @click="emit('cancel')"
-        class="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm font-medium transition-colors">
+        class="flex-1 px-4 py-2 bg-base-100 hover:bg-base-100 text-base-content rounded-lg text-sm font-medium transition-colors">
         Cancelar
       </button>
       <button type="submit" :disabled="saving || !canSave"

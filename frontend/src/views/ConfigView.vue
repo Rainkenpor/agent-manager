@@ -37,7 +37,7 @@ const importResult = ref<Record<string, { created: number; skipped: number; erro
 const isDragging = ref(false)
 
 const openaiBadgeClass = computed(() => {
-	if (!openaiStatus.value?.configured) return 'bg-slate-800 text-slate-300 border-slate-700'
+	if (!openaiStatus.value?.configured) return 'bg-base-200 text-base-content border-base-300'
 	if (openaiStatus.value.needsRefresh) return 'bg-amber-500/10 text-amber-300 border-amber-500/30'
 	return 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
 })
@@ -231,16 +231,16 @@ onMounted(async () => {
 </script>
 
 <template>
-	<div class="p-6 bg-slate-950 text-white min-h-full">
+	<div class="p-6 bg-base-300 text-base-content min-h-full">
 		<div class="mb-6">
-			<h1 class="text-2xl font-bold text-white flex items-center gap-2">
+			<h1 class="text-2xl font-bold text-base-content flex items-center gap-2">
 				<i class="mdi mdi-cog-transfer text-indigo-400"></i>
 				Configuración
 			</h1>
-			<p class="text-slate-400 text-sm mt-1">Administra proveedores, exporta e importa la configuración del sistema.</p>
+			<p class="text-base-content/60 text-sm mt-1">Administra proveedores, exporta e importa la configuración del sistema.</p>
 		</div>
 
-		<div class="flex gap-1 mb-6 bg-slate-900 rounded-xl p-1 w-fit">
+		<div class="flex gap-1 mb-6 bg-base-300 rounded-xl p-1 w-fit">
 			<button
 				v-for="t in [
 					{ key: 'providers', label: 'Proveedores', icon: 'mdi-connection' },
@@ -251,7 +251,7 @@ onMounted(async () => {
 				@click="tab = t.key as 'providers' | 'export' | 'import'"
 				:class="[
 					'px-5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2',
-					tab === t.key ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
+					tab === t.key ? 'bg-indigo-600 text-white' : 'text-base-content/60 hover:text-white'
 				]">
 				<i :class="`mdi ${t.icon}`"></i>
 				{{ t.label }}
@@ -259,14 +259,14 @@ onMounted(async () => {
 		</div>
 
 		<div v-if="tab === 'providers'" class="max-w-3xl">
-			<div class="bg-slate-900 rounded-xl p-6 border border-slate-800">
+			<div class="bg-base-300 rounded-xl p-6 border border-base-300">
 				<div class="flex items-start justify-between gap-4 mb-5">
 					<div>
-						<h2 class="font-semibold text-white flex items-center gap-2">
+						<h2 class="font-semibold text-base-content flex items-center gap-2">
 							<i class="mdi mdi-openai text-emerald-400"></i>
 							OpenAI
 						</h2>
-						<p class="text-slate-400 text-sm mt-1">
+						<p class="text-base-content/60 text-sm mt-1">
 							La credencial se guarda en base de datos, se sirve desde cache y se valida automáticamente cada 2 horas.
 						</p>
 					</div>
@@ -295,21 +295,21 @@ onMounted(async () => {
 				</div>
 
 				<div class="grid sm:grid-cols-2 gap-3 mb-6">
-					<div class="rounded-lg border border-slate-800 bg-slate-950/50 p-4">
-						<p class="text-xs uppercase tracking-wide text-slate-500 mb-1">Última actualización</p>
-						<p class="text-sm text-white">{{ formatDate(openaiStatus?.updatedAt ?? null) }}</p>
+					<div class="rounded-lg border border-base-300 bg-base-300/50 p-4">
+						<p class="text-xs uppercase tracking-wide text-base-content/50 mb-1">Última actualización</p>
+						<p class="text-sm text-base-content">{{ formatDate(openaiStatus?.updatedAt ?? null) }}</p>
 					</div>
-					<div class="rounded-lg border border-slate-800 bg-slate-950/50 p-4">
-						<p class="text-xs uppercase tracking-wide text-slate-500 mb-1">Última validación</p>
-						<p class="text-sm text-white">{{ formatDate(openaiStatus?.lastValidatedAt ?? null) }}</p>
+					<div class="rounded-lg border border-base-300 bg-base-300/50 p-4">
+						<p class="text-xs uppercase tracking-wide text-base-content/50 mb-1">Última validación</p>
+						<p class="text-sm text-base-content">{{ formatDate(openaiStatus?.lastValidatedAt ?? null) }}</p>
 					</div>
-					<div class="rounded-lg border border-slate-800 bg-slate-950/50 p-4">
-						<p class="text-xs uppercase tracking-wide text-slate-500 mb-1">Expira</p>
-						<p class="text-sm text-white">{{ formatDate(openaiStatus?.expiresAt ?? null) }}</p>
+					<div class="rounded-lg border border-base-300 bg-base-300/50 p-4">
+						<p class="text-xs uppercase tracking-wide text-base-content/50 mb-1">Expira</p>
+						<p class="text-sm text-base-content">{{ formatDate(openaiStatus?.expiresAt ?? null) }}</p>
 					</div>
-					<div class="rounded-lg border border-slate-800 bg-slate-950/50 p-4">
-						<p class="text-xs uppercase tracking-wide text-slate-500 mb-1">Refresh token</p>
-						<p class="text-sm text-white">{{ openaiStatus?.hasRefreshToken ? 'Disponible' : 'No disponible' }}</p>
+					<div class="rounded-lg border border-base-300 bg-base-300/50 p-4">
+						<p class="text-xs uppercase tracking-wide text-base-content/50 mb-1">Refresh token</p>
+						<p class="text-sm text-base-content">{{ openaiStatus?.hasRefreshToken ? 'Disponible' : 'No disponible' }}</p>
 					</div>
 				</div>
 
@@ -317,7 +317,7 @@ onMounted(async () => {
 					<button
 						@click="connectOpenAI"
 						:disabled="providerBusy"
-						class="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 disabled:text-slate-500">
+						class="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-indigo-600 hover:bg-indigo-500 disabled:bg-base-200 disabled:text-base-content/50">
 						<i class="mdi mdi-open-in-new mr-2"></i>
 						{{ openaiStatus?.configured ? 'Reconectar OpenAI' : 'Conectar OpenAI' }}
 					</button>
@@ -325,7 +325,7 @@ onMounted(async () => {
 					<button
 						@click="refreshOpenAI"
 						:disabled="providerBusy || !openaiStatus?.configured"
-						class="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-slate-800 hover:bg-slate-700 disabled:text-slate-500">
+						class="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-base-200 hover:bg-base-100 disabled:text-base-content/50">
 						<i class="mdi mdi-refresh mr-2" :class="{ 'animate-spin': providerBusy }"></i>
 						Validar / refrescar
 					</button>
@@ -333,7 +333,7 @@ onMounted(async () => {
 					<button
 						@click="loadOpenAIStatus"
 						:disabled="providerLoading"
-						class="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-slate-800 hover:bg-slate-700 disabled:text-slate-500">
+						class="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-base-200 hover:bg-base-100 disabled:text-base-content/50">
 						<i class="mdi mdi-reload mr-2" :class="{ 'animate-spin': providerLoading }"></i>
 						Recargar estado
 					</button>
@@ -341,7 +341,7 @@ onMounted(async () => {
 					<button
 						@click="deleteOpenAI"
 						:disabled="providerBusy || !openaiStatus?.configured"
-						class="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-red-500/10 hover:bg-red-500/20 text-red-300 border border-red-500/30 disabled:text-slate-500 disabled:border-slate-700">
+						class="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-red-500/10 hover:bg-red-500/20 text-red-300 border border-red-500/30 disabled:text-base-content/50 disabled:border-base-300">
 						<i class="mdi mdi-delete-outline mr-2"></i>
 						Eliminar
 					</button>
@@ -350,13 +350,13 @@ onMounted(async () => {
 		</div>
 
 		<div v-if="tab === 'export'" class="max-w-2xl">
-			<div class="bg-slate-900 rounded-xl p-6 border border-slate-800">
+			<div class="bg-base-300 rounded-xl p-6 border border-base-300">
 				<div class="flex items-center justify-between mb-4">
-					<h2 class="font-semibold text-white">Selecciona los recursos a exportar</h2>
+					<h2 class="font-semibold text-base-content">Selecciona los recursos a exportar</h2>
 					<div class="flex gap-2">
 						<button @click="selectAll" class="text-xs text-indigo-400 hover:text-indigo-300 transition-colors">Todos</button>
-						<span class="text-slate-600">·</span>
-						<button @click="clearAll" class="text-xs text-slate-400 hover:text-white transition-colors">Ninguno</button>
+						<span class="text-base-content/40">·</span>
+						<button @click="clearAll" class="text-xs text-base-content/60 hover:text-base-content transition-colors">Ninguno</button>
 					</div>
 				</div>
 
@@ -369,7 +369,7 @@ onMounted(async () => {
 							'flex items-center gap-3 px-4 py-3 rounded-lg border transition-all text-left',
 							selectedResources.includes(opt.key)
 								? 'border-indigo-500 bg-indigo-500/10 text-white'
-								: 'border-slate-700 bg-slate-800/50 text-slate-400 hover:border-slate-600 hover:text-white'
+								: 'border-base-300 bg-base-200/50 text-base-content/60 hover:border-base-content/20 hover:text-base-content'
 						]">
 						<i :class="`mdi ${opt.icon} text-lg`" :style="selectedResources.includes(opt.key) ? 'color: #818cf8' : ''"></i>
 						<span class="text-sm font-medium">{{ opt.label }}</span>
@@ -385,7 +385,7 @@ onMounted(async () => {
 					@click="doExport"
 					:disabled="!selectedResources.length || exportLoading"
 					class="w-full py-3 rounded-lg font-medium text-sm transition-all flex items-center justify-center gap-2"
-					:class="selectedResources.length && !exportLoading ? 'bg-indigo-600 hover:bg-indigo-500 text-white' : 'bg-slate-800 text-slate-500 cursor-not-allowed'">
+					:class="selectedResources.length && !exportLoading ? 'bg-indigo-600 hover:bg-indigo-500 text-white' : 'bg-base-200 text-base-content/50 cursor-not-allowed'">
 					<i v-if="exportLoading" class="mdi mdi-loading animate-spin"></i>
 					<i v-else class="mdi mdi-download"></i>
 					{{ exportLoading ? 'Exportando...' : `Descargar JSON (${selectedResources.length} recursos)` }}
@@ -394,8 +394,8 @@ onMounted(async () => {
 		</div>
 
 		<div v-if="tab === 'import'" class="max-w-2xl">
-			<div class="bg-slate-900 rounded-xl p-6 border border-slate-800">
-				<h2 class="font-semibold text-white mb-4">Importar desde JSON</h2>
+			<div class="bg-base-300 rounded-xl p-6 border border-base-300">
+				<h2 class="font-semibold text-base-content mb-4">Importar desde JSON</h2>
 
 				<div
 					@dragover.prevent="isDragging = true"
@@ -404,17 +404,17 @@ onMounted(async () => {
 					@click="fileInput?.click()"
 					:class="[
 						'border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all mb-4',
-						isDragging ? 'border-indigo-400 bg-indigo-500/10' : 'border-slate-700 hover:border-slate-600 bg-slate-800/30'
+						isDragging ? 'border-indigo-400 bg-indigo-500/10' : 'border-base-300 hover:border-base-content/20 bg-base-200/30'
 					]">
 					<input ref="fileInput" type="file" accept=".json" class="hidden" @change="onFileChange" />
-					<i class="mdi mdi-file-upload-outline text-4xl text-slate-500 mb-2 block"></i>
-					<p v-if="!importFile" class="text-slate-400 text-sm">
+					<i class="mdi mdi-file-upload-outline text-4xl text-base-content/50 mb-2 block"></i>
+					<p v-if="!importFile" class="text-base-content/60 text-sm">
 						Arrastra un archivo JSON aquí o <span class="text-indigo-400">haz clic para seleccionar</span>
 					</p>
-					<p v-else class="text-white text-sm font-medium flex items-center justify-center gap-2">
+					<p v-else class="text-base-content text-sm font-medium flex items-center justify-center gap-2">
 						<i class="mdi mdi-file-check text-green-400"></i>
 						{{ importFile.name }}
-						<span class="text-slate-400 font-normal">({{ (importFile.size / 1024).toFixed(1) }} KB)</span>
+						<span class="text-base-content/60 font-normal">({{ (importFile.size / 1024).toFixed(1) }} KB)</span>
 					</p>
 				</div>
 
@@ -432,18 +432,18 @@ onMounted(async () => {
 						<i class="mdi mdi-check-circle text-green-400 text-xl"></i>
 						<div>
 							<p class="text-green-400 font-medium text-sm">Importación completada</p>
-							<p class="text-slate-400 text-xs">{{ totalCreated(importResult) }} creados · {{ totalSkipped(importResult) }} omitidos</p>
+							<p class="text-base-content/60 text-xs">{{ totalCreated(importResult) }} creados · {{ totalSkipped(importResult) }} omitidos</p>
 						</div>
 					</div>
 
 					<div
 						v-for="(section, key) in importResult"
 						:key="key"
-						class="flex items-center justify-between px-4 py-2 bg-slate-800 rounded-lg">
-						<span class="text-sm text-slate-300">{{ sectionLabel[key] ?? key }}</span>
+						class="flex items-center justify-between px-4 py-2 bg-base-200 rounded-lg">
+						<span class="text-sm text-base-content">{{ sectionLabel[key] ?? key }}</span>
 						<div class="flex gap-3 text-xs">
 							<span class="text-green-400"><i class="mdi mdi-plus"></i> {{ section.created }}</span>
-							<span class="text-slate-500"><i class="mdi mdi-minus"></i> {{ section.skipped }}</span>
+							<span class="text-base-content/50"><i class="mdi mdi-minus"></i> {{ section.skipped }}</span>
 							<span v-if="section.errors.length" class="text-red-400"><i class="mdi mdi-alert"></i> {{ section.errors.length }}</span>
 						</div>
 					</div>
@@ -458,7 +458,7 @@ onMounted(async () => {
 					@click="doImport"
 					:disabled="!importFile || importLoading"
 					class="w-full py-3 rounded-lg font-medium text-sm transition-all flex items-center justify-center gap-2"
-					:class="importFile && !importLoading ? 'bg-indigo-600 hover:bg-indigo-500 text-white' : 'bg-slate-800 text-slate-500 cursor-not-allowed'">
+					:class="importFile && !importLoading ? 'bg-indigo-600 hover:bg-indigo-500 text-white' : 'bg-base-200 text-base-content/50 cursor-not-allowed'">
 					<i v-if="importLoading" class="mdi mdi-loading animate-spin"></i>
 					<i v-else class="mdi mdi-upload"></i>
 					{{ importLoading ? 'Importando...' : 'Importar configuración' }}

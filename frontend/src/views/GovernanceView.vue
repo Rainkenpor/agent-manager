@@ -193,8 +193,8 @@ function removeSection(index: number) {
 
     <div class="flex flex-1 min-h-0 h-full">
       <!-- List -->
-      <div class="w-80 shrink-0 border-r border-slate-800/60 flex flex-col min-h-0 overflow-auto">
-        <div v-if="loading" class="flex items-center justify-center py-12 text-slate-500 text-sm">
+      <div class="w-80 shrink-0 border-r border-base-300/60 flex flex-col min-h-0 overflow-auto">
+        <div v-if="loading" class="flex items-center justify-center py-12 text-base-content/50 text-sm">
           <span class="mdi mdi-loading mdi-spin mr-2" />Cargando...
         </div>
 
@@ -202,8 +202,8 @@ function removeSection(index: number) {
           <div class="w-14 h-14 rounded-2xl bg-violet-500/10 flex items-center justify-center mb-4">
             <span class="mdi mdi-shield-check text-2xl text-violet-400" />
           </div>
-          <p class="text-sm font-medium text-slate-300 mb-1">Sin gobernanza todavía</p>
-          <p class="text-xs text-slate-500">Crea tu primera regla de gobernanza</p>
+          <p class="text-sm font-medium text-base-content mb-1">Sin gobernanza todavía</p>
+          <p class="text-xs text-base-content/50">Crea tu primera regla de gobernanza</p>
         </div>
 
         <div v-else class="flex-1 overflow-y-auto py-3">
@@ -215,31 +215,31 @@ function removeSection(index: number) {
                 <span class="mdi mdi-tag-outline text-xs" />{{ type }}
               </p>
               <button v-for="item in group" :key="item.id"
-                class="w-full text-left px-4 py-2.5 hover:bg-slate-800/60 transition-colors border-b border-slate-800/40 last:border-0"
-                :class="selected?.id === item.id ? 'bg-slate-800/80 border-l-2 border-l-violet-500' : ''"
+                class="w-full text-left px-4 py-2.5 hover:bg-base-200/60 transition-colors border-b border-base-300/40 last:border-0"
+                :class="selected?.id === item.id ? 'bg-base-200/80 border-l-2 border-l-violet-500' : ''"
                 @click="selected = item">
                 <div class="flex items-center justify-between gap-2">
-                  <p class="text-sm font-medium text-white truncate">{{ item.name }}</p>
+                  <p class="text-sm font-medium text-base-content truncate">{{ item.name }}</p>
                   <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
                 </div>
-                <p v-if="item.description" class="text-xs text-slate-500 truncate mt-0.5">{{ item.description }}</p>
+                <p v-if="item.description" class="text-xs text-base-content/50 truncate mt-0.5">{{ item.description }}</p>
               </button>
             </div>
           </div>
 
           <!-- Inactive -->
           <div v-if="inactiveItems.length > 0" class="mt-2">
-            <p class="px-4 pb-1 text-xs font-semibold text-slate-500 uppercase tracking-wider">Inactivos</p>
+            <p class="px-4 pb-1 text-xs font-semibold text-base-content/50 uppercase tracking-wider">Inactivos</p>
             <button v-for="item in inactiveItems" :key="item.id"
-              class="w-full text-left px-4 py-2.5 hover:bg-slate-800/60 transition-colors border-b border-slate-800/40 last:border-0"
-              :class="selected?.id === item.id ? 'bg-slate-800/80 border-l-2 border-l-violet-500' : ''"
+              class="w-full text-left px-4 py-2.5 hover:bg-base-200/60 transition-colors border-b border-base-300/40 last:border-0"
+              :class="selected?.id === item.id ? 'bg-base-200/80 border-l-2 border-l-violet-500' : ''"
               @click="selected = item">
               <div class="flex items-center justify-between gap-2">
                 <div class="min-w-0">
-                  <p class="text-sm font-medium text-slate-400 truncate">{{ item.name }}</p>
-                  <p class="text-xs text-slate-600 font-mono truncate">{{ item.type }}</p>
+                  <p class="text-sm font-medium text-base-content/60 truncate">{{ item.name }}</p>
+                  <p class="text-xs text-base-content/40 font-mono truncate">{{ item.type }}</p>
                 </div>
-                <span class="w-1.5 h-1.5 rounded-full bg-slate-600 shrink-0" />
+                <span class="w-1.5 h-1.5 rounded-full bg-base-100 shrink-0" />
               </div>
             </button>
           </div>
@@ -252,28 +252,28 @@ function removeSection(index: number) {
           <div class="w-16 h-16 rounded-2xl bg-violet-500/10 flex items-center justify-center mb-4">
             <span class="mdi mdi-shield-check text-3xl text-violet-400" />
           </div>
-          <p class="text-sm font-medium text-slate-400 mb-1">Selecciona una gobernanza</p>
-          <p class="text-xs text-slate-600">Haz clic en un ítem de la lista para ver sus detalles</p>
+          <p class="text-sm font-medium text-base-content/60 mb-1">Selecciona una gobernanza</p>
+          <p class="text-xs text-base-content/40">Haz clic en un ítem de la lista para ver sus detalles</p>
         </div>
 
         <div v-else class="p-8 w-full">
           <div class="flex items-start justify-between mb-6 gap-4">
             <div>
               <div class="flex items-center gap-3 mb-1">
-                <h2 class="text-xl font-bold text-white">{{ selected.name }}</h2>
+                <h2 class="text-xl font-bold text-base-content">{{ selected.name }}</h2>
                 <span class="text-xs px-2 py-0.5 rounded-full font-medium"
-                  :class="selected.isActive ? 'bg-emerald-500/10 text-emerald-400' : 'bg-slate-700/60 text-slate-500'">
+                  :class="selected.isActive ? 'bg-emerald-500/10 text-emerald-400' : 'bg-base-100/60 text-base-content/50'">
                   {{ selected.isActive ? 'Activo' : 'Inactivo' }}
                 </span>
               </div>
               <span class="text-xs text-violet-400 font-mono bg-violet-500/10 px-2 py-0.5 rounded">
                 <span class="mdi mdi-tag-outline mr-1" />{{ selected.type }}
               </span>
-              <p v-if="selected.description" class="text-sm text-slate-400 mt-2">{{ selected.description }}</p>
+              <p v-if="selected.description" class="text-sm text-base-content/60 mt-2">{{ selected.description }}</p>
             </div>
             <div class="flex items-center gap-2 shrink-0">
               <button v-if="auth.hasPermission('governance', 'update')"
-                class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+                class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-base-200 hover:bg-base-100 text-base-content hover:text-base-content transition-colors"
                 @click="openEdit(selected)">
                 <span class="mdi mdi-pencil text-sm" />Editar
               </button>
@@ -285,41 +285,41 @@ function removeSection(index: number) {
             </div>
           </div>
 
-          <div class="rounded-xl border border-slate-800 bg-slate-900/50 overflow-hidden">
-            <div class="px-4 py-2.5 border-b border-slate-800 flex items-center gap-2">
-              <span class="mdi mdi-file-document-outline text-slate-500 text-sm" />
-              <span class="text-xs font-medium text-slate-500">Contenido (instrucciones)</span>
+          <div class="rounded-xl border border-base-300 bg-base-300/50 overflow-hidden">
+            <div class="px-4 py-2.5 border-b border-base-300 flex items-center gap-2">
+              <span class="mdi mdi-file-document-outline text-base-content/50 text-sm" />
+              <span class="text-xs font-medium text-base-content/50">Contenido (instrucciones)</span>
             </div>
-            <pre class="p-4 text-sm text-slate-300 font-mono whitespace-pre-wrap leading-relaxed overflow-x-auto">{{
+            <pre class="p-4 text-sm text-base-content font-mono whitespace-pre-wrap leading-relaxed overflow-x-auto">{{
               selected.content || '(sin contenido)' }}</pre>
           </div>
 
-          <div class="mt-4 rounded-xl border border-slate-800 bg-slate-900/50 overflow-hidden">
-            <div class="px-4 py-2.5 border-b border-slate-800 flex items-center justify-between gap-2">
+          <div class="mt-4 rounded-xl border border-base-300 bg-base-300/50 overflow-hidden">
+            <div class="px-4 py-2.5 border-b border-base-300 flex items-center justify-between gap-2">
               <div class="flex items-center gap-2">
-                <span class="mdi mdi-format-list-bulleted-square text-slate-500 text-sm" />
-                <span class="text-xs font-medium text-slate-500">Secciones</span>
+                <span class="mdi mdi-format-list-bulleted-square text-base-content/50 text-sm" />
+                <span class="text-xs font-medium text-base-content/50">Secciones</span>
               </div>
-              <span class="text-[11px] text-slate-600">{{ selected.sections?.length ?? 0 }}</span>
+              <span class="text-[11px] text-base-content/40">{{ selected.sections?.length ?? 0 }}</span>
             </div>
-            <div v-if="selected.sections?.length" class="divide-y divide-slate-800">
+            <div v-if="selected.sections?.length" class="divide-y divide-base-300">
               <div v-for="(section, index) in selected.sections" :key="`${selected.id}-section-${index}`" class="p-4">
                 <p class="text-sm font-semibold text-violet-300 mb-2">{{ index + 1 }}. {{ section.title }}</p>
-                <pre class="text-sm text-slate-300 font-mono whitespace-pre-wrap leading-relaxed overflow-x-auto">{{
+                <pre class="text-sm text-base-content font-mono whitespace-pre-wrap leading-relaxed overflow-x-auto">{{
                   section.content || '(sin contenido)' }}</pre>
               </div>
             </div>
-            <div v-else class="p-4 text-sm text-slate-500">(sin secciones)</div>
+            <div v-else class="p-4 text-sm text-base-content/50">(sin secciones)</div>
           </div>
 
           <div class="mt-4 grid grid-cols-2 gap-3">
-            <div class="rounded-lg border border-slate-800 bg-slate-900/30 px-4 py-3">
-              <p class="text-xs text-slate-500 mb-0.5">Creado</p>
-              <p class="text-xs text-slate-300">{{ new Date(selected.createdAt).toLocaleString() }}</p>
+            <div class="rounded-lg border border-base-300 bg-base-300/30 px-4 py-3">
+              <p class="text-xs text-base-content/50 mb-0.5">Creado</p>
+              <p class="text-xs text-base-content">{{ new Date(selected.createdAt).toLocaleString() }}</p>
             </div>
-            <div class="rounded-lg border border-slate-800 bg-slate-900/30 px-4 py-3">
-              <p class="text-xs text-slate-500 mb-0.5">Actualizado</p>
-              <p class="text-xs text-slate-300">{{ new Date(selected.updatedAt).toLocaleString() }}</p>
+            <div class="rounded-lg border border-base-300 bg-base-300/30 px-4 py-3">
+              <p class="text-xs text-base-content/50 mb-0.5">Actualizado</p>
+              <p class="text-xs text-base-content">{{ new Date(selected.updatedAt).toLocaleString() }}</p>
             </div>
           </div>
         </div>
@@ -332,60 +332,60 @@ function removeSection(index: number) {
     <div class="px-6 py-5 space-y-5">
       <!-- Name -->
       <div>
-        <label class="block text-xs font-medium text-slate-400 mb-1.5">Nombre <span
+        <label class="block text-xs font-medium text-base-content/60 mb-1.5">Nombre <span
             class="text-red-400">*</span></label>
         <input v-model="form.name" type="text" placeholder="Política de revisión de código"
-          class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-violet-500 transition-colors" />
+          class="w-full bg-base-200 border border-base-300 rounded-lg px-3 py-2 text-sm text-base-content placeholder:text-base-content/40 focus:outline-none focus:border-violet-500 transition-colors" />
       </div>
 
       <!-- Type -->
       <div>
-        <label class="block text-xs font-medium text-slate-400 mb-1.5">
+        <label class="block text-xs font-medium text-base-content/60 mb-1.5">
           Tipo <span class="text-red-400">*</span>
-          <span class="ml-1 text-slate-600 font-normal">— los agentes usan este valor para consultar la
+          <span class="ml-1 text-base-content/40 font-normal">— los agentes usan este valor para consultar la
             gobernanza</span>
         </label>
         <input v-model="form.type" type="text" placeholder="code-review"
-          class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-violet-300 font-mono placeholder-slate-500 focus:outline-none focus:border-violet-500 transition-colors" />
-        <p class="text-xs text-slate-600 mt-1">El agente llama a <code
+          class="w-full bg-base-200 border border-base-300 rounded-lg px-3 py-2 text-sm text-violet-300 font-mono placeholder:text-base-content/40 focus:outline-none focus:border-violet-500 transition-colors" />
+        <p class="text-xs text-base-content/40 mt-1">El agente llama a <code
             class="text-violet-400">get_governance(type)</code>
           para obtener todas las instrucciones de este tipo</p>
       </div>
 
       <!-- Description -->
       <div>
-        <label class="block text-xs font-medium text-slate-400 mb-1.5">Descripción</label>
+        <label class="block text-xs font-medium text-base-content/60 mb-1.5">Descripción</label>
         <input v-model="form.description" type="text" placeholder="Breve descripción de la gobernanza"
-          class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-violet-500 transition-colors" />
+          class="w-full bg-base-200 border border-base-300 rounded-lg px-3 py-2 text-sm text-base-content placeholder:text-base-content/40 focus:outline-none focus:border-violet-500 transition-colors" />
       </div>
 
       <!-- Content -->
       <div>
-        <label class="block text-xs font-medium text-slate-400 mb-1.5">Instrucciones (markdown)</label>
+        <label class="block text-xs font-medium text-base-content/60 mb-1.5">Instrucciones (markdown)</label>
         <TextAreaComplete v-model="form.content" placeholder="Instrucciones que el agente debe seguir..." />
       </div>
 
       <div class="space-y-3">
         <div class="flex items-center justify-between gap-3">
           <div>
-            <label class="block text-xs font-medium text-slate-400 mb-1">Secciones</label>
-            <p class="text-xs text-slate-600">Estructura opcional para que el agente consulte la gobernanza por bloques.
+            <label class="block text-xs font-medium text-base-content/60 mb-1">Secciones</label>
+            <p class="text-xs text-base-content/40">Estructura opcional para que el agente consulte la gobernanza por bloques.
             </p>
           </div>
           <button type="button"
-            class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-violet-300 transition-colors"
+            class="px-3 py-1.5 rounded-lg bg-base-200 hover:bg-base-100 text-xs font-medium text-violet-300 transition-colors"
             @click="addSection">
             Agregar sección
           </button>
         </div>
 
         <div v-if="!form.sections.length"
-          class="rounded-lg border border-dashed border-slate-700 px-4 py-4 text-sm text-slate-500">
+          class="rounded-lg border border-dashed border-base-300 px-4 py-4 text-sm text-base-content/50">
           No hay secciones agregadas.
         </div>
 
         <div v-for="(section, index) in form.sections" :key="`section-${index}`"
-          class="rounded-xl border border-slate-800 bg-slate-900/40 p-4 space-y-3">
+          class="rounded-xl border border-base-300 bg-base-300/40 p-4 space-y-3">
           <div class="flex items-center justify-between gap-3">
             <p class="text-xs font-semibold text-violet-300 uppercase tracking-wider">Sección {{ index + 1 }}</p>
             <button type="button"
@@ -396,13 +396,13 @@ function removeSection(index: number) {
           </div>
 
           <div>
-            <label class="block text-xs font-medium text-slate-400 mb-1.5">Título</label>
+            <label class="block text-xs font-medium text-base-content/60 mb-1.5">Título</label>
             <input v-model="section.title" type="text" placeholder="Checklist"
-              class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-violet-500 transition-colors" />
+              class="w-full bg-base-200 border border-base-300 rounded-lg px-3 py-2 text-sm text-base-content placeholder:text-base-content/40 focus:outline-none focus:border-violet-500 transition-colors" />
           </div>
 
           <div>
-            <label class="block text-xs font-medium text-slate-400 mb-1.5">Contenido</label>
+            <label class="block text-xs font-medium text-base-content/60 mb-1.5">Contenido</label>
             <TextAreaComplete v-model="section.content" placeholder="Instrucciones que el agente debe seguir..." />
           </div>
         </div>
@@ -411,18 +411,18 @@ function removeSection(index: number) {
       <!-- Active (only when editing) -->
       <div v-if="editing" class="flex items-center gap-3">
         <button type="button" class="relative w-10 h-5 rounded-full transition-colors duration-200 focus:outline-none"
-          :class="form.isActive ? 'bg-violet-600' : 'bg-slate-700'" @click="form.isActive = !form.isActive">
-          <span class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200"
+          :class="form.isActive ? 'bg-violet-600' : 'bg-base-100'" @click="form.isActive = !form.isActive">
+          <span class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-base-100 shadow transition-transform duration-200"
             :class="form.isActive ? 'translate-x-5' : 'translate-x-0'" />
         </button>
-        <span class="text-sm text-slate-300">{{ form.isActive ? 'Activo' : 'Inactivo' }}</span>
+        <span class="text-sm text-base-content">{{ form.isActive ? 'Activo' : 'Inactivo' }}</span>
       </div>
     </div>
 
     <template #footer>
       <div class="flex justify-end gap-3">
         <button
-          class="px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+          class="px-4 py-2 rounded-lg text-sm font-medium text-base-content/60 hover:text-base-content hover:bg-base-200 transition-colors"
           @click="closeModal">
           Cancelar
         </button>

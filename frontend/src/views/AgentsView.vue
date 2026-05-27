@@ -416,7 +416,7 @@ watch(newGroupName, (v) => {
     <template #actions>
       <div class="flex items-center gap-2">
         <button
-          class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors"
+          class="flex items-center gap-2 bg-base-200 hover:bg-base-100 border border-base-content/20 text-base-content px-4 py-2.5 rounded-lg text-sm font-medium transition-colors"
           @click="showGroupsModal = true">
           <span class="mdi mdi-folder-multiple-outline"></span>
           Grupos
@@ -433,26 +433,26 @@ watch(newGroupName, (v) => {
     </template>
 
     <!-- Tabs por grupo -->
-    <div v-if="!loading" class="flex flex-wrap items-center gap-1.5 mb-5 border-b border-slate-800 pb-2">
+    <div v-if="!loading" class="flex flex-wrap items-center gap-1.5 mb-5 border-b border-base-300 pb-2">
       <button @click="activeTab = '__all__'"
         class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border-2 transition-colors" :class="activeTab === '__all__'
           ? 'bg-indigo-600/20 border-indigo-500 text-white'
-          : 'border-transparent text-slate-400 hover:text-white hover:bg-slate-800'">
+          : 'border-transparent text-base-content/60 hover:text-base-content hover:bg-base-200'">
         <span class="mdi mdi-view-grid-outline"></span>
         Todos
         <span class="text-[10px] opacity-70">({{ agentGroupCountByTab.__all__ }})</span>
       </button>
       <button v-for="g in groups" :key="g.id" @click="activeTab = g.id"
         class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border-2 transition-colors"
-        :style="tabStyle(g.id, activeTab === g.id)" :class="activeTab === g.id ? '' : 'hover:bg-slate-800'">
+        :style="tabStyle(g.id, activeTab === g.id)" :class="activeTab === g.id ? '' : 'hover:bg-base-200'">
         <span :class="['mdi', g.icon || 'mdi-folder-outline']"></span>
         {{ g.name }}
         <span class="text-[10px] opacity-70">({{ agentGroupCountByTab[g.id] || 0 }})</span>
       </button>
       <button @click="activeTab = '__ungrouped__'"
         class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border-2 transition-colors" :class="activeTab === '__ungrouped__'
-          ? 'bg-slate-700/40 border-slate-500 text-slate-200'
-          : 'border-transparent text-slate-500 hover:text-white hover:bg-slate-800'">
+          ? 'bg-base-100/40 border-base-content/30 text-base-content'
+          : 'border-transparent text-base-content/50 hover:text-base-content hover:bg-base-200'">
         <span class="mdi mdi-folder-off-outline"></span>
         Sin grupo
         <span class="text-[10px] opacity-70">({{ agentGroupCountByTab.__ungrouped__ }})</span>
@@ -470,13 +470,13 @@ watch(newGroupName, (v) => {
     <div v-else class="space-y-10">
       <!-- Primary Agents -->
       <section>
-        <h2 class="text-base font-semibold text-white mb-4 flex items-center gap-2">
+        <h2 class="text-base font-semibold text-base-content mb-4 flex items-center gap-2">
           <span class="w-2 h-2 rounded-full bg-indigo-500 inline-block"></span>
           Listado de Agentes
-          <span class="ml-1 text-xs font-normal text-white">({{ primaryAgents.length }})</span>
+          <span class="ml-1 text-xs font-normal text-base-content">({{ primaryAgents.length }})</span>
         </h2>
         <div v-if="!primaryAgents.length"
-          class="text-slate-400 text-sm py-6 text-center bg-slate-900 rounded-xl border border-slate-700">
+          class="text-base-content/60 text-sm py-6 text-center bg-base-300 rounded-xl border border-base-300">
           No existen agentes
         </div>
         <div v-else class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -484,8 +484,8 @@ watch(newGroupName, (v) => {
             <template #header>
               <div class="flex w-full">
                 <div class="flex-1 overflow-auto ">
-                  <h3 class="font-semibold text-white truncate">{{ agent.name }}</h3>
-                  <p class="text-xs text-slate-400 font-mono mt-0.5 truncate">{{ agent.slug }}</p>
+                  <h3 class="font-semibold text-base-content truncate">{{ agent.name }}</h3>
+                  <p class="text-xs text-base-content/60 font-mono mt-0.5 truncate">{{ agent.slug }}</p>
                 </div>
                 <div class="flex items-start gap-1.5 flex-wrap justify-end">
                   <span v-for="gid in (agent.groupIds ?? [])" :key="gid"
@@ -495,16 +495,16 @@ watch(newGroupName, (v) => {
                     {{ groupById.get(gid)?.name || 'grupo' }}
                   </span>
                   <span class="px-2 py-0.5 rounded-full text-xs font-medium"
-                    :class="agent.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'">
+                    :class="agent.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-base-100 text-base-content/50'">
                     {{ agent.isActive ? 'active' : 'inactive' }}
                   </span>
                 </div>
               </div>
             </template>
 
-            <p v-if="agent.description" class="text-sm text-slate-500 mb-3 line-clamp-2">{{ agent.description }}</p>
+            <p v-if="agent.description" class="text-sm text-base-content/50 mb-3 line-clamp-2">{{ agent.description }}</p>
 
-            <div class="flex items-center gap-2 text-xs text-slate-500 mb-4 flex-wrap">
+            <div class="flex items-center gap-2 text-xs text-base-content/50 mb-4 flex-wrap">
               <span v-if="(agent.subagents ?? []).length"
                 class="flex items-center gap-1 bg-violet-50 text-violet-600 rounded-md px-2 py-1">
                 {{ (agent.subagents ?? []).length }} subagent{{ (agent.subagents ?? []).length !== 1 ? 's' : '' }}
@@ -548,51 +548,51 @@ watch(newGroupName, (v) => {
             <!-- Name + Slug -->
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <label class="block text-sm font-medium text-white mb-1.5">Name <span
+                <label class="block text-sm font-medium text-base-content mb-1.5">Name <span
                     class="text-red-500">*</span></label>
                 <input v-model="agentForm.name" type="text" placeholder="My Agent" required
-                  class="w-full px-3 py-2.5 rounded-lg border border-slate-600 bg-slate-800 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                  class="w-full px-3 py-2.5 rounded-lg border border-base-content/20 bg-base-200 text-base-content text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
               </div>
               <div>
-                <label class="block text-sm font-medium text-white mb-1.5">Slug <span
+                <label class="block text-sm font-medium text-base-content mb-1.5">Slug <span
                     class="text-red-500">*</span></label>
                 <input v-model="agentForm.slug" type="text" placeholder="my-agent" required
-                  class="w-full px-3 py-2.5 rounded-lg border border-slate-600 bg-slate-800 text-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                  class="w-full px-3 py-2.5 rounded-lg border border-base-content/20 bg-base-200 text-base-content text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500" />
               </div>
             </div>
 
             <!-- Description -->
             <div>
-              <label class="block text-sm font-medium text-white mb-1.5">Description</label>
+              <label class="block text-sm font-medium text-base-content mb-1.5">Description</label>
               <input v-model="agentForm.description" type="text" placeholder="What does this agent do?"
-                class="w-full px-3 py-2.5 rounded-lg border border-slate-600 bg-slate-800 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                class="w-full px-3 py-2.5 rounded-lg border border-base-content/20 bg-base-200 text-base-content text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
             </div>
 
             <!-- Mode + Active -->
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <label class="block text-sm font-medium text-white mb-1.5">Mode <span
+                <label class="block text-sm font-medium text-base-content mb-1.5">Mode <span
                     class="text-red-500">*</span></label>
                 <select v-model="agentForm.mode"
-                  class="w-full px-3 py-2.5 rounded-lg border border-slate-600 bg-slate-800 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                  class="w-full px-3 py-2.5 rounded-lg border border-base-content/20 bg-base-200 text-base-content text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                   <option value="primary">Primary</option>
                   <option value="subagent">Subagent</option>
                 </select>
               </div>
               <div class="flex flex-col">
-                <label class="block text-sm font-medium text-white mb-1.5">Status</label>
+                <label class="block text-sm font-medium text-base-content mb-1.5">Status</label>
                 <label class="flex items-center gap-2.5 cursor-pointer mt-2">
                   <input v-model="agentForm.isActive" type="checkbox"
-                    class="w-4 h-4 text-indigo-600 rounded border-slate-600 focus:ring-indigo-500" />
-                  <span class="text-sm text-white">Active</span>
+                    class="w-4 h-4 text-indigo-600 rounded border-base-content/20 focus:ring-indigo-500" />
+                  <span class="text-sm text-base-content">Active</span>
                 </label>
               </div>
             </div>
 
             <!-- Groups (multi-select) -->
             <div>
-              <label class="block text-sm font-medium text-white mb-1.5">Grupos</label>
-              <div v-if="!groups.length" class="text-xs text-slate-500 italic">No hay grupos disponibles.</div>
+              <label class="block text-sm font-medium text-base-content mb-1.5">Grupos</label>
+              <div v-if="!groups.length" class="text-xs text-base-content/50 italic">No hay grupos disponibles.</div>
               <div v-else class="flex flex-wrap gap-2">
                 <button v-for="g in groups" :key="g.id" type="button" @click="toggleFormGroup(g.id)"
                   class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border-2 transition-colors"
@@ -602,7 +602,7 @@ watch(newGroupName, (v) => {
                   {{ g.name }}
                 </button>
               </div>
-              <p class="text-xs text-slate-400 mt-1.5">
+              <p class="text-xs text-base-content/60 mt-1.5">
                 Un agente puede pertenecer a varios grupos. Solo los agentes del grupo "Trazabilidad" se ofrecen al
                 asignar etapas en las plantillas de trazabilidad.
               </p>
@@ -612,7 +612,7 @@ watch(newGroupName, (v) => {
 
             <!-- Content (system prompt) -->
             <div>
-              <label class="block text-sm font-medium text-white mb-1.5">System Prompt / Content</label>
+              <label class="block text-sm font-medium text-base-content mb-1.5">System Prompt / Content</label>
               <TextAreaComplete v-model="agentForm.content" placeholder="Write the agent system prompt here..." />
             </div>
           </form>
@@ -620,20 +620,20 @@ watch(newGroupName, (v) => {
       </div>
 
       <!-- Right: Tool selection panel -->
-      <div class="w-80 border-l border-slate-700/60 flex flex-col overflow-auto shrink-0">
+      <div class="w-80 border-l border-base-300/60 flex flex-col overflow-auto shrink-0">
 
         <div class="flex-1 flex flex-col overflow-auto p-2">
           <!-- Tools -->
           <div v-if="availableTools.length" class="overflow-auto flex-1 flex flex-col mb-3">
-            <label class="block text-sm font-medium text-white mb-2">Tools</label>
-            <div class="border border-slate-700 rounded-lg flex flex-col overflow-auto">
-              <div class="flex-1 overflow-auto border-r border-slate-700 shrink-0 bg-slate-800/50">
+            <label class="block text-sm font-medium text-base-content mb-2">Tools</label>
+            <div class="border border-base-300 rounded-lg flex flex-col overflow-auto">
+              <div class="flex-1 overflow-auto border-r border-base-300 shrink-0 bg-base-200/50">
                 <div v-for="group in toolGroups" :key="group.key">
                   <button type="button"
                     class="w-full text-left px-3 py-2.5 transition-colors flex items-center justify-between gap-1 border-l-2"
                     :class="selectedToolSource === group.key
                       ? 'bg-indigo-600/20 border-indigo-500 text-white'
-                      : 'border-transparent text-slate-400 hover:bg-slate-700 hover:text-white'"
+                      : 'border-transparent text-base-content/60 hover:bg-base-100 hover:text-base-content'"
                     @click="selectGroup(group.key)">
                     <span class="text-xs font-semibold uppercase tracking-wider truncate">
                       <input type="checkbox" class="checkbox checkbox-sm mr-2"
@@ -643,18 +643,18 @@ watch(newGroupName, (v) => {
                       {{ group.label }}
                     </span>
                     <span class="text-xs shrink-0"
-                      :class="selectedToolSource === group.key ? 'text-indigo-400' : 'text-slate-600'">
+                      :class="selectedToolSource === group.key ? 'text-indigo-400' : 'text-base-content/40'">
                       {{group.tools.filter(t => agentForm.tools[t.name]).length}}/{{ group.tools.length }}
                     </span>
                   </button>
                   <div v-if="group.label === selectedToolSource">
                     <label v-for="tool in group.tools ?? []" :key="tool.name"
-                      class="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-700 cursor-pointer transition-colors">
+                      class="flex items-center gap-3 px-4 py-2.5 hover:bg-base-100 cursor-pointer transition-colors">
                       <input v-model="agentForm.tools[tool.name]" type="checkbox"
-                        class="w-4 h-4 rounded border-slate-600 text-indigo-600 focus:ring-indigo-500 shrink-0" />
+                        class="w-4 h-4 rounded border-base-content/20 text-indigo-600 focus:ring-indigo-500 shrink-0" />
                       <div class="flex-1 min-w-0">
-                        <span class="text-sm font-mono font-medium text-white">{{ toolDisplayName(tool.name) }}</span>
-                        <p v-if="tool.description" class="text-xs text-slate-400 mt-0.5 line-clamp-2">{{
+                        <span class="text-sm font-mono font-medium text-base-content">{{ toolDisplayName(tool.name) }}</span>
+                        <p v-if="tool.description" class="text-xs text-base-content/60 mt-0.5 line-clamp-2">{{
                           tool.description
                         }}</p>
                       </div>
@@ -662,27 +662,27 @@ watch(newGroupName, (v) => {
                   </div>
                 </div>
               </div>
-              <div class="overflow-y-auto divide-y divide-slate-700/50">
-                <div v-if="!selectedToolSource" class="flex items-center justify-center h-full text-slate-500 text-xs">
+              <div class="overflow-y-auto divide-y divide-base-300/50">
+                <div v-if="!selectedToolSource" class="flex items-center justify-center h-full text-base-content/50 text-xs">
                   Select a source
                 </div>
               </div>
             </div>
           </div>
-          <div v-else class="text-xs text-slate-400 mb-20">No tools available</div>
+          <div v-else class="text-xs text-base-content/60 mb-20">No tools available</div>
 
           <!-- Subagents (only for primary) -->
           <div v-if="agentForm.mode === 'primary' && subagents.length" class="overflow-auto flex flex-col">
-            <label class="block text-sm font-medium text-white mb-2">Assign Subagents</label>
-            <div class="border border-slate-700 rounded-lg divide-y divide-slate-700/50 overflow-auto max-h-50">
+            <label class="block text-sm font-medium text-base-content mb-2">Assign Subagents</label>
+            <div class="border border-base-300 rounded-lg divide-y divide-base-300/50 overflow-auto max-h-50">
               <label v-for="sub in subagents" :key="sub.id"
-                class="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-800 cursor-pointer transition-colors">
+                class="flex items-center gap-3 px-4 py-2.5 hover:bg-base-200 cursor-pointer transition-colors">
                 <input type="checkbox" :checked="agentForm.subagentIds.includes(sub.id)"
-                  class="w-4 h-4 text-indigo-600 rounded border-slate-600 focus:ring-indigo-500"
+                  class="w-4 h-4 text-indigo-600 rounded border-base-content/20 focus:ring-indigo-500"
                   @change="toggleSubagent(sub.id)" />
                 <div>
-                  <span class="text-sm font-medium text-white">{{ sub.name }}</span>
-                  <span class="text-xs text-slate-400 font-mono ml-2">{{ sub.slug }}</span>
+                  <span class="text-sm font-medium text-base-content">{{ sub.name }}</span>
+                  <span class="text-xs text-base-content/60 font-mono ml-2">{{ sub.slug }}</span>
                 </div>
               </label>
             </div>
@@ -715,56 +715,56 @@ watch(newGroupName, (v) => {
           class="px-2.5 py-1 rounded-full text-xs font-semibold">
           {{ detailAgent.mode }}
         </span>
-        <span :class="detailAgent.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'"
+        <span :class="detailAgent.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-base-100 text-base-content/50'"
           class="px-2.5 py-1 rounded-full text-xs font-semibold">
           {{ detailAgent.isActive ? 'active' : 'inactive' }}
         </span>
-        <span class="bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full text-xs font-mono">{{ detailAgent.model
+        <span class="bg-base-100 text-base-content/40 px-2.5 py-1 rounded-full text-xs font-mono">{{ detailAgent.model
         }}</span>
-        <span class="bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full text-xs">T: {{ detailAgent.temperature
+        <span class="bg-base-100 text-base-content/40 px-2.5 py-1 rounded-full text-xs">T: {{ detailAgent.temperature
         }}</span>
       </div>
 
       <!-- Description -->
       <div v-if="detailAgent.description">
-        <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Description</h3>
-        <p class="text-sm text-slate-600">{{ detailAgent.description }}</p>
+        <h3 class="text-xs font-semibold text-base-content/60 uppercase tracking-wider mb-1.5">Description</h3>
+        <p class="text-sm text-base-content/40">{{ detailAgent.description }}</p>
       </div>
 
       <!-- System Prompt -->
       <div v-if="detailAgent.content">
-        <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">System Prompt</h3>
-        <pre class="text-xs bg-slate-800 rounded-lg p-3 text-slate-200 overflow-x-auto whitespace-pre-wrap font-mono">{{
+        <h3 class="text-xs font-semibold text-base-content/60 uppercase tracking-wider mb-1.5">System Prompt</h3>
+        <pre class="text-xs bg-base-200 rounded-lg p-3 text-base-content overflow-x-auto whitespace-pre-wrap font-mono">{{
           detailAgent.content }}</pre>
       </div>
 
       <!-- Tools -->
       <div>
-        <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Tools</h3>
+        <h3 class="text-xs font-semibold text-base-content/60 uppercase tracking-wider mb-2">Tools</h3>
         <div class="flex flex-wrap gap-1.5">
           <template v-for="(enabled, toolName) in detailAgent.tools" :key="toolName">
-            <span v-if="enabled" class="px-2.5 py-1 rounded-full text-xs font-medium bg-slate-700 text-white">{{
+            <span v-if="enabled" class="px-2.5 py-1 rounded-full text-xs font-medium bg-base-100 text-base-content">{{
               toolName }}</span>
           </template>
-          <span v-if="!Object.values(detailAgent.tools).some(Boolean)" class="text-slate-400 text-xs">No tools
+          <span v-if="!Object.values(detailAgent.tools).some(Boolean)" class="text-base-content/60 text-xs">No tools
             enabled</span>
         </div>
       </div>
 
       <!-- Subagents (only for primary) -->
       <div v-if="detailAgent.mode === 'primary' && (detailAgent.subagents ?? []).length">
-        <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Subagents</h3>
+        <h3 class="text-xs font-semibold text-base-content/60 uppercase tracking-wider mb-2">Subagents</h3>
         <div class="space-y-1.5">
           <div v-for="sub in detailAgent.subagents" :key="sub.id"
-            class="flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-800 border border-slate-700">
-            <span class="text-sm font-medium text-white">{{ sub.name }}</span>
-            <span class="text-xs text-slate-400 font-mono">{{ sub.slug }}</span>
+            class="flex items-center gap-3 px-3 py-2 rounded-lg bg-base-200 border border-base-300">
+            <span class="text-sm font-medium text-base-content">{{ sub.name }}</span>
+            <span class="text-xs text-base-content/60 font-mono">{{ sub.slug }}</span>
           </div>
         </div>
       </div>
 
       <!-- Timestamps -->
-      <div class="text-xs text-slate-400 space-y-1 pt-2 border-t border-slate-700">
+      <div class="text-xs text-base-content/60 space-y-1 pt-2 border-t border-base-300">
         <div>Created: {{ new Date(detailAgent.createdAt).toLocaleString() }}</div>
         <div>Updated: {{ new Date(detailAgent.updatedAt).toLocaleString() }}</div>
       </div>
@@ -790,9 +790,9 @@ watch(newGroupName, (v) => {
   <AppModal v-if="showGroupsModal" size="lg" title="Grupos de agentes"
     @close="() => { showGroupsModal = false; resetGroupForm() }">
     <div class="p-6 space-y-5">
-      <p class="text-sm text-slate-400">
+      <p class="text-sm text-base-content/60">
         Organiza los agentes por grupos. Cada grupo puede tener su propio icono (clase <span
-          class="font-mono text-slate-300">mdi-*</span>)
+          class="font-mono text-base-content">mdi-*</span>)
         y color. El grupo <span class="font-mono text-cyan-300">traceability</span> alimenta las etapas de plantillas
         de trazabilidad.
       </p>
@@ -800,69 +800,69 @@ watch(newGroupName, (v) => {
       <!-- Existing groups -->
       <div class="space-y-2 max-h-64 overflow-y-auto pr-1">
         <div v-for="g in groups" :key="g.id"
-          class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700">
+          class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-base-200/60 border border-base-300">
           <span class="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-lg"
             :style="{ backgroundColor: `${g.color || '#a855f7'}26`, color: g.color || '#a855f7' }">
             <span :class="['mdi', g.icon || 'mdi-folder-outline']"></span>
           </span>
           <div class="min-w-0 flex-1">
             <div class="flex items-center gap-2 flex-wrap">
-              <p class="text-sm font-medium text-white truncate">{{ g.name }}</p>
-              <span class="text-xs font-mono text-slate-500">{{ g.slug }}</span>
+              <p class="text-sm font-medium text-base-content truncate">{{ g.name }}</p>
+              <span class="text-xs font-mono text-base-content/50">{{ g.slug }}</span>
               <span v-if="isSystemGroup(g)"
                 class="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/20">
                 sistema
               </span>
             </div>
-            <p v-if="g.description" class="text-xs text-slate-500 truncate">{{ g.description }}</p>
+            <p v-if="g.description" class="text-xs text-base-content/50 truncate">{{ g.description }}</p>
           </div>
-          <span class="text-xs text-slate-500 shrink-0">{{ groupAgentCount(g.id) }} agentes</span>
-          <button class="text-slate-500 hover:text-indigo-400 shrink-0" @click="startEditGroup(g)" title="Editar">
+          <span class="text-xs text-base-content/50 shrink-0">{{ groupAgentCount(g.id) }} agentes</span>
+          <button class="text-base-content/50 hover:text-indigo-400 shrink-0" @click="startEditGroup(g)" title="Editar">
             <span class="mdi mdi-pencil"></span>
           </button>
-          <button class="text-slate-500 hover:text-red-400 shrink-0 disabled:opacity-30"
+          <button class="text-base-content/50 hover:text-red-400 shrink-0 disabled:opacity-30"
             :disabled="isSystemGroup(g) || groupAgentCount(g.id) > 0" @click="removeGroup(g)" title="Eliminar grupo">
             <span class="mdi mdi-delete"></span>
           </button>
         </div>
-        <div v-if="!groups.length" class="text-sm text-slate-500 text-center py-4">Aún no hay grupos</div>
+        <div v-if="!groups.length" class="text-sm text-base-content/50 text-center py-4">Aún no hay grupos</div>
       </div>
 
       <!-- Create / edit -->
-      <div class="border-t border-slate-700 pt-4 space-y-3">
+      <div class="border-t border-base-300 pt-4 space-y-3">
         <div class="flex items-center justify-between">
-          <p class="text-sm font-semibold text-white">
+          <p class="text-sm font-semibold text-base-content">
             {{ editingGroupId ? 'Editar grupo' : 'Nuevo grupo' }}
           </p>
-          <button v-if="editingGroupId" class="text-xs text-slate-400 hover:text-white" @click="resetGroupForm">
+          <button v-if="editingGroupId" class="text-xs text-base-content/60 hover:text-base-content" @click="resetGroupForm">
             Cancelar edición
           </button>
         </div>
         <div class="grid grid-cols-2 gap-3">
           <input v-model="newGroupName" type="text" placeholder="Nombre"
-            class="px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500" />
+            class="px-3 py-2 rounded-lg bg-base-200 border border-base-300 text-sm text-base-content placeholder:text-base-content/40 focus:outline-none focus:border-indigo-500" />
           <input v-model="newGroupSlug" type="text" placeholder="slug"
-            class="px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm text-white placeholder-slate-500 font-mono focus:outline-none focus:border-indigo-500" />
+            class="px-3 py-2 rounded-lg bg-base-200 border border-base-300 text-sm text-base-content placeholder:text-base-content/40 font-mono focus:outline-none focus:border-indigo-500" />
         </div>
         <input v-model="newGroupDescription" type="text" placeholder="Descripción (opcional)"
-          class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500" />
+          class="w-full px-3 py-2 rounded-lg bg-base-200 border border-base-300 text-sm text-base-content placeholder:text-base-content/40 focus:outline-none focus:border-indigo-500" />
 
         <div class="grid grid-cols-[1fr_auto] gap-3 items-center">
           <div>
-            <label class="block text-xs text-slate-400 mb-1">Icono (clase mdi-*)</label>
+            <label class="block text-xs text-base-content/60 mb-1">Icono (clase mdi-*)</label>
             <div class="flex items-center gap-2">
               <span class="w-9 h-9 rounded-lg flex items-center justify-center text-lg shrink-0"
                 :style="{ backgroundColor: `${newGroupColor}26`, color: newGroupColor }">
                 <span :class="['mdi', newGroupIcon || 'mdi-folder-outline']"></span>
               </span>
               <input v-model="newGroupIcon" type="text" placeholder="mdi-folder-outline"
-                class="flex-1 px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm text-white placeholder-slate-500 font-mono focus:outline-none focus:border-indigo-500" />
+                class="flex-1 px-3 py-2 rounded-lg bg-base-200 border border-base-300 text-sm text-base-content placeholder:text-base-content/40 font-mono focus:outline-none focus:border-indigo-500" />
             </div>
           </div>
           <div>
-            <label class="block text-xs text-slate-400 mb-1">Color</label>
+            <label class="block text-xs text-base-content/60 mb-1">Color</label>
             <input v-model="newGroupColor" type="color"
-              class="w-16 h-9 rounded-lg bg-slate-800 border border-slate-700 cursor-pointer" />
+              class="w-16 h-9 rounded-lg bg-base-200 border border-base-300 cursor-pointer" />
           </div>
         </div>
 

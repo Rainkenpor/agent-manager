@@ -263,11 +263,11 @@ onMounted(fetchListeners)
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function resultClass(result: string | null): string {
-  if (!result) return 'text-slate-500'
+  if (!result) return 'text-base-content/50'
   if (result === 'condition_met') return 'text-emerald-400'
-  if (result === 'condition_not_met') return 'text-slate-400'
+  if (result === 'condition_not_met') return 'text-base-content/60'
   if (result.startsWith('error:')) return 'text-red-400'
-  return 'text-slate-400'
+  return 'text-base-content/60'
 }
 
 function resultLabel(result: string | null): string {
@@ -285,12 +285,12 @@ function formatDate(iso: string | null): string {
 </script>
 
 <template>
-  <div class="p-6  text-white min-h-full">
+  <div class="p-6  text-base-content min-h-full">
     <!-- Header -->
     <div class="flex items-center justify-between mb-6">
       <div>
-        <h1 class="text-2xl font-bold text-white">Event Listeners</h1>
-        <p class="text-slate-400 text-sm mt-1">
+        <h1 class="text-2xl font-bold text-base-content">Event Listeners</h1>
+        <p class="text-base-content/60 text-sm mt-1">
           Ejecutan un tool periódicamente (cron). Si la condición se cumple, disparan acciones y se auto-eliminan.
         </p>
       </div>
@@ -301,13 +301,13 @@ function formatDate(iso: string | null): string {
     </div>
 
     <!-- Loading -->
-    <div v-if="loading" class="flex items-center gap-3 text-slate-400 py-12 justify-center">
+    <div v-if="loading" class="flex items-center gap-3 text-base-content/60 py-12 justify-center">
       <span class="mdi mdi-loading mdi-spin text-2xl"></span>
       <span>Cargando listeners...</span>
     </div>
 
     <!-- Empty state -->
-    <div v-else-if="listeners.length === 0" class="flex flex-col items-center gap-4 py-16 text-slate-500">
+    <div v-else-if="listeners.length === 0" class="flex flex-col items-center gap-4 py-16 text-base-content/50">
       <span class="mdi mdi-broadcast text-5xl"></span>
       <p class="text-lg">No hay event listeners registrados.</p>
       <button v-if="canCreate" @click="openCreate" class="text-indigo-400 hover:text-indigo-300 text-sm">
@@ -317,15 +317,15 @@ function formatDate(iso: string | null): string {
 
     <!-- List -->
     <div v-else class="space-y-3">
-      <div v-for="item in listeners" :key="item.id" class="bg-slate-900 border border-slate-700/60 rounded-xl p-5">
+      <div v-for="item in listeners" :key="item.id" class="bg-base-300 border border-base-300/60 rounded-xl p-5">
         <div class="flex items-start justify-between gap-4">
           <!-- Info left -->
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-3 mb-1">
               <span class="w-2 h-2 rounded-full shrink-0"
-                :class="item.enabled ? 'bg-emerald-400' : 'bg-slate-600'"></span>
-              <h3 class="font-semibold text-white truncate">{{ item.name }}</h3>
-              <span class="text-xs font-mono bg-slate-800 text-slate-300 px-2 py-0.5 rounded">
+                :class="item.enabled ? 'bg-emerald-400' : 'bg-base-100'"></span>
+              <h3 class="font-semibold text-base-content truncate">{{ item.name }}</h3>
+              <span class="text-xs font-mono bg-base-200 text-base-content px-2 py-0.5 rounded">
                 {{ item.schedule }}
               </span>
             </div>
@@ -346,7 +346,7 @@ function formatDate(iso: string | null): string {
             </div>
 
             <!-- Last run info -->
-            <div class="mt-2 flex items-center gap-4 text-xs text-slate-500">
+            <div class="mt-2 flex items-center gap-4 text-xs text-base-content/50">
               <span>Última ejecución: {{ formatDate(item.lastRunAt) }}</span>
               <span :class="resultClass(item.lastRunResult)">{{ resultLabel(item.lastRunResult) }}</span>
             </div>
@@ -358,7 +358,7 @@ function formatDate(iso: string | null): string {
             <button v-if="canUpdate" @click="toggleEnabled(item)" :title="item.enabled ? 'Desactivar' : 'Activar'"
               class="p-1.5 rounded-lg transition-colors" :class="item.enabled
                 ? 'text-emerald-400 hover:bg-emerald-500/10'
-                : 'text-slate-500 hover:bg-slate-700'">
+                : 'text-base-content/50 hover:bg-base-100'">
               <span class="mdi text-lg"
                 :class="item.enabled ? 'mdi-toggle-switch' : 'mdi-toggle-switch-off-outline'"></span>
             </button>
@@ -373,7 +373,7 @@ function formatDate(iso: string | null): string {
 
             <!-- Edit -->
             <button v-if="canUpdate" @click="openEdit(item)" title="Editar"
-              class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition-colors">
+              class="p-1.5 rounded-lg text-base-content/60 hover:text-base-content hover:bg-base-100 transition-colors">
               <span class="mdi mdi-pencil-outline text-lg"></span>
             </button>
 
@@ -402,74 +402,74 @@ function formatDate(iso: string | null): string {
 
         <!-- Name -->
         <div>
-          <label class="block text-sm text-slate-300 mb-1">Nombre <span class="text-red-400">*</span></label>
+          <label class="block text-sm text-base-content mb-1">Nombre <span class="text-red-400">*</span></label>
           <input v-model="form.name" type="text" placeholder="Verificador de pedidos completados"
-            class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500" />
+            class="w-full bg-base-200 border border-base-content/20 rounded-lg px-3 py-2 text-base-content text-sm focus:outline-none focus:border-indigo-500" />
         </div>
 
         <!-- Schedule -->
         <div>
-          <label class="block text-sm text-slate-300 mb-1">
+          <label class="block text-sm text-base-content mb-1">
             Schedule (cron) <span class="text-red-400">*</span>
           </label>
           <input v-model="form.schedule" type="text" placeholder="*/15 * * * *"
-            class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white font-mono text-sm focus:outline-none focus:border-indigo-500" />
-          <p class="text-xs text-slate-500 mt-1">Expresión cron de 5 campos: minuto hora dom mes dow</p>
+            class="w-full bg-base-200 border border-base-content/20 rounded-lg px-3 py-2 text-base-content font-mono text-sm focus:outline-none focus:border-indigo-500" />
+          <p class="text-xs text-base-content/50 mt-1">Expresión cron de 5 campos: minuto hora dom mes dow</p>
         </div>
 
         <!-- Enabled -->
         <div class="flex items-center gap-3">
           <input id="enabled" v-model="form.enabled" type="checkbox" class="w-4 h-4 rounded accent-indigo-500" />
-          <label for="enabled" class="text-sm text-slate-300 cursor-pointer">Habilitado</label>
+          <label for="enabled" class="text-sm text-base-content cursor-pointer">Habilitado</label>
         </div>
 
         <!-- Source -->
-        <fieldset class="border border-slate-700 rounded-xl p-4 space-y-3">
-          <legend class="text-xs font-semibold text-slate-400 px-1 uppercase tracking-wider">Fuente (source)</legend>
+        <fieldset class="border border-base-300 rounded-xl p-4 space-y-3">
+          <legend class="text-xs font-semibold text-base-content/60 px-1 uppercase tracking-wider">Fuente (source)</legend>
           <div>
-            <label class="block text-sm text-slate-300 mb-1">Nombre del tool <span class="text-red-400">*</span></label>
+            <label class="block text-sm text-base-content mb-1">Nombre del tool <span class="text-red-400">*</span></label>
             <input v-model="form.source.function_name" type="text" placeholder="mcp__erp__get_orders"
-              class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white font-mono text-sm focus:outline-none focus:border-indigo-500" />
+              class="w-full bg-base-200 border border-base-content/20 rounded-lg px-3 py-2 text-base-content font-mono text-sm focus:outline-none focus:border-indigo-500" />
           </div>
           <div>
-            <label class="block text-sm text-slate-300 mb-1">Parámetros (JSON)</label>
+            <label class="block text-sm text-base-content mb-1">Parámetros (JSON)</label>
             <textarea v-model="form.source.params" rows="3" placeholder='{ "limit": 50 }'
-              class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white font-mono text-sm focus:outline-none focus:border-indigo-500 resize-none"></textarea>
+              class="w-full bg-base-200 border border-base-content/20 rounded-lg px-3 py-2 text-base-content font-mono text-sm focus:outline-none focus:border-indigo-500 resize-none"></textarea>
           </div>
         </fieldset>
 
         <!-- Condition -->
-        <fieldset class="border border-slate-700 rounded-xl p-4 space-y-3">
-          <legend class="text-xs font-semibold text-slate-400 px-1 uppercase tracking-wider">Condición</legend>
+        <fieldset class="border border-base-300 rounded-xl p-4 space-y-3">
+          <legend class="text-xs font-semibold text-base-content/60 px-1 uppercase tracking-wider">Condición</legend>
           <div>
-            <label class="block text-sm text-slate-300 mb-1">Campo <span class="text-red-400">*</span></label>
+            <label class="block text-sm text-base-content mb-1">Campo <span class="text-red-400">*</span></label>
             <input v-model="form.condition.field" type="text" placeholder="element.status.name"
-              class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white font-mono text-sm focus:outline-none focus:border-indigo-500" />
-            <p class="text-xs text-slate-500 mt-1">
-              Ruta de campo. Usa <code class="bg-slate-800 px-1 rounded">element</code> como raíz.
-              Soporta arrays: <code class="bg-slate-800 px-1 rounded">element.items[0].status</code>
+              class="w-full bg-base-200 border border-base-content/20 rounded-lg px-3 py-2 text-base-content font-mono text-sm focus:outline-none focus:border-indigo-500" />
+            <p class="text-xs text-base-content/50 mt-1">
+              Ruta de campo. Usa <code class="bg-base-200 px-1 rounded">element</code> como raíz.
+              Soporta arrays: <code class="bg-base-200 px-1 rounded">element.items[0].status</code>
             </p>
           </div>
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block text-sm text-slate-300 mb-1">Operador</label>
+              <label class="block text-sm text-base-content mb-1">Operador</label>
               <select v-model="form.condition.operator"
-                class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500">
+                class="w-full bg-base-200 border border-base-content/20 rounded-lg px-3 py-2 text-base-content text-sm focus:outline-none focus:border-indigo-500">
                 <option v-for="op in OPERATORS" :key="op" :value="op">{{ op }}</option>
               </select>
             </div>
             <div>
-              <label class="block text-sm text-slate-300 mb-1">Valor esperado</label>
+              <label class="block text-sm text-base-content mb-1">Valor esperado</label>
               <input v-model="form.condition.value" type="text" placeholder='"Completado" o 42 o true'
-                class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500" />
+                class="w-full bg-base-200 border border-base-content/20 rounded-lg px-3 py-2 text-base-content text-sm focus:outline-none focus:border-indigo-500" />
             </div>
           </div>
         </fieldset>
 
         <!-- Actions -->
-        <fieldset class="border border-slate-700 rounded-xl p-4 space-y-4">
+        <fieldset class="border border-base-300 rounded-xl p-4 space-y-4">
           <div class="flex items-center justify-between">
-            <legend class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Acciones</legend>
+            <legend class="text-xs font-semibold text-base-content/60 uppercase tracking-wider">Acciones</legend>
             <button type="button" @click="addAction"
               class="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1">
               <span class="mdi mdi-plus"></span> Agregar acción
@@ -477,23 +477,23 @@ function formatDate(iso: string | null): string {
           </div>
 
           <div v-for="(action, idx) in form.action" :key="idx"
-            class="bg-slate-800/50 border border-slate-700/50 rounded-lg p-3 space-y-3">
+            class="bg-base-200/50 border border-base-300/50 rounded-lg p-3 space-y-3">
             <div class="flex items-center justify-between">
-              <span class="text-xs text-slate-500">Acción {{ idx + 1 }}</span>
+              <span class="text-xs text-base-content/50">Acción {{ idx + 1 }}</span>
               <button v-if="form.action.length > 1" type="button" @click="removeAction(idx)"
                 class="text-red-400 hover:text-red-300 text-xs">
                 <span class="mdi mdi-trash-can-outline"></span>
               </button>
             </div>
             <div>
-              <label class="block text-xs text-slate-400 mb-1">Nombre del tool <span class="text-red-400">*</span></label>
+              <label class="block text-xs text-base-content/60 mb-1">Nombre del tool <span class="text-red-400">*</span></label>
               <input v-model="action.function_name" type="text" placeholder="mcp__slack__send_message"
-                class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white font-mono text-sm focus:outline-none focus:border-indigo-500" />
+                class="w-full bg-base-200 border border-base-content/20 rounded-lg px-3 py-2 text-base-content font-mono text-sm focus:outline-none focus:border-indigo-500" />
             </div>
             <div>
-              <label class="block text-xs text-slate-400 mb-1">Parámetros (JSON)</label>
+              <label class="block text-xs text-base-content/60 mb-1">Parámetros (JSON)</label>
               <textarea v-model="action.params" rows="3" placeholder='{ "template": "shipping_alert" }'
-                class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white font-mono text-sm focus:outline-none focus:border-indigo-500 resize-none"></textarea>
+                class="w-full bg-base-200 border border-base-content/20 rounded-lg px-3 py-2 text-base-content font-mono text-sm focus:outline-none focus:border-indigo-500 resize-none"></textarea>
             </div>
           </div>
         </fieldset>
@@ -502,7 +502,7 @@ function formatDate(iso: string | null): string {
       <template #footer>
         <div class="flex justify-end gap-3">
           <button @click="showModal = false"
-            class="px-4 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 text-sm transition-colors">
+            class="px-4 py-2 rounded-lg text-base-content/60 hover:text-base-content hover:bg-base-200 text-sm transition-colors">
             Cancelar
           </button>
           <button @click="save" :disabled="saving"

@@ -75,7 +75,7 @@ onMounted(fetchMetrics)
   <PageLayout title="Consumo de Tokens LLM" description="Métricas de uso de tokens en llamadas a modelos de lenguaje">
     <template #actions>
       <button @click="fetchMetrics"
-        class="flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors">
+        class="flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg bg-base-200 hover:bg-base-100 text-base-content transition-colors">
         <svg class="w-3.5 h-3.5" :class="loading ? 'animate-spin' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
             d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -98,32 +98,32 @@ onMounted(fetchMetrics)
       <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <div v-for="(period, key) in { 'Hoy': metrics.today, 'Mes en curso': metrics.currentMonth, 'Año en curso': metrics.currentYear, 'Histórico': metrics.allTime }"
           :key="key"
-          class="rounded-2xl p-5 bg-slate-900 border border-slate-800">
-          <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-3">{{ key }}</p>
+          class="rounded-2xl p-5 bg-base-300 border border-base-300">
+          <p class="text-xs text-base-content/60 font-semibold uppercase tracking-wider mb-3">{{ key }}</p>
           <div class="space-y-2">
             <div class="flex justify-between items-center">
-              <span class="text-xs text-slate-500">Tokens entrada</span>
+              <span class="text-xs text-base-content/50">Tokens entrada</span>
               <span class="text-sm font-mono text-indigo-300">{{ fmt(period.inputTokens) }}</span>
             </div>
             <div class="flex justify-between items-center">
-              <span class="text-xs text-slate-500">Tokens salida</span>
+              <span class="text-xs text-base-content/50">Tokens salida</span>
               <span class="text-sm font-mono text-emerald-300">{{ fmt(period.outputTokens) }}</span>
             </div>
-            <div class="border-t border-slate-800 pt-2 flex justify-between items-center">
-              <span class="text-xs text-slate-400 font-semibold">Total tokens</span>
-              <span class="text-base font-bold font-mono text-white">{{ fmt(period.totalTokens) }}</span>
+            <div class="border-t border-base-300 pt-2 flex justify-between items-center">
+              <span class="text-xs text-base-content/60 font-semibold">Total tokens</span>
+              <span class="text-base font-bold font-mono text-base-content">{{ fmt(period.totalTokens) }}</span>
             </div>
             <div class="flex justify-between items-center">
-              <span class="text-xs text-slate-500">Llamadas</span>
-              <span class="text-xs font-mono text-slate-400">{{ period.callCount }}</span>
+              <span class="text-xs text-base-content/50">Llamadas</span>
+              <span class="text-xs font-mono text-base-content/60">{{ period.callCount }}</span>
             </div>
           </div>
         </div>
       </div>
 
       <!-- Last 30 days chart -->
-      <div class="rounded-2xl bg-slate-900 border border-slate-800 p-5">
-        <h3 class="text-sm font-semibold text-white mb-4">Últimos 30 días</h3>
+      <div class="rounded-2xl bg-base-300 border border-base-300 p-5">
+        <h3 class="text-sm font-semibold text-base-content mb-4">Últimos 30 días</h3>
         <div class="flex items-end gap-0.5 h-32 w-full">
           <div v-for="day in metrics.last30Days" :key="day.date"
             class="flex-1 flex flex-col justify-end gap-0 group relative"
@@ -133,15 +133,15 @@ onMounted(fetchMetrics)
               :style="{ height: `${(day.totalTokens / maxDailyTotal) * 100}%`, minHeight: day.totalTokens > 0 ? '2px' : '0' }" />
             <!-- tooltip -->
             <div class="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col items-center pointer-events-none z-10">
-              <div class="bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-xs whitespace-nowrap shadow-xl">
-                <p class="text-white font-mono">{{ fmt(day.totalTokens) }}</p>
-                <p class="text-slate-400">{{ fmtDate(day.date) }}</p>
+              <div class="bg-base-200 border border-base-300 rounded-lg px-2 py-1.5 text-xs whitespace-nowrap shadow-xl">
+                <p class="text-base-content font-mono">{{ fmt(day.totalTokens) }}</p>
+                <p class="text-base-content/60">{{ fmtDate(day.date) }}</p>
               </div>
             </div>
           </div>
         </div>
         <!-- X-axis labels: show only first, middle, last -->
-        <div class="flex justify-between mt-1 text-xs text-slate-600 font-mono">
+        <div class="flex justify-between mt-1 text-xs text-base-content/40 font-mono">
           <span>{{ fmtDate(metrics.last30Days[0].date) }}</span>
           <span>{{ fmtDate(metrics.last30Days[14].date) }}</span>
           <span>{{ fmtDate(metrics.last30Days[29].date) }}</span>
@@ -149,30 +149,30 @@ onMounted(fetchMetrics)
       </div>
 
       <!-- By model table -->
-      <div class="rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden">
-        <header class="px-5 py-4 border-b border-slate-800">
-          <h3 class="text-sm font-semibold text-white">Consumo por modelo</h3>
+      <div class="rounded-2xl bg-base-300 border border-base-300 overflow-hidden">
+        <header class="px-5 py-4 border-b border-base-300">
+          <h3 class="text-sm font-semibold text-base-content">Consumo por modelo</h3>
         </header>
-        <div v-if="!metrics.byModel.length" class="px-5 py-10 text-center text-sm text-slate-500 italic">
+        <div v-if="!metrics.byModel.length" class="px-5 py-10 text-center text-sm text-base-content/50 italic">
           Aún no hay datos de consumo registrados.
         </div>
         <table v-else class="w-full text-sm">
-          <thead class="bg-slate-950/50">
+          <thead class="bg-base-300/50">
             <tr>
-              <th class="px-5 py-3 text-left text-xs text-slate-400 font-semibold uppercase tracking-wider">Modelo</th>
-              <th class="px-5 py-3 text-right text-xs text-slate-400 font-semibold uppercase tracking-wider">Tokens entrada</th>
-              <th class="px-5 py-3 text-right text-xs text-slate-400 font-semibold uppercase tracking-wider">Tokens salida</th>
-              <th class="px-5 py-3 text-right text-xs text-slate-400 font-semibold uppercase tracking-wider">Total</th>
-              <th class="px-5 py-3 text-right text-xs text-slate-400 font-semibold uppercase tracking-wider">Llamadas</th>
+              <th class="px-5 py-3 text-left text-xs text-base-content/60 font-semibold uppercase tracking-wider">Modelo</th>
+              <th class="px-5 py-3 text-right text-xs text-base-content/60 font-semibold uppercase tracking-wider">Tokens entrada</th>
+              <th class="px-5 py-3 text-right text-xs text-base-content/60 font-semibold uppercase tracking-wider">Tokens salida</th>
+              <th class="px-5 py-3 text-right text-xs text-base-content/60 font-semibold uppercase tracking-wider">Total</th>
+              <th class="px-5 py-3 text-right text-xs text-base-content/60 font-semibold uppercase tracking-wider">Llamadas</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-800">
-            <tr v-for="m in metrics.byModel" :key="m.model" class="hover:bg-slate-800/40 transition-colors">
+          <tbody class="divide-y divide-base-300">
+            <tr v-for="m in metrics.byModel" :key="m.model" class="hover:bg-base-200/40 transition-colors">
               <td class="px-5 py-3 font-mono text-indigo-300 text-xs">{{ m.model }}</td>
-              <td class="px-5 py-3 text-right font-mono text-slate-300 text-xs">{{ fmt(m.inputTokens) }}</td>
-              <td class="px-5 py-3 text-right font-mono text-slate-300 text-xs">{{ fmt(m.outputTokens) }}</td>
-              <td class="px-5 py-3 text-right font-mono text-white font-semibold text-xs">{{ fmt(m.totalTokens) }}</td>
-              <td class="px-5 py-3 text-right font-mono text-slate-400 text-xs">{{ m.callCount }}</td>
+              <td class="px-5 py-3 text-right font-mono text-base-content text-xs">{{ fmt(m.inputTokens) }}</td>
+              <td class="px-5 py-3 text-right font-mono text-base-content text-xs">{{ fmt(m.outputTokens) }}</td>
+              <td class="px-5 py-3 text-right font-mono text-base-content font-semibold text-xs">{{ fmt(m.totalTokens) }}</td>
+              <td class="px-5 py-3 text-right font-mono text-base-content/60 text-xs">{{ m.callCount }}</td>
             </tr>
           </tbody>
         </table>
@@ -180,7 +180,7 @@ onMounted(fetchMetrics)
 
     </div>
 
-    <div v-else-if="!loading" class="flex flex-col items-center justify-center py-20 text-center text-slate-500">
+    <div v-else-if="!loading" class="flex flex-col items-center justify-center py-20 text-center text-base-content/50">
       <p class="text-sm">No se pudieron cargar las métricas.</p>
     </div>
   </PageLayout>

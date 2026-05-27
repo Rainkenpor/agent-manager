@@ -187,24 +187,24 @@ async function toggleRole(roleId: string) {
     </div>
 
     <!-- Table -->
-    <div v-else class="bg-slate-900 rounded-xl shadow-sm border border-slate-800 overflow-hidden">
+    <div v-else class="bg-base-300 rounded-xl shadow-sm border border-base-300 overflow-hidden">
       <table class="w-full text-sm">
         <thead>
-          <tr class="border-b border-slate-700 bg-slate-800">
-            <th class="text-left px-6 py-3.5 font-semibold text-slate-400">Username</th>
-            <th class="text-left px-6 py-3.5 font-semibold text-slate-400">Email</th>
-            <th class="text-left px-6 py-3.5 font-semibold text-slate-400">Name</th>
-            <th class="text-left px-6 py-3.5 font-semibold text-slate-400">Roles</th>
-            <th class="text-left px-6 py-3.5 font-semibold text-slate-400">Status</th>
-            <th class="text-right px-6 py-3.5 font-semibold text-slate-400">Actions</th>
+          <tr class="border-b border-base-300 bg-base-200">
+            <th class="text-left px-6 py-3.5 font-semibold text-base-content/60">Username</th>
+            <th class="text-left px-6 py-3.5 font-semibold text-base-content/60">Email</th>
+            <th class="text-left px-6 py-3.5 font-semibold text-base-content/60">Name</th>
+            <th class="text-left px-6 py-3.5 font-semibold text-base-content/60">Roles</th>
+            <th class="text-left px-6 py-3.5 font-semibold text-base-content/60">Status</th>
+            <th class="text-right px-6 py-3.5 font-semibold text-base-content/60">Actions</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-700">
-          <tr v-for="user in users" :key="user.id" class="hover:bg-slate-800 transition-colors cursor-pointer"
+        <tbody class="divide-y divide-base-300">
+          <tr v-for="user in users" :key="user.id" class="hover:bg-base-200 transition-colors cursor-pointer"
             @click="openRolesModal(user)">
-            <td class="px-6 py-4 font-medium text-white">{{ user.username }}</td>
-            <td class="px-6 py-4 text-slate-400">{{ user.email }}</td>
-            <td class="px-6 py-4 text-slate-400">
+            <td class="px-6 py-4 font-medium text-base-content">{{ user.username }}</td>
+            <td class="px-6 py-4 text-base-content/60">{{ user.email }}</td>
+            <td class="px-6 py-4 text-base-content/60">
               {{ [user.firstName, user.lastName].filter(Boolean).join(' ') || '—' }}
             </td>
             <td class="px-6 py-4">
@@ -214,10 +214,10 @@ async function toggleRole(roleId: string) {
                   {{ role.name }}
                 </span>
                 <span v-if="(user.roles ?? []).length > 3"
-                  class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
+                  class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-base-100 text-base-content/40">
                   +{{ (user.roles ?? []).length - 3 }}
                 </span>
-                <span v-if="!(user.roles ?? []).length" class="text-slate-400 text-xs">No roles</span>
+                <span v-if="!(user.roles ?? []).length" class="text-base-content/60 text-xs">No roles</span>
               </div>
             </td>
             <td class="px-6 py-4">
@@ -229,14 +229,14 @@ async function toggleRole(roleId: string) {
             <td class="px-6 py-4">
               <div class="flex items-center justify-end gap-2" @click.stop>
                 <button
-                  class="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                  class="p-1.5 rounded-lg text-base-content/60 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
                   title="Edit user" @click="openEdit(user)">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
                 </button>
-                <button class="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                <button class="p-1.5 rounded-lg text-base-content/60 hover:text-red-600 hover:bg-red-50 transition-colors"
                   title="Delete user" @click="confirmDelete(user)">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -247,7 +247,7 @@ async function toggleRole(roleId: string) {
             </td>
           </tr>
           <tr v-if="!users.length">
-            <td colspan="6" class="px-6 py-12 text-center text-slate-400">No users found</td>
+            <td colspan="6" class="px-6 py-12 text-center text-base-content/60">No users found</td>
           </tr>
         </tbody>
       </table>
@@ -260,26 +260,26 @@ async function toggleRole(roleId: string) {
     <form id="user-form" class="space-y-4" @submit.prevent="saveUser">
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-medium text-slate-400 mb-1.5">First Name</label>
+          <label class="block text-sm font-medium text-base-content/60 mb-1.5">First Name</label>
           <input v-model="userForm.firstName" type="text" placeholder="Optional" class="input w-full" />
         </div>
         <div>
-          <label class="block text-sm font-medium text-slate-400 mb-1.5">Last Name</label>
+          <label class="block text-sm font-medium text-base-content/60 mb-1.5">Last Name</label>
           <input v-model="userForm.lastName" type="text" placeholder="Optional" class="input w-full" />
         </div>
       </div>
       <div>
-        <label class="block text-sm font-medium text-slate-400 mb-1.5">Username <span
+        <label class="block text-sm font-medium text-base-content/60 mb-1.5">Username <span
             class="text-red-500">*</span></label>
         <input v-model="userForm.username" type="text" placeholder="username" required :disabled="!!editingUser"
-          class="input w-full disabled:bg-base-100 disabled:text-slate-500" />
+          class="input w-full disabled:bg-base-100 disabled:text-base-content/50" />
       </div>
       <div>
-        <label class="block text-sm font-medium text-slate-400 mb-1.5">Email <span class="text-red-500">*</span></label>
+        <label class="block text-sm font-medium text-base-content/60 mb-1.5">Email <span class="text-red-500">*</span></label>
         <input v-model="userForm.email" type="email" placeholder="user@example.com" required class="input w-full" />
       </div>
       <div>
-        <label class="block text-sm font-medium text-slate-400 mb-1.5">
+        <label class="block text-sm font-medium text-base-content/60 mb-1.5">
           Password {{ editingUser ? '(leave blank to keep current)' : '' }}
           <span v-if="!editingUser" class="text-red-500">*</span>
         </label>
@@ -316,12 +316,12 @@ async function toggleRole(roleId: string) {
           @click="toggleRole(role.id)">
           <div class="relative">
             <input type="checkbox" :checked="userHasRole(role.id)" :disabled="togglingRole === role.id"
-              class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer" @click.stop
+              class="w-4 h-4 text-indigo-600 rounded border-base-300 focus:ring-indigo-500 cursor-pointer" @click.stop
               @change="toggleRole(role.id)" />
           </div>
           <div class="flex-1">
             <p class="text-sm font-medium ">{{ role.name }}</p>
-            <p v-if="role.description" class="text-xs text-slate-400">{{ role.description }}</p>
+            <p v-if="role.description" class="text-xs text-base-content/60">{{ role.description }}</p>
           </div>
           <svg v-if="togglingRole === role.id" class="animate-spin h-4 w-4 text-indigo-400" fill="none"
             viewBox="0 0 24 24">
@@ -329,12 +329,12 @@ async function toggleRole(roleId: string) {
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
           </svg>
         </div>
-        <div v-if="!allRoles.length" class="text-center text-slate-400 py-6 text-sm">No roles available</div>
+        <div v-if="!allRoles.length" class="text-center text-base-content/60 py-6 text-sm">No roles available</div>
       </div>
     </div>
     <div class="px-6 pb-5">
       <button
-        class="w-full px-4 py-2.5 rounded-lg bg-slate-800 text-white text-sm font-medium hover:bg-slate-700 transition-colors"
+        class="w-full px-4 py-2.5 rounded-lg bg-base-200 text-base-content text-sm font-medium hover:bg-base-100 transition-colors"
         @click="closeRolesModal">
         Done
       </button>

@@ -72,7 +72,7 @@ onMounted(fetchUsers)
 <template>
   <AppModal title="Compartir trazabilidad" size="md" @close="emit('close')">
     <div class="p-6 space-y-4">
-      <p class="text-sm text-slate-400">
+      <p class="text-sm text-base-content/60">
         Los usuarios seleccionados verán esta trazabilidad y recibirán un espacio en su sección de chat para
         iniciar o abrir su propio chat vinculado.
       </p>
@@ -81,7 +81,7 @@ onMounted(fetchUsers)
         {{ error }}
       </div>
 
-      <div v-if="loading" class="flex items-center gap-2 text-slate-500 text-sm py-4">
+      <div v-if="loading" class="flex items-center gap-2 text-base-content/50 text-sm py-4">
         <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
@@ -89,7 +89,7 @@ onMounted(fetchUsers)
         Cargando usuarios...
       </div>
 
-      <div v-else-if="available.length === 0" class="text-sm text-slate-500 py-4">
+      <div v-else-if="available.length === 0" class="text-sm text-base-content/50 py-4">
         No hay usuarios disponibles para invitar.
       </div>
 
@@ -98,19 +98,19 @@ onMounted(fetchUsers)
           class="flex items-center gap-3 px-3 py-2 rounded-lg border cursor-pointer transition-colors"
           :class="selected.has(u.id)
             ? 'bg-indigo-600/10 border-indigo-500'
-            : 'bg-slate-800/40 border-slate-700 hover:border-slate-600'">
+            : 'bg-base-200/40 border-base-300 hover:border-base-content/20'">
           <input type="checkbox" :checked="selected.has(u.id)" @change="toggle(u.id)"
             class="accent-indigo-500 cursor-pointer" />
           <div class="min-w-0 flex-1">
-            <p class="text-sm text-white truncate">{{ displayName(u) }}</p>
-            <p v-if="u.email" class="text-xs text-slate-500 truncate">{{ u.email }}</p>
+            <p class="text-sm text-base-content truncate">{{ displayName(u) }}</p>
+            <p v-if="u.email" class="text-xs text-base-content/50 truncate">{{ u.email }}</p>
           </div>
         </label>
       </div>
 
       <div class="flex gap-3 pt-2">
         <button @click="emit('close')"
-          class="flex-1 py-2.5 text-sm rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition-colors">
+          class="flex-1 py-2.5 text-sm rounded-xl bg-base-200 hover:bg-base-100 text-base-content font-medium transition-colors">
           Cancelar
         </button>
         <button @click="submit" :disabled="saving || selected.size === 0"

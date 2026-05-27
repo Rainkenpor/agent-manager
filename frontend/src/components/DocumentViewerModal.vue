@@ -177,32 +177,32 @@ onMounted(loadDocument)
   <teleport to="body">
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
       @mousedown.self="emit('close')">
-      <div class="bg-slate-900 rounded-2xl border border-slate-700 w-full max-w-5xl h-[90vh] flex flex-col">
+      <div class="bg-base-300 rounded-2xl border border-base-300 w-full max-w-5xl h-[90vh] flex flex-col">
 
         <!-- Header -->
-        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-700 shrink-0 gap-4">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-base-300 shrink-0 gap-4">
           <div class="flex items-center gap-3 flex-1 min-w-0">
             <svg class="w-5 h-5 text-teal-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             <div v-if="!editing" class="flex-1 min-w-0">
-              <h3 class="font-semibold text-white truncate">{{ activeDocument?.name || 'Cargando…' }}</h3>
-              <p v-if="subtitle" class="text-xs text-slate-500 mt-0.5 truncate">{{ subtitle }}</p>
+              <h3 class="font-semibold text-base-content truncate">{{ activeDocument?.name || 'Cargando…' }}</h3>
+              <p v-if="subtitle" class="text-xs text-base-content/50 mt-0.5 truncate">{{ subtitle }}</p>
             </div>
             <input v-else v-model="editForm.name"
-              class="flex-1 bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              class="flex-1 bg-base-200 border border-base-content/20 rounded-lg px-3 py-1.5 text-base-content text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
           </div>
           <div class="flex items-center gap-2 shrink-0">
             <template v-if="!editing">
               <button v-if="canEdit && tab === 'content' && activeDocument" @click="startEditing"
-                class="px-3 py-1.5 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors">
+                class="px-3 py-1.5 text-xs rounded-lg bg-base-200 hover:bg-base-100 text-base-content transition-colors">
                 Editar
               </button>
             </template>
             <template v-else>
               <button @click="cancelEdit"
-                class="px-3 py-1.5 text-xs rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors">
+                class="px-3 py-1.5 text-xs rounded-lg bg-base-100 hover:bg-base-100 text-base-content transition-colors">
                 Cancelar
               </button>
               <button @click="save" :disabled="saving"
@@ -211,7 +211,7 @@ onMounted(loadDocument)
               </button>
             </template>
             <button @click="emit('close')"
-              class="p-1.5 text-slate-500 hover:text-slate-300 transition-colors rounded-lg hover:bg-slate-800">
+              class="p-1.5 text-base-content/50 hover:text-base-content transition-colors rounded-lg hover:bg-base-200">
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -220,21 +220,21 @@ onMounted(loadDocument)
         </div>
 
         <!-- Tabs -->
-        <div v-if="!editing" class="px-6 pt-3 border-b border-slate-800 shrink-0 flex gap-1">
+        <div v-if="!editing" class="px-6 pt-3 border-b border-base-300 shrink-0 flex gap-1">
           <button @click="tab = 'content'"
             class="px-3 py-2 text-xs font-medium rounded-t-lg transition-colors border-b-2" :class="tab === 'content'
-              ? 'text-white border-indigo-400'
-              : 'text-slate-400 hover:text-slate-200 border-transparent'">
+              ? 'text-base-content border-indigo-400'
+              : 'text-base-content/60 hover:text-base-content border-transparent'">
             Contenido
           </button>
           <button @click="tab = 'history'"
             class="px-3 py-2 text-xs font-medium rounded-t-lg transition-colors border-b-2 flex items-center gap-1.5"
             :class="tab === 'history'
-              ? 'text-white border-indigo-400'
-              : 'text-slate-400 hover:text-slate-200 border-transparent'">
+              ? 'text-base-content border-indigo-400'
+              : 'text-base-content/60 hover:text-base-content border-transparent'">
             Historial
             <span v-if="history.length > 0"
-              class="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-700 text-slate-300">{{
+              class="text-[10px] px-1.5 py-0.5 rounded-full bg-base-100 text-base-content">{{
                 history.length }}</span>
           </button>
         </div>
@@ -248,17 +248,17 @@ onMounted(loadDocument)
 
           <!-- Content tab — view mode -->
           <div v-else-if="tab === 'content' && !editing" class="h-full overflow-y-auto p-6">
-            <pre v-if="activeDocument?.content" class="whitespace-pre-wrap text-sm text-slate-300 font-mono">{{
+            <pre v-if="activeDocument?.content" class="whitespace-pre-wrap text-sm text-base-content font-mono">{{
               activeDocument.content }}</pre>
-            <p v-else class="text-slate-500 text-sm italic">Sin contenido. Haz clic en Editar para añadir.</p>
+            <p v-else class="text-base-content/50 text-sm italic">Sin contenido. Haz clic en Editar para añadir.</p>
           </div>
 
           <!-- Content tab — edit mode -->
           <div v-else-if="tab === 'content' && editing" class="h-full flex flex-col p-6 min-h-0">
-            <label class="block text-xs text-slate-400 mb-1.5 shrink-0">Contenido (markdown)</label>
+            <label class="block text-xs text-base-content/60 mb-1.5 shrink-0">Contenido (markdown)</label>
             <div class="flex-1 min-h-0">
               <TextAreaComplete v-model="editForm.content"
-                class="w-full h-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none leading-relaxed"
+                class="w-full h-full bg-base-200 border border-base-300 rounded-lg p-2 text-base-content text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none leading-relaxed"
                 placeholder="Escribe el contenido en markdown..." />
             </div>
           </div>
@@ -266,77 +266,77 @@ onMounted(loadDocument)
           <!-- History tab -->
           <div v-else class="h-full flex min-h-0">
             <!-- Version list -->
-            <div class="w-56 shrink-0 border-r border-slate-800 overflow-y-auto">
+            <div class="w-56 shrink-0 border-r border-base-300 overflow-y-auto">
               <div v-if="historyLoading" class="flex justify-center py-6">
                 <div class="animate-spin w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full" />
               </div>
-              <div v-else-if="history.length === 0" class="px-3 py-6 text-center text-slate-500 text-xs">
+              <div v-else-if="history.length === 0" class="px-3 py-6 text-center text-base-content/50 text-xs">
                 Sin historial
               </div>
               <button v-for="(v, i) in history" :key="v.id"
-                class="w-full text-left px-3 py-2.5 border-b border-slate-800/60 transition-colors"
-                :class="selectedVersionId === v.id ? 'bg-slate-800' : 'hover:bg-slate-800/50'"
+                class="w-full text-left px-3 py-2.5 border-b border-base-300/60 transition-colors"
+                :class="selectedVersionId === v.id ? 'bg-base-200' : 'hover:bg-base-200/50'"
                 @click="selectedVersionId = v.id">
                 <div class="flex items-center gap-2">
-                  <span class="text-[10px] font-mono text-slate-500 shrink-0">{{ shortId(v.id) }}</span>
+                  <span class="text-[10px] font-mono text-base-content/50 shrink-0">{{ shortId(v.id) }}</span>
                   <span v-if="v.active"
                     class="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold shrink-0">
                     Actual
                   </span>
                   <span v-else
-                    class="text-[9px] px-1.5 py-0.5 rounded-full bg-slate-700 text-slate-400 font-medium shrink-0">
+                    class="text-[9px] px-1.5 py-0.5 rounded-full bg-base-100 text-base-content/60 font-medium shrink-0">
                     v{{ history.length - i }}
                   </span>
                 </div>
-                <p class="text-xs text-slate-300 truncate mt-1">{{ v.name }}</p>
-                <p class="text-[10px] text-slate-500 mt-0.5">{{ fmtDate(v.updatedAt) }}</p>
+                <p class="text-xs text-base-content truncate mt-1">{{ v.name }}</p>
+                <p class="text-[10px] text-base-content/50 mt-0.5">{{ fmtDate(v.updatedAt) }}</p>
               </button>
             </div>
 
             <!-- Diff viewer -->
             <div class="flex-1 flex flex-col min-w-0">
               <div v-if="selectedVersion"
-                class="px-4 py-2 border-b border-slate-800 shrink-0 flex items-center gap-3 text-xs">
-                <span class="font-mono text-slate-400">{{ shortId(selectedVersion.id) }}</span>
-                <span class="text-slate-500">vs</span>
-                <span class="font-mono text-slate-400">{{ previousVersion ? shortId(previousVersion.id) : '∅ (inicial)'
+                class="px-4 py-2 border-b border-base-300 shrink-0 flex items-center gap-3 text-xs">
+                <span class="font-mono text-base-content/60">{{ shortId(selectedVersion.id) }}</span>
+                <span class="text-base-content/50">vs</span>
+                <span class="font-mono text-base-content/60">{{ previousVersion ? shortId(previousVersion.id) : '∅ (inicial)'
                   }}</span>
                 <span class="ml-auto flex gap-2">
                   <span class="text-emerald-400">+{{ diffStats.adds }}</span>
                   <span class="text-rose-400">−{{ diffStats.removes }}</span>
                 </span>
               </div>
-              <div class="flex-1 overflow-y-auto bg-slate-950/50 font-mono text-xs">
-                <div v-if="!selectedVersion" class="px-4 py-6 text-center text-slate-500">
+              <div class="flex-1 overflow-y-auto bg-base-300/50 font-mono text-xs">
+                <div v-if="!selectedVersion" class="px-4 py-6 text-center text-base-content/50">
                   Selecciona una versión para ver los cambios
                 </div>
-                <div v-else-if="currentDiff.length === 0" class="px-4 py-6 text-center text-slate-500">
+                <div v-else-if="currentDiff.length === 0" class="px-4 py-6 text-center text-base-content/50">
                   Documento vacío
                 </div>
                 <div v-else>
-                  <div v-for="(line, idx) in currentDiff" :key="idx" class="flex border-b border-slate-900/60" :class="{
+                  <div v-for="(line, idx) in currentDiff" :key="idx" class="flex border-b border-base-300/60" :class="{
                     'bg-emerald-500/10': line.op === 'add',
                     'bg-rose-500/10': line.op === 'remove'
                   }">
                     <span
-                      class="w-10 shrink-0 text-right px-2 py-1 text-slate-600 select-none border-r border-slate-800">
+                      class="w-10 shrink-0 text-right px-2 py-1 text-base-content/40 select-none border-r border-base-300">
                       {{ line.leftNum ?? '' }}
                     </span>
                     <span
-                      class="w-10 shrink-0 text-right px-2 py-1 text-slate-600 select-none border-r border-slate-800">
+                      class="w-10 shrink-0 text-right px-2 py-1 text-base-content/40 select-none border-r border-base-300">
                       {{ line.rightNum ?? '' }}
                     </span>
                     <span class="w-5 shrink-0 px-1 py-1 text-center select-none" :class="{
                       'text-emerald-400': line.op === 'add',
                       'text-rose-400': line.op === 'remove',
-                      'text-slate-700': line.op === 'equal'
+                      'text-base-content/70': line.op === 'equal'
                     }">
                       {{ line.op === 'add' ? '+' : line.op === 'remove' ? '−' : ' ' }}
                     </span>
                     <pre class="flex-1 px-2 py-1 whitespace-pre-wrap break-all" :class="{
                       'text-emerald-200': line.op === 'add',
                       'text-rose-200': line.op === 'remove',
-                      'text-slate-400': line.op === 'equal'
+                      'text-base-content/60': line.op === 'equal'
                     }">{{ line.op === 'add' ? line.right : line.left }}</pre>
                   </div>
                 </div>
@@ -347,7 +347,7 @@ onMounted(loadDocument)
 
         <!-- Footer -->
         <div v-if="!editing && activeDocument && tab === 'content'"
-          class="px-6 py-3 border-t border-slate-800 shrink-0 flex gap-4 text-xs text-slate-600">
+          class="px-6 py-3 border-t border-base-300 shrink-0 flex gap-4 text-xs text-base-content/40">
           <span>Creado: {{ fmtDate(activeDocument.createdAt) }}</span>
           <span>Actualizado: {{ fmtDate(activeDocument.updatedAt) }}</span>
         </div>

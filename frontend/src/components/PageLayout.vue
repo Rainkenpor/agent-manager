@@ -11,11 +11,11 @@ defineProps<{
   <div class="flex flex-col h-full min-h-0">
 
     <!-- Header -->
-    <div class="flex items-center justify-between px-8 py-5 border-b border-slate-800 shrink-0">
+    <div class="flex items-center justify-between px-8 py-5 border-b border-base-300 shrink-0">
       <slot name="header">
         <div>
-          <h1 v-if="title" class="text-2xl font-bold text-white">{{ title }}</h1>
-          <p v-if="description" class="text-slate-500 text-sm mt-0.5">{{ description }}</p>
+          <h1 v-if="title" class="text-2xl font-bold text-base-content">{{ title }}</h1>
+          <p v-if="description" class="text-base-content/50 text-sm mt-0.5">{{ description }}</p>
         </div>
       </slot>
 

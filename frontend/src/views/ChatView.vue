@@ -696,7 +696,7 @@ function renderInlineMarkdown(text: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/`(.+?)`/g, '<code class="bg-slate-700/80 px-1 rounded text-xs font-mono">$1</code>')
+    .replace(/`(.+?)`/g, '<code class="bg-base-100/80 px-1 rounded text-xs font-mono">$1</code>')
 }
 
 function renderMarkdown(text: string): string {
@@ -954,8 +954,8 @@ onMounted(fetchInitialData)
   <div class="flex h-full overflow-hidden">
 
     <!-- Sidebar: conversation list -->
-    <div class="w-52 shrink-0 flex flex-col border-r border-slate-800 bg-base-100">
-      <div class="px-4 py-4 border-b border-slate-800 flex items-center justify-between">
+    <div class="w-52 shrink-0 flex flex-col border-r border-base-300 bg-base-100">
+      <div class="px-4 py-4 border-b border-base-300 flex items-center justify-between">
         <button class="btn btn-info btn-outline btn-sm" @click="openNewChatModal">
           + Nuevo Chat
         </button>
@@ -964,7 +964,7 @@ onMounted(fetchInitialData)
       <!-- Conversation list -->
       <div class="flex-1 overflow-y-auto">
         <!-- Traceability invitations -->
-        <div v-if="invitations.length > 0" class="border-b border-slate-800">
+        <div v-if="invitations.length > 0" class="border-b border-base-300">
           <div
             class="px-4 py-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-amber-400">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -974,12 +974,12 @@ onMounted(fetchInitialData)
             Trazabilidades disponibles
           </div>
           <button v-for="inv in invitations" :key="inv.traceabilityId"
-            class="w-full text-left px-4 py-3 border-t border-slate-800/60 hover:bg-amber-500/5 transition-colors"
+            class="w-full text-left px-4 py-3 border-t border-base-300/60 hover:bg-amber-500/5 transition-colors"
             @click="openInvitation(inv)" :title="inv.description || 'Iniciar chat para esta trazabilidad'">
             <div class="flex items-start gap-2">
               <span class="mt-0.5 mdi mdi-clipboard-text-outline text-amber-400 shrink-0"></span>
               <div class="min-w-0 flex-1">
-                <p class="text-sm font-medium text-white truncate">{{ inv.title }}</p>
+                <p class="text-sm font-medium text-base-content truncate">{{ inv.title }}</p>
                 <p class="text-xs text-amber-400/80 truncate">Iniciar chat</p>
               </div>
             </div>
@@ -987,13 +987,13 @@ onMounted(fetchInitialData)
         </div>
 
         <div v-if="sidebarEntries.length === 0 && invitations.length === 0"
-          class="px-4 py-8 text-center text-slate-500 text-sm">
+          class="px-4 py-8 text-center text-base-content/50 text-sm">
           Sin conversaciones
         </div>
         <button v-for="entry in sidebarEntries" :key="entry.kind + ':' + entry.id"
-          class="w-full text-left px-4 py-3 border-b border-slate-800/60 hover:bg-slate-800/50 transition-colors group relative"
+          class="w-full text-left px-4 py-3 border-b border-base-300/60 hover:bg-base-200/50 transition-colors group relative"
           :class="[
-            isEntryActive(entry) ? 'bg-slate-800' : '',
+            isEntryActive(entry) ? 'bg-base-200' : '',
             entryGroupInfo(entry) ? 'pl-5' : ''
           ]" @click="openEntry(entry)">
           <span v-if="entryGroupInfo(entry)" class="absolute left-0 top-0 bottom-0 w-1"
@@ -1005,11 +1005,11 @@ onMounted(fetchInitialData)
                 <span v-if="entryGroupInfo(entry)" class="mdi mdi-clipboard-text-outline text-[13px] shrink-0"
                   :style="{ color: groupColor(entryGroupInfo(entry)!.traceabilityId) }"
                   :title="`Trazabilidad: ${entryGroupInfo(entry)!.title}`"></span>
-                <p class="text-sm font-medium text-white truncate">
+                <p class="text-sm font-medium text-base-content truncate">
                   {{ entry.kind === 'group' ? entryGroupInfo(entry)!.title : entry.conversation.title }}
                 </p>
                 <span v-if="entry.kind === 'group' && (entry.groupChats?.length ?? 0) > 1"
-                  class="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full bg-slate-700 text-slate-300 font-medium"
+                  class="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full bg-base-100 text-base-content font-medium"
                   :title="`${entry.groupChats!.length} chats (uno por stage)`">
                   {{ entry.groupChats!.length }}
                 </span>
@@ -1030,25 +1030,25 @@ onMounted(fetchInitialData)
               <div v-if="entryGroupInfo(entry)" class="flex items-center gap-1 mt-1.5">
                 <div class="flex items-center">
                   <span v-if="entryGroupInfo(entry)!.ownerUserId"
-                    class="w-5 h-5 -ml-1 first:ml-0 rounded-full ring-2 ring-base-100 flex items-center justify-center text-[9px] font-bold text-white"
+                    class="w-5 h-5 -ml-1 first:ml-0 rounded-full ring-2 ring-base-100 flex items-center justify-center text-[9px] font-bold text-base-content"
                     :style="{ backgroundColor: groupColor(entryGroupInfo(entry)!.traceabilityId) }"
                     :title="`${userDisplayName(entryGroupInfo(entry)!.ownerUserId!)} (propietario)`">
                     {{ userInitials(entryGroupInfo(entry)!.ownerUserId!) }}
                   </span>
                   <span v-for="p in entryGroupInfo(entry)!.participants.slice(0, 4)" :key="p.userId"
-                    class="w-5 h-5 -ml-1 rounded-full bg-slate-700 ring-2 ring-base-100 flex items-center justify-center text-[9px] font-bold text-slate-200"
+                    class="w-5 h-5 -ml-1 rounded-full bg-base-100 ring-2 ring-base-100 flex items-center justify-center text-[9px] font-bold text-base-content"
                     :title="userDisplayName(p.userId)">
                     {{ userInitials(p.userId) }}
                   </span>
                   <span v-if="entryGroupInfo(entry)!.participants.length > 4"
-                    class="w-5 h-5 -ml-1 rounded-full bg-slate-700 ring-2 ring-base-100 flex items-center justify-center text-[9px] font-bold text-slate-300">
+                    class="w-5 h-5 -ml-1 rounded-full bg-base-100 ring-2 ring-base-100 flex items-center justify-center text-[9px] font-bold text-base-content">
                     +{{ entryGroupInfo(entry)!.participants.length - 4 }}
                   </span>
                 </div>
               </div>
             </div>
             <button v-if="entry.kind === 'chat'"
-              class="shrink-0 opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-400 transition-all"
+              class="shrink-0 opacity-0 group-hover:opacity-100 text-base-content/50 hover:text-red-400 transition-all"
               title="Eliminar" @click.stop="deleteConversation(entry.conversation)">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -1064,7 +1064,7 @@ onMounted(fetchInitialData)
     <div class="flex-1 flex flex-col min-w-0">
 
       <!-- Header -->
-      <div class="px-6 py-4 border-b border-slate-800 flex items-center gap-3">
+      <div class="px-6 py-4 border-b border-base-300 flex items-center gap-3">
         <template v-if="activeConversation">
           <div class="w-8 h-8 rounded-lg bg-cyan-600/20 flex items-center justify-center shrink-0">
             <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1074,11 +1074,11 @@ onMounted(fetchInitialData)
           </div>
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2">
-              <p class="text-sm font-semibold text-white truncate">{{ activeConversation.title }}</p>
+              <p class="text-sm font-semibold text-base-content truncate">{{ activeConversation.title }}</p>
               <select v-if="(chatGroups[activeConversation.id]?.myEligibleStages?.length ?? 0) > 1"
                 :value="chatGroups[activeConversation.id].stageId ?? ''"
                 @change="(e) => switchStage((e.target as HTMLSelectElement).value)" :disabled="switchingStage"
-                class="text-xs bg-slate-800 border border-slate-700 rounded px-2 py-1 text-white focus:outline-none focus:border-indigo-500"
+                class="text-xs bg-base-200 border border-base-300 rounded px-2 py-1 text-base-content focus:outline-none focus:border-indigo-500"
                 :title="'Cambiar de stage'">
                 <option v-if="!chatGroups[activeConversation.id].stageId" value="" disabled>Selecciona stage…</option>
                 <option v-for="s in chatGroups[activeConversation.id].myEligibleStages" :key="s.stageId"
@@ -1087,12 +1087,12 @@ onMounted(fetchInitialData)
                 </option>
               </select>
             </div>
-            <p class="text-xs text-slate-400">Agente: {{ activeAgent?.name ?? activeConversation.agentId }}</p>
+            <p class="text-xs text-base-content/60">Agente: {{ activeAgent?.name ?? activeConversation.agentId }}</p>
           </div>
           <!-- Participants strip (when traceability is linked) -->
           <div v-if="hasLinkedTraceability && linkedTraceability" class="flex items-center gap-1 shrink-0">
             <div v-for="p in participants" :key="p.userId"
-              class="w-7 h-7 -ml-1 first:ml-0 rounded-full bg-slate-700 ring-2 ring-base-100 flex items-center justify-center text-[10px] font-bold text-slate-200 group relative"
+              class="w-7 h-7 -ml-1 first:ml-0 rounded-full bg-base-100 ring-2 ring-base-100 flex items-center justify-center text-[10px] font-bold text-base-content group relative"
               :title="`${userDisplayName(p.userId)} — ${p.hasRoleMatch ? 'rol coincide con la trazabilidad' : 'sin coincidencia de rol con la trazabilidad'}`">
               {{ userInitials(p.userId) }}
               <span
@@ -1111,7 +1111,7 @@ onMounted(fetchInitialData)
           <!-- Traceability sidebar toggle -->
           <button v-if="hasLinkedTraceability" @click="showTraceabilitySidebar = !showTraceabilitySidebar"
             class="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-            :class="showTraceabilitySidebar ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'"
+            :class="showTraceabilitySidebar ? 'bg-indigo-600 text-white' : 'bg-base-200 text-base-content/60 hover:text-white hover:bg-base-100'"
             title="Ver trazabilidad vinculada">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -1121,13 +1121,13 @@ onMounted(fetchInitialData)
           </button>
         </template>
         <template v-else>
-          <div class="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center shrink-0">
-            <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div class="w-8 h-8 rounded-lg bg-base-200 flex items-center justify-center shrink-0">
+            <svg class="w-4 h-4 text-base-content/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                 d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
           </div>
-          <p class="text-sm text-slate-400">Selecciona o crea una conversación</p>
+          <p class="text-sm text-base-content/60">Selecciona o crea una conversación</p>
         </template>
       </div>
 
@@ -1142,8 +1142,8 @@ onMounted(fetchInitialData)
                 d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
           </div>
-          <p class="text-white font-semibold mb-1">Chatea con un agente</p>
-          <p class="text-slate-500 text-sm max-w-xs">
+          <p class="text-base-content font-semibold mb-1">Chatea con un agente</p>
+          <p class="text-base-content/50 text-sm max-w-xs">
             Crea una nueva conversación y selecciona el agente con el que deseas interactuar.
           </p>
         </div>
@@ -1153,7 +1153,7 @@ onMounted(fetchInitialData)
         </div>
 
         <template v-else>
-          <div v-if="messages.length === 0" class="text-center py-12 text-slate-500 text-sm">
+          <div v-if="messages.length === 0" class="text-center py-12 text-base-content/50 text-sm">
             Sin mensajes aún. ¡Escribe algo para comenzar!
           </div>
 
@@ -1162,7 +1162,7 @@ onMounted(fetchInitialData)
             @mouseleave="hoveredMessageId = null">
             <!-- Avatar -->
             <div class="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold mt-0.5"
-              :class="msg.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-300'">
+              :class="msg.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-base-100 text-base-content'">
               {{ msg.role === 'user' ? 'U' : 'A' }}
             </div>
 
@@ -1176,13 +1176,13 @@ onMounted(fetchInitialData)
                 editingMessageId === msg.id ? 'p-0 w-120' : 'px-4 py-2.5',
                 msg.role === 'user'
                   ? 'bg-indigo-600 text-white rounded-tr-sm'
-                  : 'bg-slate-800 text-slate-100 rounded-tl-sm border border-slate-700/50'
+                  : 'bg-base-200 text-base-content rounded-tl-sm border border-base-300/50'
               ]">
 
                 <!-- Tool calls — shown before the text content -->
                 <div v-if="msg.toolCalls?.length" class="flex flex-wrap gap-1.5 mb-2">
                   <span v-for="tool in msg.toolCalls" :key="tool"
-                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-700/60 text-slate-500 text-xs font-mono">
+                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-base-100/60 text-base-content/50 text-xs font-mono">
                     <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -1195,18 +1195,18 @@ onMounted(fetchInitialData)
 
                 <!-- ── Active request form ── -->
                 <template v-if="getRequestQuestions(msg) && !submittedForms.includes(msg.id) && formAnswers[msg.id]">
-                  <p v-if="getContentBeforeRequest(msg.content)" class="whitespace-pre-wrap mb-3 text-slate-300"
+                  <p v-if="getContentBeforeRequest(msg.content)" class="whitespace-pre-wrap mb-3 text-base-content"
                     v-html="renderMarkdown(getContentBeforeRequest(msg.content))" />
 
-                  <div class="space-y-4 border border-slate-600/40 rounded-xl p-4 bg-slate-900/60">
+                  <div class="space-y-4 border border-base-content/20/40 rounded-xl p-4 bg-base-300/60">
                     <p class="text-xs font-semibold text-indigo-400 uppercase tracking-wider">Completa el formulario
                     </p>
 
                     <div v-for="q in getRequestQuestions(msg)" :key="q.id" class="space-y-2">
                       <!-- Question label + description -->
                       <div>
-                        <p class="text-sm font-medium text-slate-100" v-html="renderInlineMarkdown(q.label)" />
-                        <p v-if="q.description" class="text-xs text-slate-500 mt-0.5 whitespace-pre-wrap"
+                        <p class="text-sm font-medium text-base-content" v-html="renderInlineMarkdown(q.label)" />
+                        <p v-if="q.description" class="text-xs text-base-content/50 mt-0.5 whitespace-pre-wrap"
                           v-html="renderInlineMarkdown(q.description)" />
                       </div>
 
@@ -1217,10 +1217,10 @@ onMounted(fetchInitialData)
                           <input type="checkbox"
                             :checked="formAnswers[msg.id][q.id].selectedOptions.includes(opt.label)"
                             @change="toggleOption(msg.id, q.id, opt.label)"
-                            class="mt-0.5 shrink-0 rounded border-slate-600 bg-slate-800 accent-indigo-500 cursor-pointer" />
-                          <span class="text-sm text-slate-200 leading-snug">
+                            class="mt-0.5 shrink-0 rounded border-base-content/20 bg-base-200 accent-indigo-500 cursor-pointer" />
+                          <span class="text-sm text-base-content leading-snug">
                             {{ opt.label }}
-                            <span v-if="opt.description" class="text-slate-300"> — {{ opt.description }}</span>
+                            <span v-if="opt.description" class="text-base-content"> — {{ opt.description }}</span>
                           </span>
                         </label>
                       </div>
@@ -1233,7 +1233,7 @@ onMounted(fetchInitialData)
                           <div class="flex w-full">
                             <input type="text" :value="opt.description"
                               @input="(e) => listItemChanged(opt, e, msg.id, q.id, key)"
-                              class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors" />
+                              class="w-full px-3 py-2 rounded-lg bg-base-200 border border-base-300 text-sm text-base-content placeholder:text-base-content/40 focus:outline-none focus:border-indigo-500 transition-colors" />
                             <div v-if="opt.description !== ''" class="w-12 btn btn-ghost btn-error"
                               @click="removeOption(msg.id, q.id, key)">
                               <span class="mdi mdi-close"></span>
@@ -1257,7 +1257,7 @@ onMounted(fetchInitialData)
                           @click="selectOption(msg.id, q.id, opt.label)" :title="opt.description || undefined"
                           :class="formAnswers[msg.id][q.id].selectedOptions[0] === opt.label
                             ? 'bg-indigo-600 border-indigo-500 text-white'
-                            : 'bg-slate-800 border-slate-600 text-slate-300 hover:border-indigo-500/60 hover:text-white'" class="px-4 py-1.5 rounded-lg border text-sm font-medium transition-colors">
+                            : 'bg-base-200 border-base-content/20 text-base-content hover:border-indigo-500/60 hover:text-base-content'" class="px-4 py-1.5 rounded-lg border text-sm font-medium transition-colors">
                           {{ opt.label }}
                         </button>
                       </div>
@@ -1269,10 +1269,10 @@ onMounted(fetchInitialData)
                           <input type="radio" :name="`${msg.id}-${q.id}`" :value="opt.label"
                             :checked="formAnswers[msg.id][q.id].selectedOptions[0] === opt.label"
                             @change="selectOption(msg.id, q.id, opt.label)"
-                            class="mt-0.5 shrink-0 border-slate-600 bg-slate-800 accent-indigo-500 cursor-pointer" />
-                          <span class="text-sm text-slate-200 leading-snug">
+                            class="mt-0.5 shrink-0 border-base-content/20 bg-base-200 accent-indigo-500 cursor-pointer" />
+                          <span class="text-sm text-base-content leading-snug">
                             {{ opt.label }}
-                            <span v-if="opt.description" class="text-slate-300"> — {{ opt.description }}</span>
+                            <span v-if="opt.description" class="text-base-content"> — {{ opt.description }}</span>
                           </span>
                         </label>
                       </div>
@@ -1284,7 +1284,7 @@ onMounted(fetchInitialData)
                         type="text" :placeholder="q.type === 'multi' || q.type === 'single' || q.type === 'confirm'
                           ? 'Otra respuesta (opcional)...'
                           : (q.description ? q.description.split('\n')[0] : 'Tu respuesta...')"
-                        class="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors" />
+                        class="w-full px-3 py-2 rounded-lg bg-base-200 border border-base-300 text-sm text-base-content placeholder:text-base-content/40 focus:outline-none focus:border-indigo-500 transition-colors" />
                     </div>
 
                     <button @click="submitRequestForm(msg.id, getRequestQuestions(msg)!)"
@@ -1293,22 +1293,22 @@ onMounted(fetchInitialData)
                       Enviar respuestas
                     </button>
                   </div>
-                  <p v-if="getContentAfterRequest(msg.content)" class="whitespace-pre-wrap mt-3 text-slate-300"
+                  <p v-if="getContentAfterRequest(msg.content)" class="whitespace-pre-wrap mt-3 text-base-content"
                     v-html="renderMarkdown(getContentAfterRequest(msg.content))" />
                 </template>
 
                 <!-- ── Submitted form notice ── -->
                 <template v-else-if="getRequestQuestions(msg)">
-                  <p v-if="getContentBeforeRequest(msg.content)" class="whitespace-pre-wrap mb-2 text-slate-300"
+                  <p v-if="getContentBeforeRequest(msg.content)" class="whitespace-pre-wrap mb-2 text-base-content"
                     v-html="renderMarkdown(getContentBeforeRequest(msg.content))" />
-                  <span class="inline-flex items-center gap-1.5 text-xs text-slate-500">
+                  <span class="inline-flex items-center gap-1.5 text-xs text-base-content/50">
                     <svg class="w-3.5 h-3.5 text-green-400 shrink-0" fill="none" stroke="currentColor"
                       viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
                     </svg>
                     Formulario enviado
                   </span>
-                  <p v-if="getContentAfterRequest(msg.content)" class="whitespace-pre-wrap mt-2 text-slate-300"
+                  <p v-if="getContentAfterRequest(msg.content)" class="whitespace-pre-wrap mt-2 text-base-content"
                     v-html="renderMarkdown(getContentAfterRequest(msg.content))" />
                 </template>
 
@@ -1348,9 +1348,9 @@ onMounted(fetchInitialData)
 
               <!-- Timestamp + response time + action buttons -->
               <div v-if="editingMessageId !== msg.id" class="flex items-center gap-2 px-1 h-2.5">
-                <span class="text-xs text-slate-600">{{ formatTime(msg.createdAt) }}</span>
+                <span class="text-xs text-base-content/40">{{ formatTime(msg.createdAt) }}</span>
                 <span v-if="msg.role === 'assistant' && msg.responseTime != null && !msg.streaming"
-                  class="flex items-center gap-1 text-xs text-slate-600">
+                  class="flex items-center gap-1 text-xs text-base-content/40">
                   <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -1361,7 +1361,7 @@ onMounted(fetchInitialData)
                 <!-- Retry button for assistant messages -->
                 <button v-if="msg.role === 'assistant' && !msg.streaming && hoveredMessageId === msg.id && !sending"
                   @click="retryMessage(msg)"
-                  class="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs text-slate-500 hover:text-indigo-400 hover:bg-slate-800 transition-colors"
+                  class="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs text-base-content/50 hover:text-indigo-400 hover:bg-base-200 transition-colors"
                   title="Reintentar respuesta">
                   <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -1372,7 +1372,7 @@ onMounted(fetchInitialData)
 
                 <!-- Edit button for user messages -->
                 <button v-if="msg.role === 'user' && hoveredMessageId === msg.id && !sending" @click="editMessage(msg)"
-                  class="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs text-slate-500 hover:text-indigo-400 hover:bg-slate-800 transition-colors"
+                  class="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs text-base-content/50 hover:text-indigo-400 hover:bg-base-200 transition-colors"
                   title="Editar mensaje">
                   <span class="mdi mdi-pencil"></span>
                   Editar
@@ -1392,11 +1392,11 @@ onMounted(fetchInitialData)
 
       <!-- Input area -->
       <div class="px-6 pb-5 pt-2">
-        <div class="flex items-end gap-3 rounded-2xl border bg-slate-900 px-4 py-3 transition-colors"
-          :class="activeConversation ? 'border-slate-700 focus-within:border-indigo-500/60' : 'border-slate-800 opacity-50'">
+        <div class="flex items-end gap-3 rounded-2xl border bg-base-300 px-4 py-3 transition-colors"
+          :class="activeConversation ? 'border-base-300 focus-within:border-indigo-500/60' : 'border-base-300 opacity-50'">
           <textarea v-model="messageInput" :disabled="!activeConversation || sending" rows="3"
             placeholder="Escribe un mensaje... (Enter para enviar, Shift+Enter para salto de línea)"
-            class="flex-1 resize-none bg-transparent text-sm text-white placeholder-slate-500 focus:outline-none max-h-36"
+            class="flex-1 resize-none bg-transparent text-sm text-base-content placeholder:text-base-content/40 focus:outline-none max-h-36"
             @keydown="handleKeydown" />
           <!-- Cancel button while sending -->
           <button v-if="sending"
@@ -1407,7 +1407,7 @@ onMounted(fetchInitialData)
           <!-- Send button -->
           <button v-else
             class="shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-colors disabled:opacity-40"
-            :class="messageInput.trim() && activeConversation ? 'bg-indigo-600 hover:bg-indigo-500' : 'bg-slate-700'"
+            :class="messageInput.trim() && activeConversation ? 'bg-indigo-600 hover:bg-indigo-500' : 'bg-base-100'"
             :disabled="!messageInput.trim() || !activeConversation" @click="sendMessage">
             <span class="mdi mdi-send"></span>
           </button>
@@ -1436,19 +1436,19 @@ onMounted(fetchInitialData)
   <div v-if="pendingStageSelection"
     class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
     @click.self="pendingStageSelection = null">
-    <div class="bg-slate-900 rounded-2xl border border-slate-700 w-full max-w-md p-6">
-      <h2 class="text-lg font-semibold text-white mb-1">Selecciona un stage</h2>
-      <p class="text-xs text-slate-400 mb-4 truncate">Trazabilidad: {{ pendingStageSelection.title }}</p>
-      <p class="text-sm text-slate-300 mb-3">Tienes acceso a varios stages. Cada uno abrirá su propio chat:</p>
+    <div class="bg-base-300 rounded-2xl border border-base-300 w-full max-w-md p-6">
+      <h2 class="text-lg font-semibold text-base-content mb-1">Selecciona un stage</h2>
+      <p class="text-xs text-base-content/60 mb-4 truncate">Trazabilidad: {{ pendingStageSelection.title }}</p>
+      <p class="text-sm text-base-content mb-3">Tienes acceso a varios stages. Cada uno abrirá su propio chat:</p>
       <div class="space-y-2 max-h-80 overflow-y-auto">
         <button v-for="s in pendingStageSelection.stages" :key="s.id"
           class="w-full text-left px-3 py-3 rounded-lg border transition-colors" :class="s.hasChat
             ? 'border-emerald-700/50 bg-emerald-900/10 hover:bg-emerald-900/20'
-            : 'border-slate-700 bg-slate-800 hover:bg-slate-700'" @click="pickStageFromModal(s.id)">
+            : 'border-base-300 bg-base-200 hover:bg-base-100'" @click="pickStageFromModal(s.id)">
           <div class="flex items-center justify-between gap-2">
             <div class="min-w-0">
-              <p class="text-sm font-medium text-white truncate">{{ s.name }}</p>
-              <p v-if="s.role" class="text-[11px] text-slate-400 truncate">Rol: {{ s.role }}</p>
+              <p class="text-sm font-medium text-base-content truncate">{{ s.name }}</p>
+              <p v-if="s.role" class="text-[11px] text-base-content/60 truncate">Rol: {{ s.role }}</p>
             </div>
             <span v-if="s.hasChat" class="text-[10px] uppercase tracking-wider text-emerald-400 shrink-0">Abierto</span>
             <span v-else class="text-[10px] uppercase tracking-wider text-indigo-400 shrink-0">Crear</span>
@@ -1457,7 +1457,7 @@ onMounted(fetchInitialData)
       </div>
       <div class="flex justify-end gap-2 mt-5">
         <button @click="pendingStageSelection = null"
-          class="px-4 py-2 rounded-lg text-sm text-slate-300 hover:text-white hover:bg-slate-800 transition-colors">
+          class="px-4 py-2 rounded-lg text-sm text-base-content hover:text-base-content hover:bg-base-200 transition-colors">
           Cerrar
         </button>
       </div>
@@ -1474,21 +1474,21 @@ onMounted(fetchInitialData)
   <div v-if="showNewChatModal"
     class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
     @click.self="showNewChatModal = false">
-    <div class="bg-slate-900 rounded-2xl border border-slate-700 w-full max-w-md p-6">
-      <h2 class="text-lg font-semibold text-white mb-5">Nueva conversación</h2>
+    <div class="bg-base-300 rounded-2xl border border-base-300 w-full max-w-md p-6">
+      <h2 class="text-lg font-semibold text-base-content mb-5">Nueva conversación</h2>
 
       <div class="space-y-4">
         <!-- Title -->
         <div>
-          <label class="block text-sm text-slate-400 mb-1.5">Nombre *</label>
+          <label class="block text-sm text-base-content/60 mb-1.5">Nombre *</label>
           <input v-model="newChatTitle" type="text" placeholder="Ej: Análisis de feature PROJ-123"
-            class="w-full px-3 py-2.5 rounded-lg bg-slate-800 border border-slate-700 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors" />
+            class="w-full px-3 py-2.5 rounded-lg bg-base-200 border border-base-300 text-sm text-base-content placeholder:text-base-content/40 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors" />
         </div>
 
         <!-- Agent selection -->
         <div>
-          <label class="block text-sm text-slate-400 mb-1.5">Agente *</label>
-          <div v-if="loadingChatAgents" class="flex items-center gap-2 text-slate-500 text-sm py-2">
+          <label class="block text-sm text-base-content/60 mb-1.5">Agente *</label>
+          <div v-if="loadingChatAgents" class="flex items-center gap-2 text-base-content/50 text-sm py-2">
             <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
@@ -1503,11 +1503,11 @@ onMounted(fetchInitialData)
             <label v-for="agent in chatAgents" :key="agent.id"
               class="flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all" :class="selectedAgentId === agent.id
                 ? 'bg-indigo-600/10 border-indigo-500 ring-1 ring-indigo-500/40'
-                : 'bg-slate-800/50 border-slate-700 hover:border-slate-600'">
+                : 'bg-base-200/50 border-base-300 hover:border-base-content/20'">
               <input type="radio" :value="agent.id" v-model="selectedAgentId" class="mt-0.5 accent-indigo-500" />
               <div class="min-w-0">
-                <p class="text-sm font-medium text-white">{{ agent.name }}</p>
-                <p v-if="agent.description" class="text-xs text-slate-400 mt-0.5 truncate">{{ agent.description }}</p>
+                <p class="text-sm font-medium text-base-content">{{ agent.name }}</p>
+                <p v-if="agent.description" class="text-xs text-base-content/60 mt-0.5 truncate">{{ agent.description }}</p>
               </div>
             </label>
           </div>
@@ -1516,7 +1516,7 @@ onMounted(fetchInitialData)
 
       <div class="flex gap-3 mt-6">
         <button @click="showNewChatModal = false"
-          class="flex-1 py-2.5 text-sm rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition-colors">
+          class="flex-1 py-2.5 text-sm rounded-xl bg-base-200 hover:bg-base-100 text-base-content font-medium transition-colors">
           Cancelar
         </button>
         <button @click="createConversation" :disabled="!selectedAgentId || !newChatTitle.trim()"

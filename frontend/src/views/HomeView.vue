@@ -116,7 +116,7 @@ onMounted(() => {
   <PageLayout title="Dashboard" description="Tu punto de partida en Agent Manager">
     <template #actions>
       <button @click="() => { fetchReleaseNotes(); fetchStats() }"
-        class="flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors">
+        class="flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg bg-base-200 hover:bg-base-100 text-base-content transition-colors">
         <svg class="w-3.5 h-3.5" :class="releaseNotesLoading || statsLoading ? 'animate-spin' : ''" fill="none"
           viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -131,104 +131,104 @@ onMounted(() => {
 
       <!-- Hero / Welcome (2x1) -->
       <div
-        class="md:col-span-2 rounded-2xl p-5 bg-gradient-to-br from-indigo-600/30 via-indigo-700/20 to-slate-900 border border-indigo-500/30 flex flex-col justify-between overflow-hidden relative">
+        class="md:col-span-2 rounded-2xl p-5 bg-gradient-to-br from-indigo-600/30 via-indigo-700/20 to-base-300 border border-indigo-500/30 flex flex-col justify-between overflow-hidden relative">
         <div class="absolute -right-8 -bottom-8 w-40 h-40 rounded-full bg-indigo-500/20 blur-3xl pointer-events-none" />
         <div class="relative">
           <p class="text-xs text-indigo-300 uppercase tracking-wider font-semibold">{{ greeting }}</p>
-          <h2 class="text-2xl font-bold text-white mt-1 truncate">{{ userName }} 👋</h2>
-          <p class="text-sm text-slate-400 mt-1 capitalize">{{ today }}</p>
+          <h2 class="text-2xl font-bold text-base-content mt-1 truncate">{{ userName }} 👋</h2>
+          <p class="text-sm text-base-content/60 mt-1 capitalize">{{ today }}</p>
         </div>
         <div v-if="latestVersion" class="relative mt-4 flex items-center gap-2 text-xs">
           <span class="px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-mono">v{{ latestVersion }}</span>
-          <span class="text-slate-400 truncate">Última versión publicada</span>
+          <span class="text-base-content/60 truncate">Última versión publicada</span>
         </div>
       </div>
 
       <!-- Agentes stat -->
       <button @click="go('/agentes')"
-        class="rounded-2xl p-5 bg-slate-900 border border-slate-800 hover:border-emerald-500/40 transition-colors text-left group">
+        class="rounded-2xl p-5 bg-base-300 border border-base-300 hover:border-emerald-500/40 transition-colors text-left group">
         <div class="flex items-start justify-between">
           <span class="text-2xl">🤖</span>
-          <svg class="w-4 h-4 text-slate-600 group-hover:text-emerald-400 transition-colors" fill="none"
+          <svg class="w-4 h-4 text-base-content/40 group-hover:text-emerald-400 transition-colors" fill="none"
             viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
           </svg>
         </div>
-        <p class="text-3xl font-bold text-white mt-3 font-mono">
-          <span v-if="agentsCount === null" class="text-slate-700">···</span>
+        <p class="text-3xl font-bold text-base-content mt-3 font-mono">
+          <span v-if="agentsCount === null" class="text-base-content/70">···</span>
           <span v-else>{{ agentsCount }}</span>
         </p>
-        <p class="text-xs text-slate-400 mt-1">Agentes disponibles</p>
+        <p class="text-xs text-base-content/60 mt-1">Agentes disponibles</p>
       </button>
 
       <!-- MCPs stat -->
       <button @click="go('/mcps')"
-        class="rounded-2xl p-5 bg-slate-900 border border-slate-800 hover:border-sky-500/40 transition-colors text-left group">
+        class="rounded-2xl p-5 bg-base-300 border border-base-300 hover:border-sky-500/40 transition-colors text-left group">
         <div class="flex items-start justify-between">
           <span class="text-2xl">🔌</span>
-          <svg class="w-4 h-4 text-slate-600 group-hover:text-sky-400 transition-colors" fill="none"
+          <svg class="w-4 h-4 text-base-content/40 group-hover:text-sky-400 transition-colors" fill="none"
             viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
           </svg>
         </div>
-        <p class="text-3xl font-bold text-white mt-3 font-mono">
-          <span v-if="mcpsCount === null" class="text-slate-700">···</span>
+        <p class="text-3xl font-bold text-base-content mt-3 font-mono">
+          <span v-if="mcpsCount === null" class="text-base-content/70">···</span>
           <span v-else>{{ mcpsCount }}</span>
         </p>
-        <p class="text-xs text-slate-400 mt-1">Servidores MCP</p>
+        <p class="text-xs text-base-content/60 mt-1">Servidores MCP</p>
       </button>
 
       <!-- Release notes (2x2) -->
-      <div class="md:col-span-2 md:row-span-2 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col">
-        <header class="flex items-center justify-between gap-3 px-5 py-4 border-b border-slate-800">
+      <div class="md:col-span-2 md:row-span-2 rounded-2xl bg-base-300 border border-base-300 flex flex-col">
+        <header class="flex items-center justify-between gap-3 px-5 py-4 border-b border-base-300">
           <div class="flex items-center gap-2">
             <span class="text-base">🚀</span>
-            <h3 class="text-sm font-semibold text-white">Últimos cambios</h3>
+            <h3 class="text-sm font-semibold text-base-content">Últimos cambios</h3>
           </div>
-          <span class="text-xs text-slate-500 font-mono">doc/&lt;version&gt;.md</span>
+          <span class="text-xs text-base-content/50 font-mono">doc/&lt;version&gt;.md</span>
         </header>
         <div v-if="releaseNotesLoading" class="flex-1 flex justify-center items-center py-10">
           <div class="animate-spin w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full" />
         </div>
-        <div v-else-if="!releaseNotes.length" class="flex-1 flex items-center justify-center px-4 py-10 text-xs text-slate-500 italic text-center">
-          Aún no hay archivos en la carpeta <code class="text-slate-400">doc/</code>.
+        <div v-else-if="!releaseNotes.length" class="flex-1 flex items-center justify-center px-4 py-10 text-xs text-base-content/50 italic text-center">
+          Aún no hay archivos en la carpeta <code class="text-base-content/60">doc/</code>.
         </div>
-        <ul v-else class="flex-1 overflow-y-auto divide-y divide-slate-800">
+        <ul v-else class="flex-1 overflow-y-auto divide-y divide-base-300">
           <li v-for="note in releaseNotes.slice(0, 6)" :key="note.version">
             <button @click="toggleNote(note.version)"
-              class="w-full flex items-center gap-3 px-5 py-3 hover:bg-slate-800/40 transition-colors text-left">
+              class="w-full flex items-center gap-3 px-5 py-3 hover:bg-base-200/40 transition-colors text-left">
               <span class="font-mono text-xs px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-300 shrink-0">
                 v{{ note.version }}
               </span>
-              <span class="flex-1 min-w-0 text-sm text-white truncate">
+              <span class="flex-1 min-w-0 text-sm text-base-content truncate">
                 {{ note.title ?? `Versión ${note.version}` }}
               </span>
-              <span v-if="note.date" class="text-xs text-slate-500 font-mono shrink-0 hidden sm:inline">{{ note.date }}</span>
-              <svg class="w-4 h-4 text-slate-500 shrink-0 transition-transform"
+              <span v-if="note.date" class="text-xs text-base-content/50 font-mono shrink-0 hidden sm:inline">{{ note.date }}</span>
+              <svg class="w-4 h-4 text-base-content/50 shrink-0 transition-transform"
                 :class="expandedNote === note.version ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
               </svg>
             </button>
             <div v-if="expandedNote === note.version" class="px-5 pb-4">
-              <pre class="text-xs text-slate-300 whitespace-pre-wrap font-mono leading-relaxed bg-slate-950 rounded-lg p-3 border border-slate-800">{{ note.content }}</pre>
+              <pre class="text-xs text-base-content whitespace-pre-wrap font-mono leading-relaxed bg-base-300 rounded-lg p-3 border border-base-300">{{ note.content }}</pre>
             </div>
           </li>
         </ul>
       </div>
 
       <!-- Conversaciones recientes (1x2) -->
-      <div class="md:row-span-2 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col">
-        <header class="flex items-center justify-between gap-2 px-4 py-4 border-b border-slate-800">
+      <div class="md:row-span-2 rounded-2xl bg-base-300 border border-base-300 flex flex-col">
+        <header class="flex items-center justify-between gap-2 px-4 py-4 border-b border-base-300">
           <div class="flex items-center gap-2">
             <span class="text-base">💬</span>
-            <h3 class="text-sm font-semibold text-white">Chats recientes</h3>
+            <h3 class="text-sm font-semibold text-base-content">Chats recientes</h3>
           </div>
           <button @click="go('/chat')"
             class="text-xs text-indigo-400 hover:text-indigo-300 transition-colors">Ver todos →</button>
         </header>
         <div v-if="!recentConversations.length"
-          class="flex-1 flex flex-col items-center justify-center px-4 py-10 text-center text-xs text-slate-500">
+          class="flex-1 flex flex-col items-center justify-center px-4 py-10 text-center text-xs text-base-content/50">
           <span class="text-3xl mb-2 opacity-50">💭</span>
           <p>Aún no tienes chats</p>
           <button @click="go('/chat')"
@@ -236,12 +236,12 @@ onMounted(() => {
             Iniciar chat
           </button>
         </div>
-        <ul v-else class="flex-1 overflow-y-auto divide-y divide-slate-800">
+        <ul v-else class="flex-1 overflow-y-auto divide-y divide-base-300">
           <li v-for="c in recentConversations" :key="c.id">
             <button @click="go(`/chat?conversation=${c.id}`)"
-              class="w-full px-4 py-3 hover:bg-slate-800/40 transition-colors text-left">
-              <p class="text-sm text-white truncate">{{ c.title || 'Sin título' }}</p>
-              <p class="text-xs text-slate-500 mt-0.5">{{ formatRelative(c.updatedAt || c.createdAt) }}</p>
+              class="w-full px-4 py-3 hover:bg-base-200/40 transition-colors text-left">
+              <p class="text-sm text-base-content truncate">{{ c.title || 'Sin título' }}</p>
+              <p class="text-xs text-base-content/50 mt-0.5">{{ formatRelative(c.updatedAt || c.createdAt) }}</p>
             </button>
           </li>
         </ul>
@@ -249,74 +249,74 @@ onMounted(() => {
 
       <!-- Skills stat -->
       <button @click="go('/agentes')"
-        class="rounded-2xl p-5 bg-slate-900 border border-slate-800 hover:border-amber-500/40 transition-colors text-left group">
+        class="rounded-2xl p-5 bg-base-300 border border-base-300 hover:border-amber-500/40 transition-colors text-left group">
         <div class="flex items-start justify-between">
           <span class="text-2xl">⚡</span>
-          <svg class="w-4 h-4 text-slate-600 group-hover:text-amber-400 transition-colors" fill="none"
+          <svg class="w-4 h-4 text-base-content/40 group-hover:text-amber-400 transition-colors" fill="none"
             viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
           </svg>
         </div>
-        <p class="text-3xl font-bold text-white mt-3 font-mono">
-          <span v-if="skillsCount === null" class="text-slate-700">···</span>
+        <p class="text-3xl font-bold text-base-content mt-3 font-mono">
+          <span v-if="skillsCount === null" class="text-base-content/70">···</span>
           <span v-else>{{ skillsCount }}</span>
         </p>
-        <p class="text-xs text-slate-400 mt-1">Skills configurados</p>
+        <p class="text-xs text-base-content/60 mt-1">Skills configurados</p>
       </button>
 
       <!-- Sugerencias de gobernanza -->
       <button @click="go('/gobernanza/sugerencias')"
-        class="rounded-2xl p-5 bg-slate-900 border border-slate-800 hover:border-fuchsia-500/40 transition-colors text-left group relative">
+        class="rounded-2xl p-5 bg-base-300 border border-base-300 hover:border-fuchsia-500/40 transition-colors text-left group relative">
         <div class="flex items-start justify-between">
           <span class="text-2xl">📜</span>
-          <svg class="w-4 h-4 text-slate-600 group-hover:text-fuchsia-400 transition-colors" fill="none"
+          <svg class="w-4 h-4 text-base-content/40 group-hover:text-fuchsia-400 transition-colors" fill="none"
             viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
           </svg>
         </div>
-        <p class="text-3xl font-bold text-white mt-3 font-mono">
-          <span v-if="suggestionsCount === null" class="text-slate-700">···</span>
+        <p class="text-3xl font-bold text-base-content mt-3 font-mono">
+          <span v-if="suggestionsCount === null" class="text-base-content/70">···</span>
           <span v-else>{{ suggestionsCount }}</span>
         </p>
-        <p class="text-xs text-slate-400 mt-1">Sugerencias de gobernanza</p>
+        <p class="text-xs text-base-content/60 mt-1">Sugerencias de gobernanza</p>
         <span v-if="suggestionsCount && suggestionsCount > 0"
           class="absolute top-3 right-3 w-2 h-2 rounded-full bg-fuchsia-400 animate-pulse" />
       </button>
 
       <!-- Atajos rápidos (4x1) -->
-      <div class="md:col-span-4 rounded-2xl p-5 bg-slate-900 border border-slate-800">
-        <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Atajos rápidos</h3>
+      <div class="md:col-span-4 rounded-2xl p-5 bg-base-300 border border-base-300">
+        <h3 class="text-xs font-semibold text-base-content/60 uppercase tracking-wider mb-3">Atajos rápidos</h3>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
           <button @click="go('/chat')"
-            class="flex items-center gap-3 p-3 rounded-xl bg-slate-800/60 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/40 transition-colors text-left">
+            class="flex items-center gap-3 p-3 rounded-xl bg-base-200/60 hover:bg-base-200 border border-base-300 hover:border-indigo-500/40 transition-colors text-left">
             <span class="text-xl">💬</span>
             <div class="min-w-0">
-              <p class="text-sm font-medium text-white">Nuevo chat</p>
-              <p class="text-xs text-slate-500 truncate">Conversa con un agente</p>
+              <p class="text-sm font-medium text-base-content">Nuevo chat</p>
+              <p class="text-xs text-base-content/50 truncate">Conversa con un agente</p>
             </div>
           </button>
           <button @click="go('/agentes')"
-            class="flex items-center gap-3 p-3 rounded-xl bg-slate-800/60 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/40 transition-colors text-left">
+            class="flex items-center gap-3 p-3 rounded-xl bg-base-200/60 hover:bg-base-200 border border-base-300 hover:border-emerald-500/40 transition-colors text-left">
             <span class="text-xl">🤖</span>
             <div class="min-w-0">
-              <p class="text-sm font-medium text-white">Agentes</p>
-              <p class="text-xs text-slate-500 truncate">Configura tus agentes</p>
+              <p class="text-sm font-medium text-base-content">Agentes</p>
+              <p class="text-xs text-base-content/50 truncate">Configura tus agentes</p>
             </div>
           </button>
           <button @click="go('/mcps')"
-            class="flex items-center gap-3 p-3 rounded-xl bg-slate-800/60 hover:bg-slate-800 border border-slate-800 hover:border-sky-500/40 transition-colors text-left">
+            class="flex items-center gap-3 p-3 rounded-xl bg-base-200/60 hover:bg-base-200 border border-base-300 hover:border-sky-500/40 transition-colors text-left">
             <span class="text-xl">🔌</span>
             <div class="min-w-0">
-              <p class="text-sm font-medium text-white">MCPs</p>
-              <p class="text-xs text-slate-500 truncate">Conectores externos</p>
+              <p class="text-sm font-medium text-base-content">MCPs</p>
+              <p class="text-xs text-base-content/50 truncate">Conectores externos</p>
             </div>
           </button>
           <button @click="go('/automatizacion')"
-            class="flex items-center gap-3 p-3 rounded-xl bg-slate-800/60 hover:bg-slate-800 border border-slate-800 hover:border-amber-500/40 transition-colors text-left">
+            class="flex items-center gap-3 p-3 rounded-xl bg-base-200/60 hover:bg-base-200 border border-base-300 hover:border-amber-500/40 transition-colors text-left">
             <span class="text-xl">⚙️</span>
             <div class="min-w-0">
-              <p class="text-sm font-medium text-white">Automatización</p>
-              <p class="text-xs text-slate-500 truncate">Hooks y listeners</p>
+              <p class="text-sm font-medium text-base-content">Automatización</p>
+              <p class="text-xs text-base-content/50 truncate">Hooks y listeners</p>
             </div>
           </button>
         </div>

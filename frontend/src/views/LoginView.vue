@@ -60,19 +60,19 @@ function loginWithAzure() {
 
 <template>
   <div
-    class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900 flex items-center justify-center px-4">
+    class="min-h-screen bg-gradient-to-br from-base-300 via-base-300 to-indigo-900 flex items-center justify-center px-4">
     <div class="w-full max-w-md">
       <!-- Logo / Title -->
       <div class="text-center mb-8">
         <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-600 shadow-lg mb-4">
-          <span class="text-white text-2xl font-bold">AM</span>
+          <span class="text-base-content text-2xl font-bold">AM</span>
         </div>
-        <h1 class="text-3xl font-bold text-white">Agent Manager</h1>
-        <p class="text-slate-400 mt-1 text-sm">Sign in to your admin account</p>
+        <h1 class="text-3xl font-bold text-base-content">Agent Manager</h1>
+        <p class="text-base-content/60 mt-1 text-sm">Sign in to your admin account</p>
       </div>
 
       <!-- Card -->
-      <div class="bg-white rounded-2xl shadow-2xl p-8">
+      <div class="bg-base-100 rounded-2xl shadow-2xl p-8">
 
         <!-- Azure loading overlay -->
         <div v-if="azureLoading" class="flex flex-col items-center justify-center py-6 gap-3">
@@ -80,7 +80,7 @@ function loginWithAzure() {
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
           </svg>
-          <p class="text-sm text-slate-500">Completing Azure sign-in...</p>
+          <p class="text-sm text-base-content/50">Completing Azure sign-in...</p>
         </div>
 
         <template v-else>
@@ -91,7 +91,7 @@ function loginWithAzure() {
 
           <!-- Azure AD Login -->
           <button type="button" @click="loginWithAzure"
-            class="w-full flex items-center justify-center gap-3 border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium py-2.5 rounded-lg transition-colors text-sm mb-5">
+            class="w-full flex items-center justify-center gap-3 border border-base-300 hover:bg-base-100 text-base-content/70 font-medium py-2.5 rounded-lg transition-colors text-sm mb-5">
             <!-- Microsoft logo -->
             <svg width="18" height="18" viewBox="0 0 21 21" fill="none" xmlns="http://www.w3.org/2000/svg">
               <rect x="1" y="1" width="9" height="9" fill="#F25022" />
@@ -104,26 +104,26 @@ function loginWithAzure() {
 
           <!-- Divider -->
           <div class="flex items-center gap-3 mb-5">
-            <div class="flex-1 h-px bg-slate-200"></div>
-            <span class="text-xs text-slate-400">or continue with username</span>
-            <div class="flex-1 h-px bg-slate-200"></div>
+            <div class="flex-1 h-px bg-base-100"></div>
+            <span class="text-xs text-base-content/60">or continue with username</span>
+            <div class="flex-1 h-px bg-base-100"></div>
           </div>
 
           <!-- Credentials form -->
           <form @submit.prevent="handleLogin" class="space-y-5">
             <!-- Username -->
             <div>
-              <label class="block text-sm font-medium text-slate-700 mb-1.5">Username</label>
+              <label class="block text-sm font-medium text-base-content/70 mb-1.5">Username</label>
               <input v-model="username" type="text" placeholder="Enter your username" autocomplete="username"
-                class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-slate-800 placeholder-slate-400 text-sm transition" />
+                class="w-full px-4 py-2.5 rounded-lg border border-base-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base-content placeholder:text-base-content/40 text-sm transition" />
             </div>
 
             <!-- Password -->
             <div>
-              <label class="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
+              <label class="block text-sm font-medium text-base-content/70 mb-1.5">Password</label>
               <input v-model="password" type="password" placeholder="Enter your password"
                 autocomplete="current-password"
-                class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-slate-800 placeholder-slate-400 text-sm transition" />
+                class="w-full px-4 py-2.5 rounded-lg border border-base-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base-content placeholder:text-base-content/40 text-sm transition" />
             </div>
 
             <!-- Submit -->

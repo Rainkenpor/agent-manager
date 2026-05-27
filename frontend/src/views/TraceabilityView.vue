@@ -93,7 +93,7 @@ const tracStatusLabel: Record<string, string> = { active: 'Activo', completed: '
 const tracStatusClass: Record<string, string> = {
   active: 'bg-blue-500/10 text-blue-400 ring-1 ring-blue-500/20',
   completed: 'bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20',
-  archived: 'bg-slate-500/10 text-slate-400 ring-1 ring-slate-500/20',
+  archived: 'bg-base-content/30/10 text-base-content/60 ring-1 ring-base-content/30/20',
 }
 
 const stageStatusLabel: Record<string, string> = {
@@ -101,14 +101,14 @@ const stageStatusLabel: Record<string, string> = {
   blocked: 'Bloqueado', 'in-review': 'En revisión',
 }
 const stageStatusClass: Record<string, string> = {
-  pending: 'bg-slate-700 text-slate-300',
+  pending: 'bg-base-100 text-base-content',
   active: 'bg-blue-500/20 text-blue-300',
   completed: 'bg-emerald-500/20 text-emerald-300',
   blocked: 'bg-red-500/20 text-red-300',
   'in-review': 'bg-amber-500/20 text-amber-300',
 }
 const taskStatusClass: Record<string, string> = {
-  todo: 'text-slate-400', 'in-progress': 'text-blue-400', done: 'text-emerald-400', blocked: 'text-red-400',
+  todo: 'text-base-content/60', 'in-progress': 'text-blue-400', done: 'text-emerald-400', blocked: 'text-red-400',
 }
 const platformIcons: Record<string, string> = {
   jira: '🟦', confluence: '🟩', github: '⬛', gitlab: '🟧', generic: '🔗',
@@ -655,12 +655,12 @@ onMounted(fetchAll)
     <div class="flex gap-5 h-full overflow-auto">
       <div class="flex flex-col ">
         <!-- Tabs -->
-        <div class="flex gap-1 mb-5 bg-slate-900 rounded-xl p-1 w-fit">
+        <div class="flex gap-1 mb-5 bg-base-300 rounded-xl p-1 w-fit">
           <button
             v-for="tab in [{ key: 'traceabilities', label: 'Trazabilidades' }, { key: 'templates', label: 'Templates' }]"
             :key="tab.key" @click="activeTab = tab.key as any"
             class="px-4 py-2 text-sm rounded-lg font-medium transition-colors"
-            :class="activeTab === tab.key ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'">
+            :class="activeTab === tab.key ? 'bg-indigo-600 text-white' : 'text-base-content/60 hover:text-white'">
             {{ tab.label }}
           </button>
         </div>
@@ -671,13 +671,13 @@ onMounted(fetchAll)
         </div>
 
         <div v-if="!loading && activeTab === 'traceabilities'" class="flex gap-5 flex-1 min-h-0">
-          <div v-if="traceabilities.length === 0" class="text-center py-16 text-slate-500">
+          <div v-if="traceabilities.length === 0" class="text-center py-16 text-base-content/50">
             <svg class="w-10 h-10 mx-auto mb-3 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                 d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7" />
             </svg>
             <p class="text-sm">No hay trazabilidades</p>
-            <p class="text-xs mt-1 text-slate-600">
+            <p class="text-xs mt-1 text-base-content/40">
               <span v-if="templates.length === 0">Crea un template primero</span>
               <span v-else>Pulsa "+ Nueva Trazabilidad"</span>
             </p>
@@ -686,57 +686,57 @@ onMounted(fetchAll)
           <div class="w-72 shrink-0 space-y-2 overflow-y-auto">
             <div v-for="item in traceabilities" :key="item.id"
               class="rounded-xl border p-3 cursor-pointer transition-all" :class="activeTrac?.id === item.id
-                ? 'bg-slate-800 border-indigo-500 ring-1 ring-indigo-500/30'
-                : 'bg-slate-900 border-slate-800 hover:border-slate-700'" @click="selectTrac(item)">
+                ? 'bg-base-200 border-indigo-500 ring-1 ring-indigo-500/30'
+                : 'bg-base-300 border-base-300 hover:border-base-300'" @click="selectTrac(item)">
               <div class="flex items-start justify-between gap-2 mb-2">
-                <p class="font-medium text-white text-sm truncate flex-1">{{ item.title }}</p>
+                <p class="font-medium text-base-content text-sm truncate flex-1">{{ item.title }}</p>
                 <span class="text-xs px-1.5 py-0.5 rounded-full font-medium shrink-0"
                   :class="tracStatusClass[item.status]">
                   {{ tracStatusLabel[item.status] }}
                 </span>
               </div>
               <div class="flex items-center justify-between gap-2">
-                <div class="flex-1 h-1 bg-slate-700 rounded-full overflow-hidden">
+                <div class="flex-1 h-1 bg-base-100 rounded-full overflow-hidden">
                   <div class="h-full bg-teal-500 rounded-full"
                     :style="`width:${item.stageCount ? Math.round((item.completedStages / item.stageCount) * 100) : 0}%`" />
                 </div>
-                <span class="text-xs text-slate-500 shrink-0">
+                <span class="text-xs text-base-content/50 shrink-0">
                   {{ item.completedStages }}/{{ item.stageCount }}
                 </span>
                 <button v-if="canDelete" @click.stop="deleteTracTarget = item"
-                  class="text-slate-600 hover:text-red-400 transition-colors shrink-0">
+                  class="text-base-content/40 hover:text-red-400 transition-colors shrink-0">
                   <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               </div>
-              <p v-if="item.templateName" class="text-xs text-slate-600 mt-1.5 truncate">{{ item.templateName }}</p>
+              <p v-if="item.templateName" class="text-xs text-base-content/40 mt-1.5 truncate">{{ item.templateName }}</p>
             </div>
           </div>
         </div>
 
         <div v-if="!loading && activeTab === 'templates'" class="flex gap-5 flex-1 min-h-0">
           <div class="w-72 shrink-0 space-y-2 overflow-y-auto">
-            <div v-if="templates.length === 0" class="text-center py-16 text-slate-500 text-sm">
+            <div v-if="templates.length === 0" class="text-center py-16 text-base-content/50 text-sm">
               No hay templates
             </div>
             <div v-for="t in templates" :key="t.id" class="rounded-xl border p-3 cursor-pointer transition-all" :class="activeTemplate?.id === t.id
-              ? 'bg-slate-800 border-indigo-500 ring-1 ring-indigo-500/30'
-              : 'bg-slate-900 border-slate-800 hover:border-slate-700'" @click="openTemplate(t)">
+              ? 'bg-base-200 border-indigo-500 ring-1 ring-indigo-500/30'
+              : 'bg-base-300 border-base-300 hover:border-base-300'" @click="openTemplate(t)">
               <div class="flex items-start justify-between gap-2">
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center gap-1.5 flex-wrap">
-                    <p class="font-medium text-white text-sm truncate">{{ t.name }}</p>
+                    <p class="font-medium text-base-content text-sm truncate">{{ t.name }}</p>
                     <span v-if="t.code"
                       class="font-mono text-xs px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/30">{{
                         t.code }}</span>
                   </div>
-                  <p class="text-xs text-slate-500 mt-0.5">
+                  <p class="text-xs text-base-content/50 mt-0.5">
                     {{ t.stages?.length ?? 0 }} etapa{{ (t.stages?.length ?? 0) !== 1 ? 's' : '' }}
                   </p>
                 </div>
                 <button v-if="canDelete" @click.stop="deleteTplTarget = t"
-                  class="text-slate-600 hover:text-red-400 transition-colors shrink-0 mt-0.5">
+                  class="text-base-content/40 hover:text-red-400 transition-colors shrink-0 mt-0.5">
                   <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                   </svg>
@@ -754,7 +754,7 @@ onMounted(fetchAll)
         <!-- Center: traceability detail -->
         <div class="flex-1 min-w-0 overflow-y-auto">
           <!-- Empty state -->
-          <div v-if="!activeTrac && !loadingTrac" class="flex flex-col items-center justify-center h-64 text-slate-500">
+          <div v-if="!activeTrac && !loadingTrac" class="flex flex-col items-center justify-center h-64 text-base-content/50">
             <svg class="w-12 h-12 mb-3 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                 d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7" />
@@ -772,7 +772,7 @@ onMounted(fetchAll)
               <div v-if="!editingTrac" class="flex items-start justify-between gap-3">
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center gap-3 flex-wrap">
-                    <h2 class="text-xl font-bold text-white">
+                    <h2 class="text-xl font-bold text-base-content">
                       {{ activeTrac.title }}
                     </h2>
                   </div>
@@ -786,31 +786,31 @@ onMounted(fetchAll)
                       {{ tracStatusLabel[activeTrac.status] }}
                     </span>
                   </div>
-                  <p v-if="activeTrac.description" class="text-slate-400 text-sm mt-1">{{ activeTrac.description }}</p>
-                  <p v-if="activeTrac.templateName" class="text-xs text-slate-600 mt-1">Template: {{
+                  <p v-if="activeTrac.description" class="text-base-content/60 text-sm mt-1">{{ activeTrac.description }}</p>
+                  <p v-if="activeTrac.templateName" class="text-xs text-base-content/40 mt-1">Template: {{
                     activeTrac.templateName
                   }}</p>
                 </div>
                 <button v-if="canUpdate" @click="editingTrac = true"
-                  class="shrink-0 px-3 py-1.5 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors">
+                  class="shrink-0 px-3 py-1.5 text-xs rounded-lg bg-base-200 hover:bg-base-100 text-base-content transition-colors">
                   Editar
                 </button>
               </div>
 
-              <div v-else class="bg-slate-900 rounded-xl border border-slate-700 p-4 space-y-3">
+              <div v-else class="bg-base-300 rounded-xl border border-base-300 p-4 space-y-3">
                 <input v-model="editTracForm.title"
-                  class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                  class="w-full bg-base-200 border border-base-300 rounded-lg px-3 py-2 text-base-content text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
                 <textarea v-model="editTracForm.description" rows="2"
-                  class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none" />
+                  class="w-full bg-base-200 border border-base-300 rounded-lg px-3 py-2 text-base-content text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none" />
                 <select v-model="editTracForm.status"
-                  class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none">
+                  class="bg-base-200 border border-base-300 rounded-lg px-3 py-2 text-base-content text-sm focus:outline-none">
                   <option value="active">Activo</option>
                   <option value="completed">Completado</option>
                   <option value="archived">Archivado</option>
                 </select>
                 <div class="flex gap-2">
                   <button @click="editingTrac = false"
-                    class="px-3 py-1.5 text-xs rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors">Cancelar</button>
+                    class="px-3 py-1.5 text-xs rounded-lg bg-base-100 hover:bg-base-100 text-base-content transition-colors">Cancelar</button>
                   <button @click="saveTrac"
                     class="px-3 py-1.5 text-xs rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-colors">Guardar</button>
                 </div>
@@ -818,8 +818,8 @@ onMounted(fetchAll)
             </div>
 
             <!-- BPMN Stage Flow -->
-            <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Flujo de proceso</h3>
-            <div class="overflow-auto rounded-xl border border-slate-800 bg-slate-950/50">
+            <h3 class="text-xs font-semibold text-base-content/60 uppercase tracking-wider mb-3">Flujo de proceso</h3>
+            <div class="overflow-auto rounded-xl border border-base-300 bg-base-300/50">
               <svg :width="bpmnLayout.width" :height="bpmnLayout.height" class="block mx-auto">
                 <defs>
                   <!-- Arrowhead marker for sequence flows -->
@@ -914,18 +914,18 @@ onMounted(fetchAll)
 
       <!-- Right: stage tasks/links panel -->
       <div v-if="!loading && activeTab === 'traceabilities' && activeStage"
-        class="w-80 shrink-0 bg-slate-900 rounded-2xl border border-slate-800 p-5  overflow-auto top-0">
+        class="w-80 shrink-0 bg-base-300 rounded-2xl border border-base-300 p-5  overflow-auto top-0">
         <!-- Stage header -->
         <div class="flex items-start justify-between gap-2 mb-4">
           <div class="flex-1 min-w-0">
-            <h3 class="font-semibold text-white text-sm">{{ activeStage.name }}</h3>
-            <p v-if="activeStage.role" class="text-xs text-slate-400 mt-0.5">{{ roleNameById(activeStage.role) }}</p>
+            <h3 class="font-semibold text-base-content text-sm">{{ activeStage.name }}</h3>
+            <p v-if="activeStage.role" class="text-xs text-base-content/60 mt-0.5">{{ roleNameById(activeStage.role) }}</p>
           </div>
           <div class="flex items-center gap-2 shrink-0">
             <span class="text-xs px-2 py-0.5 rounded-full font-medium" :class="stageStatusClass[activeStage.status]">
               {{ stageStatusLabel[activeStage.status] }}
             </span>
-            <button @click="activeStage = null" class="text-slate-600 hover:text-slate-400 transition-colors">
+            <button @click="activeStage = null" class="text-base-content/40 hover:text-base-content/60 transition-colors">
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -935,17 +935,17 @@ onMounted(fetchAll)
 
         <!-- ── Assignee ── -->
         <div v-if="activeStage.role" class="mb-5">
-          <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Asignado</h4>
-          <div v-if="loadingUsers" class="text-xs text-slate-500 italic">Cargando usuarios...</div>
+          <h4 class="text-xs font-semibold text-base-content/60 uppercase tracking-wider mb-2">Asignado</h4>
+          <div v-if="loadingUsers" class="text-xs text-base-content/50 italic">Cargando usuarios...</div>
           <select v-else-if="canUpdate" :value="activeStage.assignedUserId ?? ''"
             @change="assignUser(($event.target as HTMLSelectElement).value || null)"
-            class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500">
+            class="w-full bg-base-200 border border-base-300 rounded-lg px-3 py-2 text-base-content text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500">
             <option value="">— Sin asignar —</option>
             <option v-for="u in stageUsers" :key="u.userId" :value="u.userId">
               {{ userDisplayName(u) }}
             </option>
           </select>
-          <p v-else class="text-xs text-slate-300">
+          <p v-else class="text-xs text-base-content">
             {{stageUsers.find(u => u.userId === activeStage.assignedUserId) ? userDisplayName(stageUsers.find(u =>
               u.userId
               === activeStage.assignedUserId)) : '— Sin asignar —'}}
@@ -955,24 +955,24 @@ onMounted(fetchAll)
         <!-- ── Tasks ── -->
         <div class="mb-5">
           <div class="flex items-center justify-between mb-2">
-            <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Tareas</h4>
+            <h4 class="text-xs font-semibold text-base-content/60 uppercase tracking-wider">Tareas</h4>
             <button v-if="canUpdate" @click="showTaskForm = !showTaskForm"
               class="text-xs text-indigo-400 hover:text-indigo-300 transition-colors">+ Añadir</button>
           </div>
 
-          <div v-if="showTaskForm" class="bg-slate-800 rounded-lg p-3 mb-3 space-y-2">
+          <div v-if="showTaskForm" class="bg-base-200 rounded-lg p-3 mb-3 space-y-2">
             <input v-model="taskForm.title" placeholder="Título..." type="text"
-              class="w-full bg-slate-700 border border-slate-600 rounded px-2.5 py-1.5 text-white text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+              class="w-full bg-base-100 border border-base-content/20 rounded px-2.5 py-1.5 text-base-content text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500" />
             <textarea v-model="taskForm.description" placeholder="Descripción..." rows="2"
-              class="w-full bg-slate-700 border border-slate-600 rounded px-2.5 py-1.5 text-white text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none" />
+              class="w-full bg-base-100 border border-base-content/20 rounded px-2.5 py-1.5 text-base-content text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none" />
             <div class="flex gap-2">
               <select v-model="taskForm.type"
-                class="flex-1 bg-slate-700 border border-slate-600 rounded px-2 py-1.5 text-white text-xs focus:outline-none">
+                class="flex-1 bg-base-100 border border-base-content/20 rounded px-2 py-1.5 text-base-content text-xs focus:outline-none">
                 <option value="task">Tarea</option>
                 <option value="bug">Bug</option>
               </select>
               <select v-model="taskForm.status"
-                class="flex-1 bg-slate-700 border border-slate-600 rounded px-2 py-1.5 text-white text-xs focus:outline-none">
+                class="flex-1 bg-base-100 border border-base-content/20 rounded px-2 py-1.5 text-base-content text-xs focus:outline-none">
                 <option value="todo">Por hacer</option>
                 <option value="in-progress">En progreso</option>
                 <option value="done">Hecho</option>
@@ -981,7 +981,7 @@ onMounted(fetchAll)
             </div>
             <div class="flex gap-2">
               <button @click="showTaskForm = false"
-                class="flex-1 py-1 text-xs rounded bg-slate-600 hover:bg-slate-500 text-slate-300 transition-colors">Cancelar</button>
+                class="flex-1 py-1 text-xs rounded bg-base-100 hover:bg-base-content/30 text-base-content transition-colors">Cancelar</button>
               <button @click="createTask" :disabled="!taskForm.title"
                 class="flex-1 py-1 text-xs rounded bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white transition-colors">Crear</button>
             </div>
@@ -989,23 +989,23 @@ onMounted(fetchAll)
 
           <div v-if="activeStage.tasks?.length" class="space-y-1.5">
             <div v-for="task in activeStage.tasks" :key="task.id"
-              class="flex items-start gap-2 p-2 rounded-lg bg-slate-800/50 hover:bg-slate-800 transition-colors group"
+              class="flex items-start gap-2 p-2 rounded-lg bg-base-200/50 hover:bg-base-200 transition-colors group"
               @dblclick="showSelectTask = task">
               <button v-if="canUpdate" @click="updateTask(task, { status: task.status === 'done' ? 'todo' : 'done' })"
                 class="mt-0.5 w-4 h-4 shrink-0 rounded border transition-colors flex items-center justify-center"
-                :class="task.status === 'done' ? 'bg-emerald-500 border-emerald-500' : 'border-slate-600 hover:border-emerald-500'">
-                <svg v-if="task.status === 'done'" class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24"
+                :class="task.status === 'done' ? 'bg-emerald-500 border-emerald-500' : 'border-base-content/20 hover:border-emerald-500'">
+                <svg v-if="task.status === 'done'" class="w-3 h-3 text-base-content" fill="none" viewBox="0 0 24 24"
                   stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
                 </svg>
               </button>
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-1.5">
-                  <span class="text-xs" :class="task.type === 'bug' ? 'text-red-400' : 'text-slate-600'">
+                  <span class="text-xs" :class="task.type === 'bug' ? 'text-red-400' : 'text-base-content/40'">
                     {{ task.type === 'bug' ? '🐛' : '✓' }}
                   </span>
                   <span class="text-xs font-medium truncate"
-                    :class="task.status === 'done' ? 'line-through text-slate-500' : 'text-white'">
+                    :class="task.status === 'done' ? 'line-through text-base-content/50' : 'text-base-content'">
                     {{ task.title }}
                   </span>
                 </div>
@@ -1020,31 +1020,31 @@ onMounted(fetchAll)
                 </select>
               </div>
               <button v-if="canUpdate" @click="deleteTask(task)"
-                class="opacity-0 group-hover:opacity-100 text-slate-600 hover:text-red-400 transition-all shrink-0">
+                class="opacity-0 group-hover:opacity-100 text-base-content/40 hover:text-red-400 transition-all shrink-0">
                 <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
           </div>
-          <p v-else-if="!showTaskForm" class="text-xs text-slate-600 italic">Sin tareas</p>
+          <p v-else-if="!showTaskForm" class="text-xs text-base-content/40 italic">Sin tareas</p>
         </div>
 
         <!-- ── Links ── -->
         <div>
           <div class="flex items-center justify-between mb-2">
-            <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Links</h4>
+            <h4 class="text-xs font-semibold text-base-content/60 uppercase tracking-wider">Links</h4>
             <button v-if="canUpdate" @click="showLinkForm = !showLinkForm"
               class="text-xs text-indigo-400 hover:text-indigo-300 transition-colors">+ Añadir</button>
           </div>
 
-          <div v-if="showLinkForm" class="bg-slate-800 rounded-lg p-3 mb-3 space-y-2">
+          <div v-if="showLinkForm" class="bg-base-200 rounded-lg p-3 mb-3 space-y-2">
             <input v-model="linkForm.label" placeholder="Etiqueta (ej: PROJ-123)" type="text"
-              class="w-full bg-slate-700 border border-slate-600 rounded px-2.5 py-1.5 text-white text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+              class="w-full bg-base-100 border border-base-content/20 rounded px-2.5 py-1.5 text-base-content text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500" />
             <input v-model="linkForm.url" placeholder="https://..." type="url"
-              class="w-full bg-slate-700 border border-slate-600 rounded px-2.5 py-1.5 text-white text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+              class="w-full bg-base-100 border border-base-content/20 rounded px-2.5 py-1.5 text-base-content text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500" />
             <select v-model="linkForm.platform"
-              class="w-full bg-slate-700 border border-slate-600 rounded px-2 py-1.5 text-white text-xs focus:outline-none">
+              class="w-full bg-base-100 border border-base-content/20 rounded px-2 py-1.5 text-base-content text-xs focus:outline-none">
               <option value="jira">Jira</option>
               <option value="confluence">Confluence</option>
               <option value="github">GitHub</option>
@@ -1053,7 +1053,7 @@ onMounted(fetchAll)
             </select>
             <div class="flex gap-2">
               <button @click="showLinkForm = false"
-                class="flex-1 py-1 text-xs rounded bg-slate-600 hover:bg-slate-500 text-slate-300 transition-colors">Cancelar</button>
+                class="flex-1 py-1 text-xs rounded bg-base-100 hover:bg-base-content/30 text-base-content transition-colors">Cancelar</button>
               <button @click="createLink" :disabled="!linkForm.label || !linkForm.url"
                 class="flex-1 py-1 text-xs rounded bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white transition-colors">Añadir</button>
             </div>
@@ -1061,39 +1061,39 @@ onMounted(fetchAll)
 
           <div v-if="activeStage.links?.length" class="space-y-1.5">
             <div v-for="link in activeStage.links" :key="link.id"
-              class="flex items-center gap-2 p-2 rounded-lg bg-slate-800/50 hover:bg-slate-800 transition-colors group">
+              class="flex items-center gap-2 p-2 rounded-lg bg-base-200/50 hover:bg-base-200 transition-colors group">
               <span class="text-sm shrink-0">{{ platformIcons[link.platform] ?? '🔗' }}</span>
               <a :href="link.url" target="_blank"
                 class="flex-1 min-w-0 text-xs text-indigo-400 hover:text-indigo-300 truncate transition-colors">
                 {{ link.label }}
               </a>
               <button v-if="canUpdate" @click="deleteLink(link)"
-                class="opacity-0 group-hover:opacity-100 text-slate-600 hover:text-red-400 transition-all shrink-0">
+                class="opacity-0 group-hover:opacity-100 text-base-content/40 hover:text-red-400 transition-all shrink-0">
                 <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
           </div>
-          <p v-else-if="!showLinkForm" class="text-xs text-slate-600 italic">Sin links</p>
+          <p v-else-if="!showLinkForm" class="text-xs text-base-content/40 italic">Sin links</p>
         </div>
 
         <!-- ── Documents ── -->
-        <div class="mt-5 pt-4 border-t border-slate-800">
+        <div class="mt-5 pt-4 border-t border-base-300">
           <div class="flex items-center justify-between mb-2">
-            <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Documentos</h4>
+            <h4 class="text-xs font-semibold text-base-content/60 uppercase tracking-wider">Documentos</h4>
             <button v-if="canUpdate" @click="showDocForm = !showDocForm"
               class="text-xs text-indigo-400 hover:text-indigo-300 transition-colors">+ Nuevo</button>
           </div>
 
-          <div v-if="showDocForm" class="bg-slate-800 rounded-lg p-3 mb-3 space-y-2">
+          <div v-if="showDocForm" class="bg-base-200 rounded-lg p-3 mb-3 space-y-2">
             <input v-model="docForm.name" placeholder="Título del documento..." type="text"
-              class="w-full bg-slate-700 border border-slate-600 rounded px-2.5 py-1.5 text-white text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+              class="w-full bg-base-100 border border-base-content/20 rounded px-2.5 py-1.5 text-base-content text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500" />
             <textarea v-model="docForm.content" placeholder="Contenido en markdown (opcional)..." rows="3"
-              class="w-full bg-slate-700 border border-slate-600 rounded px-2.5 py-1.5 text-white text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none font-mono" />
+              class="w-full bg-base-100 border border-base-content/20 rounded px-2.5 py-1.5 text-base-content text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none font-mono" />
             <div class="flex gap-2">
               <button @click="showDocForm = false"
-                class="flex-1 py-1 text-xs rounded bg-slate-600 hover:bg-slate-500 text-slate-300 transition-colors">Cancelar</button>
+                class="flex-1 py-1 text-xs rounded bg-base-100 hover:bg-base-content/30 text-base-content transition-colors">Cancelar</button>
               <button @click="createDoc" :disabled="!docForm.name"
                 class="flex-1 py-1 text-xs rounded bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white transition-colors">Crear</button>
             </div>
@@ -1101,22 +1101,22 @@ onMounted(fetchAll)
 
           <div v-if="activeStage.documents?.length" class="space-y-1.5">
             <div v-for="doc in activeStage.documents" :key="doc.id"
-              class="flex items-center gap-2 p-2 rounded-lg bg-slate-800/50 hover:bg-slate-800 transition-colors group cursor-pointer"
+              class="flex items-center gap-2 p-2 rounded-lg bg-base-200/50 hover:bg-base-200 transition-colors group cursor-pointer"
               @click="openDocument(doc)">
               <svg class="w-3.5 h-3.5 text-teal-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              <span class="flex-1 text-xs text-slate-300 truncate">{{ doc.name }}</span>
+              <span class="flex-1 text-xs text-base-content truncate">{{ doc.name }}</span>
               <button v-if="canUpdate" @click.stop="deleteDoc(doc)"
-                class="opacity-0 group-hover:opacity-100 text-slate-600 hover:text-red-400 transition-all shrink-0">
+                class="opacity-0 group-hover:opacity-100 text-base-content/40 hover:text-red-400 transition-all shrink-0">
                 <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
           </div>
-          <p v-else-if="!showDocForm" class="text-xs text-slate-600 italic">Sin documentos</p>
+          <p v-else-if="!showDocForm" class="text-xs text-base-content/40 italic">Sin documentos</p>
         </div>
       </div>
 
@@ -1127,7 +1127,7 @@ onMounted(fetchAll)
 
         <!-- Right: template detail -->
         <div class="flex-1 min-w-0 overflow-y-auto">
-          <div v-if="!activeTemplate" class="flex flex-col items-center justify-center h-64 text-slate-500">
+          <div v-if="!activeTemplate" class="flex flex-col items-center justify-center h-64 text-base-content/50">
             <svg class="w-12 h-12 mb-3 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                 d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
@@ -1140,7 +1140,7 @@ onMounted(fetchAll)
             <div v-if="!editingTemplate" class="flex items-start justify-between mb-5">
               <div class="min-w-0">
                 <div class="flex items-center gap-2 flex-wrap">
-                  <h2 class="text-xl font-bold text-white">{{ activeTemplate.name }}</h2>
+                  <h2 class="text-xl font-bold text-base-content">{{ activeTemplate.name }}</h2>
                   <span v-if="activeTemplate.code"
                     class="font-mono text-xs px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/30 cursor-pointer select-all"
                     :title="'Código del template: ' + activeTemplate.code"
@@ -1148,24 +1148,24 @@ onMounted(fetchAll)
                     {{ activeTemplate.code }}
                   </span>
                 </div>
-                <p v-if="activeTemplate.description" class="text-slate-400 text-sm mt-1">{{ activeTemplate.description
+                <p v-if="activeTemplate.description" class="text-base-content/60 text-sm mt-1">{{ activeTemplate.description
                 }}
                 </p>
               </div>
               <button v-if="canUpdate" @click="editingTemplate = true"
-                class="px-3 py-1.5 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors shrink-0 ml-2">
+                class="px-3 py-1.5 text-xs rounded-lg bg-base-200 hover:bg-base-100 text-base-content transition-colors shrink-0 ml-2">
                 Editar
               </button>
             </div>
 
-            <div v-else class="bg-slate-900 rounded-xl border border-slate-700 p-4 mb-5 space-y-3">
+            <div v-else class="bg-base-300 rounded-xl border border-base-300 p-4 mb-5 space-y-3">
               <input v-model="editTplForm.name" placeholder="Nombre"
-                class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                class="w-full bg-base-200 border border-base-300 rounded-lg px-3 py-2 text-base-content text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
               <input v-model="editTplForm.description" placeholder="Descripción (opcional)"
-                class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                class="w-full bg-base-200 border border-base-300 rounded-lg px-3 py-2 text-base-content text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
               <div class="flex gap-2">
                 <button @click="editingTemplate = false"
-                  class="px-3 py-1.5 text-xs rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors">Cancelar</button>
+                  class="px-3 py-1.5 text-xs rounded-lg bg-base-100 hover:bg-base-100 text-base-content transition-colors">Cancelar</button>
                 <button @click="saveEditTemplate"
                   class="px-3 py-1.5 text-xs rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-colors">Guardar</button>
               </div>
@@ -1173,7 +1173,7 @@ onMounted(fetchAll)
 
             <!-- Stages header -->
             <div class="flex items-center justify-between mb-3">
-              <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Etapas</h3>
+              <h3 class="text-xs font-semibold text-base-content/60 uppercase tracking-wider">Etapas</h3>
               <button v-if="canUpdate" @click="openStageForm()"
                 class="px-3 py-1.5 text-xs rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-colors">
                 + Añadir etapa
@@ -1181,8 +1181,8 @@ onMounted(fetchAll)
             </div>
 
             <!-- Stage form -->
-            <div v-if="showStageForm" class="bg-slate-900 rounded-xl border border-slate-700 p-4 mb-4 space-y-3">
-              <h4 class="text-sm font-medium text-white">{{ editingStage ? 'Editar etapa' : 'Nueva etapa' }}</h4>
+            <div v-if="showStageForm" class="bg-base-300 rounded-xl border border-base-300 p-4 mb-4 space-y-3">
+              <h4 class="text-sm font-medium text-base-content">{{ editingStage ? 'Editar etapa' : 'Nueva etapa' }}</h4>
 
               <!-- Type toggle -->
               <div class="flex gap-2">
@@ -1190,29 +1190,29 @@ onMounted(fetchAll)
                   :key="t.val" @click="stageForm.type = t.val as any"
                   class="flex-1 py-1.5 text-xs rounded-lg font-medium transition-colors" :class="stageForm.type === t.val
                     ? t.val === 'agent' ? 'bg-violet-600 text-white' : 'bg-indigo-600 text-white'
-                    : 'bg-slate-800 text-slate-400 hover:text-white'">
+                    : 'bg-base-200 text-base-content/60 hover:text-base-content'">
                   {{ t.label }}
                 </button>
               </div>
 
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-xs text-slate-400 mb-1">Nombre *</label>
+                  <label class="block text-xs text-base-content/60 mb-1">Nombre *</label>
                   <input v-model="stageForm.name" type="text" placeholder="Ej: Implementación"
-                    class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                    class="w-full bg-base-200 border border-base-300 rounded-lg px-3 py-2 text-base-content text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
                 </div>
                 <div v-if="stageForm.type === 'agent'">
-                  <label class="block text-xs text-slate-400 mb-1">Agente *</label>
+                  <label class="block text-xs text-base-content/60 mb-1">Agente *</label>
                   <select v-model="stageForm.agentId"
-                    class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-violet-500">
+                    class="w-full bg-base-200 border border-base-300 rounded-lg px-3 py-2 text-base-content text-sm focus:outline-none focus:ring-2 focus:ring-violet-500">
                     <option value="">Seleccionar agente…</option>
                     <option v-for="a in agents" :key="a.id" :value="a.id">{{ a.name }}</option>
                   </select>
                 </div>
                 <div v-else>
-                  <label class="block text-xs text-slate-400 mb-1">Rol</label>
+                  <label class="block text-xs text-base-content/60 mb-1">Rol</label>
                   <select v-model="stageForm.role"
-                    class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    class="w-full bg-base-200 border border-base-300 rounded-lg px-3 py-2 text-base-content text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                     <option value="">Sin rol asignado</option>
                     <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.name }}</option>
                   </select>
@@ -1221,45 +1221,45 @@ onMounted(fetchAll)
 
               <!-- Helper agent for manual stages -->
               <div v-if="stageForm.type === 'manual'">
-                <label class="block text-xs text-slate-400 mb-1">Agente de ayuda (opcional)</label>
+                <label class="block text-xs text-base-content/60 mb-1">Agente de ayuda (opcional)</label>
                 <select v-model="stageForm.agentId"
-                  class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-violet-500">
+                  class="w-full bg-base-200 border border-base-300 rounded-lg px-3 py-2 text-base-content text-sm focus:outline-none focus:ring-2 focus:ring-violet-500">
                   <option :value="null">Sin agente de ayuda</option>
                   <option v-for="a in agents" :key="a.id" :value="a.id">{{ a.name }}</option>
                 </select>
-                <p class="text-xs text-slate-500 mt-1">El chat de este stage usará este agente automáticamente.</p>
+                <p class="text-xs text-base-content/50 mt-1">El chat de este stage usará este agente automáticamente.</p>
               </div>
 
               <!-- Predecessors multi-select -->
               <div v-if="activeTemplate?.stages?.length">
-                <label class="block text-xs text-slate-400 mb-1.5">Predecesores</label>
+                <label class="block text-xs text-base-content/60 mb-1.5">Predecesores</label>
                 <div class="space-y-1 max-h-36 overflow-y-auto">
                   <label v-for="s in activeTemplate.stages.filter((s: any) => s.id !== editingStage?.id)" :key="s.id"
-                    class="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-slate-800 transition-colors">
+                    class="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-base-200 transition-colors">
                     <input type="checkbox" :value="s.id" :checked="stageForm.predecessors.includes(s.id)"
                       @change="togglePredecessor(s.id)"
-                      class="rounded border-slate-600 bg-slate-800 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-0" />
-                    <span class="text-xs text-slate-300 flex-1">{{ s.name }}</span>
+                      class="rounded border-base-content/20 bg-base-200 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-0" />
+                    <span class="text-xs text-base-content flex-1">{{ s.name }}</span>
                     <span v-if="s.type === 'agent'" class="text-xs text-violet-400">🤖</span>
                   </label>
                 </div>
               </div>
 
               <div>
-                <label class="block text-xs text-slate-400 mb-1">Descripción</label>
+                <label class="block text-xs text-base-content/60 mb-1">Descripción</label>
                 <textarea v-model="stageForm.description" rows="2" placeholder="Descripción de la etapa..."
-                  class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none" />
+                  class="w-full bg-base-200 border border-base-300 rounded-lg px-3 py-2 text-base-content text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none" />
               </div>
               <div>
-                <label class="block text-xs text-slate-400 mb-1">Esquema de documento (JSON opcional)</label>
+                <label class="block text-xs text-base-content/60 mb-1">Esquema de documento (JSON opcional)</label>
                 <textarea v-model="stageForm.documentSchemaRaw" rows="3"
                   placeholder='[{"name":"Resumen","required":true},{"name":"Notas","required":false}]'
-                  class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-xs font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-y" />
-                <p class="text-xs text-slate-500 mt-1">Secciones requeridas en los documentos de esta etapa</p>
+                  class="w-full bg-base-200 border border-base-300 rounded-lg px-3 py-2 text-base-content text-xs font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-y" />
+                <p class="text-xs text-base-content/50 mt-1">Secciones requeridas en los documentos de esta etapa</p>
               </div>
               <div class="flex gap-2">
                 <button @click="showStageForm = false; editingStage = null"
-                  class="px-3 py-1.5 text-xs rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors">Cancelar</button>
+                  class="px-3 py-1.5 text-xs rounded-lg bg-base-100 hover:bg-base-100 text-base-content transition-colors">Cancelar</button>
                 <button @click="saveStage"
                   :disabled="!stageForm.name || (stageForm.type === 'agent' && !stageForm.agentId)"
                   class="px-3 py-1.5 text-xs rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white transition-colors">
@@ -1277,20 +1277,20 @@ onMounted(fetchAll)
                 </div>
                 <div :class="layer.length > 1 ? 'grid grid-cols-2 gap-2 pl-4 border-l-2 border-amber-400/30' : ''">
                   <div v-for="stage in layer" :key="stage.id"
-                    class="rounded-xl border p-4 hover:border-slate-700 transition-colors"
-                    :class="stage.type === 'agent' ? 'bg-violet-950/30 border-violet-800/40' : 'bg-slate-900 border-slate-800'">
+                    class="rounded-xl border p-4 hover:border-base-300 transition-colors"
+                    :class="stage.type === 'agent' ? 'bg-violet-950/30 border-violet-800/40' : 'bg-base-300 border-base-300'">
                     <div class="flex items-start gap-3">
                       <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2 flex-wrap">
                           <span v-if="stage.type === 'agent'"
                             class="text-xs px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-400 font-medium shrink-0">🤖</span>
-                          <span class="font-medium text-white text-sm">{{ stage.name }}</span>
+                          <span class="font-medium text-base-content text-sm">{{ stage.name }}</span>
                           <span v-if="stage.type === 'agent' && stage.agentId"
                             class="text-xs px-2 py-0.5 rounded-full bg-violet-900/40 text-violet-300">
                             {{ agentNameById(stage.agentId) }}
                           </span>
                           <span v-if="stage.role && stage.type !== 'agent'"
-                            class="text-xs px-2 py-0.5 rounded-full bg-slate-700 text-slate-300">
+                            class="text-xs px-2 py-0.5 rounded-full bg-base-100 text-base-content">
                             {{ roleNameById(stage.role) }}
                           </span>
                           <span v-if="stage.type !== 'agent' && stage.agentId"
@@ -1299,38 +1299,38 @@ onMounted(fetchAll)
                             🤖 {{ agentNameById(stage.agentId) }}
                           </span>
                         </div>
-                        <p v-if="stage.description" class="text-xs text-slate-500 mt-1">{{ stage.description }}</p>
+                        <p v-if="stage.description" class="text-xs text-base-content/50 mt-1">{{ stage.description }}</p>
                         <div v-if="stage.documentSchema?.length" class="flex flex-wrap gap-1 mt-1.5">
                           <span v-for="sec in stage.documentSchema" :key="sec.name"
                             class="text-xs px-1.5 py-0.5 rounded-full"
-                            :class="sec.required ? 'bg-rose-500/10 text-rose-400 ring-1 ring-rose-500/30' : 'bg-slate-800 text-slate-500'">
+                            :class="sec.required ? 'bg-rose-500/10 text-rose-400 ring-1 ring-rose-500/30' : 'bg-base-200 text-base-content/50'">
                             {{ sec.name }}{{ sec.required ? ' *' : '' }}
                           </span>
                         </div>
                         <div v-if="stage.predecessors?.length" class="flex flex-wrap gap-1 mt-1.5">
                           <span v-for="pid in stage.predecessors" :key="pid"
-                            class="text-xs px-1.5 py-0.5 rounded bg-slate-800 text-slate-500">
+                            class="text-xs px-1.5 py-0.5 rounded bg-base-200 text-base-content/50">
                             ← {{activeTemplate.stages.find((s: any) => s.id === pid)?.name ?? pid}}
                           </span>
                         </div>
                       </div>
                       <div v-if="canUpdate" class="flex gap-3 shrink-0">
                         <button @click="openStageForm(stage)"
-                          class="text-xs text-slate-500 hover:text-white transition-colors">Editar</button>
+                          class="text-xs text-base-content/50 hover:text-base-content transition-colors">Editar</button>
                         <button v-if="canDelete" @click="deleteStage(stage)"
-                          class="text-xs text-slate-500 hover:text-red-400 transition-colors">Eliminar</button>
+                          class="text-xs text-base-content/50 hover:text-red-400 transition-colors">Eliminar</button>
                       </div>
                     </div>
                   </div>
                 </div>
                 <div v-if="li < templateDagLayers.length - 1" class="flex justify-center py-1">
-                  <svg class="w-4 h-4 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg class="w-4 h-4 text-base-content/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                   </svg>
                 </div>
               </div>
             </div>
-            <div v-else-if="!showStageForm" class="text-center py-10 text-slate-500 text-sm">
+            <div v-else-if="!showStageForm" class="text-center py-10 text-base-content/50 text-sm">
               Sin etapas — añade la primera etapa para definir el flujo
             </div>
           </div>
@@ -1365,9 +1365,9 @@ onMounted(fetchAll)
 
       <div class="space-y-4">
         <div>
-          <label class="block text-sm text-slate-400 mb-1">Template *</label>
+          <label class="block text-sm text-base-content/60 mb-1">Template *</label>
           <select v-model="tracForm.templateId"
-            class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            class="w-full bg-base-200 border border-base-300 rounded-lg px-3 py-2 text-base-content text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
             <option value="">Seleccionar template...</option>
             <option v-for="t in templates" :key="t.id" :value="t.id">
               {{ t.name }} ({{ t.stages?.length ?? 0 }} etapas)
@@ -1381,20 +1381,20 @@ onMounted(fetchAll)
           </p>
         </div>
         <div>
-          <label class="block text-sm text-slate-400 mb-1">Título *</label>
+          <label class="block text-sm text-base-content/60 mb-1">Título *</label>
           <input v-model="tracForm.title" type="text" placeholder="Ej: Feature PROJ-123 - Login SSO"
-            class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            class="w-full bg-base-200 border border-base-300 rounded-lg px-3 py-2 text-base-content text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
         </div>
         <div>
-          <label class="block text-sm text-slate-400 mb-1">Descripción</label>
+          <label class="block text-sm text-base-content/60 mb-1">Descripción</label>
           <textarea v-model="tracForm.description" rows="3" placeholder="Descripción opcional..."
-            class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none" />
+            class="w-full bg-base-200 border border-base-300 rounded-lg px-3 py-2 text-base-content text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none" />
         </div>
         <div>
-          <label class="block text-sm text-slate-400 mb-1">ID de Chat (opcional)</label>
+          <label class="block text-sm text-base-content/60 mb-1">ID de Chat (opcional)</label>
           <input v-model="tracForm.chatId" type="text" placeholder="ID de conversación a vincular..."
-            class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-          <p class="text-xs text-slate-600 mt-1">Vincula esta trazabilidad a una conversación de chat.</p>
+            class="w-full bg-base-200 border border-base-300 rounded-lg px-3 py-2 text-base-content text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          <p class="text-xs text-base-content/40 mt-1">Vincula esta trazabilidad a una conversación de chat.</p>
         </div>
       </div>
       <template #footer>
@@ -1409,20 +1409,20 @@ onMounted(fetchAll)
     <!-- Delete Traceability -->
     <div v-if="deleteTracTarget"
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div class="bg-slate-900 rounded-2xl border border-slate-700 w-full max-w-sm p-6 text-center">
+      <div class="bg-base-300 rounded-2xl border border-base-300 w-full max-w-sm p-6 text-center">
         <div class="w-12 h-12 mx-auto mb-4 rounded-full bg-red-500/10 flex items-center justify-center">
           <svg class="w-6 h-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
           </svg>
         </div>
-        <h3 class="font-semibold text-white mb-2">Eliminar trazabilidad</h3>
-        <p class="text-slate-400 text-sm mb-5">
-          ¿Eliminar "<span class="text-white">{{ deleteTracTarget.title }}</span>"? Esta acción no se puede deshacer.
+        <h3 class="font-semibold text-base-content mb-2">Eliminar trazabilidad</h3>
+        <p class="text-base-content/60 text-sm mb-5">
+          ¿Eliminar "<span class="text-base-content">{{ deleteTracTarget.title }}</span>"? Esta acción no se puede deshacer.
         </p>
         <div class="flex gap-3">
           <button @click="deleteTracTarget = null"
-            class="flex-1 py-2 text-sm rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors">Cancelar</button>
+            class="flex-1 py-2 text-sm rounded-lg bg-base-200 hover:bg-base-100 text-base-content transition-colors">Cancelar</button>
           <button @click="confirmDeleteTrac"
             class="flex-1 py-2 text-sm rounded-lg bg-red-600 hover:bg-red-500 text-white font-medium transition-colors">Eliminar</button>
         </div>
@@ -1432,23 +1432,23 @@ onMounted(fetchAll)
     <!-- Create Template -->
     <div v-if="showCreateTemplate"
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div class="bg-slate-900 rounded-2xl border border-slate-700 w-full max-w-sm p-6">
-        <h2 class="text-lg font-semibold text-white mb-5">Nuevo Template</h2>
+      <div class="bg-base-300 rounded-2xl border border-base-300 w-full max-w-sm p-6">
+        <h2 class="text-lg font-semibold text-base-content mb-5">Nuevo Template</h2>
         <div class="space-y-3">
           <div>
-            <label class="block text-sm text-slate-400 mb-1">Nombre *</label>
+            <label class="block text-sm text-base-content/60 mb-1">Nombre *</label>
             <input v-model="templateForm.name" type="text" placeholder="Ej: Ciclo de vida de feature"
-              class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              class="w-full bg-base-200 border border-base-300 rounded-lg px-3 py-2 text-base-content text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
           </div>
           <div>
-            <label class="block text-sm text-slate-400 mb-1">Descripción</label>
+            <label class="block text-sm text-base-content/60 mb-1">Descripción</label>
             <textarea v-model="templateForm.description" rows="2" placeholder="Descripción opcional..."
-              class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none" />
+              class="w-full bg-base-200 border border-base-300 rounded-lg px-3 py-2 text-base-content text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none" />
           </div>
         </div>
         <div class="flex gap-3 mt-5">
           <button @click="showCreateTemplate = false"
-            class="flex-1 py-2 text-sm rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors">Cancelar</button>
+            class="flex-1 py-2 text-sm rounded-lg bg-base-200 hover:bg-base-100 text-base-content transition-colors">Cancelar</button>
           <button @click="createTemplate" :disabled="!templateForm.name"
             class="flex-1 py-2 text-sm rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white font-medium transition-colors">Crear</button>
         </div>
@@ -1458,22 +1458,22 @@ onMounted(fetchAll)
     <!-- Delete Template -->
     <div v-if="deleteTplTarget"
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div class="bg-slate-900 rounded-2xl border border-slate-700 w-full max-w-sm p-6 text-center">
+      <div class="bg-base-300 rounded-2xl border border-base-300 w-full max-w-sm p-6 text-center">
         <div class="w-12 h-12 mx-auto mb-4 rounded-full bg-red-500/10 flex items-center justify-center">
           <svg class="w-6 h-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
           </svg>
         </div>
-        <h3 class="font-semibold text-white mb-2">Eliminar template</h3>
-        <p class="text-slate-400 text-sm mb-5">
-          ¿Eliminar "<span class="text-white">{{ deleteTplTarget.name }}</span>"? Las trazabilidades existentes no se
+        <h3 class="font-semibold text-base-content mb-2">Eliminar template</h3>
+        <p class="text-base-content/60 text-sm mb-5">
+          ¿Eliminar "<span class="text-base-content">{{ deleteTplTarget.name }}</span>"? Las trazabilidades existentes no se
           verán
           afectadas.
         </p>
         <div class="flex gap-3">
           <button @click="deleteTplTarget = null"
-            class="flex-1 py-2 text-sm rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors">Cancelar</button>
+            class="flex-1 py-2 text-sm rounded-lg bg-base-200 hover:bg-base-100 text-base-content transition-colors">Cancelar</button>
           <button @click="confirmDeleteTemplate"
             class="flex-1 py-2 text-sm rounded-lg bg-red-600 hover:bg-red-500 text-white font-medium transition-colors">Eliminar</button>
         </div>

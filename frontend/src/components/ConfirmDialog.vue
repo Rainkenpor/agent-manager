@@ -15,12 +15,12 @@ const emit = defineEmits<{
 <template>
   <div class="fixed inset-0 z-50 flex items-center justify-center">
     <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="emit('cancel')" />
-    <div class="relative bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm mx-4">
-      <h3 class="text-lg font-semibold text-slate-800 mb-2">{{ title }}</h3>
-      <p class="text-sm text-slate-500 mb-6">{{ message }}</p>
+    <div class="relative bg-base-100 rounded-xl shadow-2xl p-6 w-full max-w-sm mx-4">
+      <h3 class="text-lg font-semibold text-base-content mb-2">{{ title }}</h3>
+      <p class="text-sm text-base-content/50 mb-6">{{ message }}</p>
       <div class="flex gap-3 justify-end">
         <button
-          class="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors"
+          class="px-4 py-2 rounded-lg text-sm font-medium text-base-content/40 hover:bg-base-100 transition-colors"
           @click="emit('cancel')"
         >
           Cancel
