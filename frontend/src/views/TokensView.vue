@@ -127,6 +127,7 @@ onMounted(fetchMetrics)
         <div class="flex items-end gap-0.5 h-32 w-full">
           <div v-for="day in metrics.last30Days" :key="day.date"
             class="flex-1 flex flex-col justify-end gap-0 group relative"
+            style="height: 100%"
             :title="`${day.date}: ${fmt(day.totalTokens)} tokens`">
             <div
               class="w-full bg-indigo-500/70 hover:bg-indigo-400 transition-colors rounded-t-sm"
