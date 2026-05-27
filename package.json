@@ -1,6 +1,6 @@
 {
   "name": "agent-manager",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "A project management tool for AI agents.",
   "type": "module",
   "workspaces": [
@@ -12,7 +12,7 @@
     "test": "vitest --run",
     "start:prod": "npm run server:build && npm run ui:build && npm run server:start",
     "server": "tsx watch --tsconfig ./backend/tsconfig.json backend/src/index.ts --ui --api",
-    "server:build": "tsc -p ./backend/tsconfig.json && tsc-alias -p ./backend/tsconfig.json",
+    "server:build": "tsc -p ./backend/tsconfig.json && tsc-alias -p ./backend/tsconfig.json && node -e \"require('fs').cpSync('doc','dist/doc',{recursive:true})\"",
     "server:start": "node ./backend/dist/src/index.js --ui --api",
     "ui": "cd frontend && npm run dev",
     "ui:build": "cd frontend && npm run build",

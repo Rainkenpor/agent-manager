@@ -451,6 +451,17 @@ export class McpExternalManager {
 			return
 		}
 
+		this.setServerTools(name, tools)
+	}
+
+	/** Limpia las entradas cacheadas de un servidor y las reconstruye desde la lista de tools dada. */
+	private setServerTools(name: string, tools: McpTool[]): void {
+		const prefix = `${MCP_PREFIX}${name}__`
+		for (const toolId of [...this.toolMap.keys()]) {
+			if (toolId.startsWith(prefix)) this.toolMap.delete(toolId)
+		}
+		this.tools = this.tools.filter((t) => !t.function.name.startsWith(prefix))
+
 		for (const tool of tools) {
 			const toolId = buildMcpToolId(name, tool.name)
 			this.toolMap.set(toolId, { serverName: name, toolName: tool.name })
@@ -469,6 +480,15 @@ export class McpExternalManager {
 				}
 			})
 		}
+	}
+
+	/** Re-consulta la lista de tools en vivo desde un servidor ya conectado y reconstruye su caché. */
+	async refreshServerTools(serverName: string): Promise<void> {
+		const client = this.httpClients.get(serverName) ?? this.stdioClients.get(serverName)
+		if (!client) return
+		const tools = await client.listTools()
+		this.setServerTools(serverName, tools)
+		agentLogger.info(`[McpExternal] '${serverName}' refreshed → ${tools.length} tool(s)`)
 	}
 
 	/**

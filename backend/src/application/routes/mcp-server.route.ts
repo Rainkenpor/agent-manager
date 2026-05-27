@@ -241,7 +241,9 @@ export function registerMcpServerRoutes(): void {
 					return { success: true, data: tools }
 				}
 
+				const wasConnected = mcpExternalManager.isConnected(server.name)
 				await mcpExternalManager.ensureServerInitialized(server.name, server)
+				if (wasConnected) await mcpExternalManager.refreshServerTools(server.name)
 				const tools = mcpExternalManager.getToolsForServer(server.name)
 				return {
 					success: true,
