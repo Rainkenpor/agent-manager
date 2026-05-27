@@ -4,6 +4,9 @@ import { join, resolve } from 'node:path'
 
 const VERSION_REGEX = /^(\d+)\.(\d+)\.(\d+)$/
 
+// Mostrando path de doc
+console.log(`📃 Carpeta de doc > ${resolve(process.cwd(), 'doc')}`)
+
 function compareVersions(a: string, b: string): number {
 	const am = a.match(VERSION_REGEX)
 	const bm = b.match(VERSION_REGEX)
