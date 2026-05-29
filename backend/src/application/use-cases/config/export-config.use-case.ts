@@ -1,10 +1,10 @@
 import type { IAgentRepository } from '@domain/repositories/agent.repository.js'
-import type { ISkillRepository } from '@domain/repositories/skill.repository.js'
 import type { IMcpServerRepository } from '@domain/repositories/mcp-server.repository.js'
-import type { ITraceabilityRepository } from '@domain/repositories/traceability.repository.js'
-import type { IRoleRepository } from '@domain/repositories/role.repository.js'
-import type { IUserRepository } from '@domain/repositories/user.repository.js'
 import type { IPermissionRepository } from '@domain/repositories/permission.repository.js'
+import type { IRoleRepository } from '@domain/repositories/role.repository.js'
+import type { ISkillRepository } from '@domain/repositories/skill.repository.js'
+import type { ITraceabilityRepository } from '@domain/repositories/traceability.repository.js'
+import type { IUserRepository } from '@domain/repositories/user.repository.js'
 
 export type ExportResource = 'agents' | 'skills' | 'mcps' | 'traceabilities' | 'roles' | 'users'
 
@@ -121,38 +121,52 @@ export class ExportConfigUseCase {
 					type: st.type,
 					agentSlug: st.agentId ? (agentSlugById.get(st.agentId) ?? null) : null,
 					documentSchema: st.documentSchema,
-					predecessorOrders: st.predecessors?.map((predId: string) => {
-						const pred = t.stages.find((s) => s.id === predId)
-						return pred?.order ?? null
-					}).filter((o: number | null) => o !== null) ?? []
+					predecessorOrders:
+						st.predecessors
+							?.map((predId: string) => {
+								const pred = t.stages.find((s) => s.id === predId)
+								return pred?.order ?? null
+							})
+							.filter((o: number | null) => o !== null) ?? []
 				}))
 			})),
-			instances: traceabilityInstances
-				.filter(Boolean)
-				.map((tr) => ({
-					title: tr!.title,
-					description: tr!.description,
-					templateName: tr!.templateName,
-					stages: tr!.stages.map((st) => ({
-						name: st.name,
-						status: st.status,
-						tasks: st.tasks.map((task) => ({
-							title: task.title,
-							description: task.description,
-							type: task.type,
-							status: task.status
-						})),
-						links: st.links.map((lnk) => ({
-							label: lnk.label,
-							url: lnk.url,
-							platform: lnk.platform
-						})),
-						documents: (st.documents ?? []).map((doc) => ({
-							name: doc.name,
-							content: doc.content
-						}))
+			instances: await Promise.all(
+				traceabilityInstances
+					.filter((tr): tr is NonNullable<typeof tr> => tr !== null)
+					.map(async (tr) => ({
+						title: tr.title,
+						description: tr.description,
+						templateName: tr.templateName,
+						stages: await Promise.all(
+							tr.stages.map(async (st) => {
+								const [tasks, links, documents] = await Promise.all([
+									this.traceabilityRepo.getTasksByStageId(st.id),
+									this.traceabilityRepo.getLinksByStageId(st.id),
+									this.traceabilityRepo.getDocumentByStageId(st.id)
+								])
+								return {
+									name: st.name,
+									status: st.status,
+									tasks: tasks.map((task) => ({
+										title: task.title,
+										description: task.description,
+										type: task.type,
+										status: task.status
+									})),
+									links: links.map((lnk) => ({
+										label: lnk.label,
+										url: lnk.url,
+										platform: lnk.platform
+									})),
+									documents: documents.map((doc) => ({
+										name: doc.name,
+										content: doc.content
+									}))
+								}
+							})
+						)
 					}))
-				}))
+			)
 		}
 	}
 

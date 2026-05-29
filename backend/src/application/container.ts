@@ -97,6 +97,7 @@ import {
 	GetTemplateByCodeUseCase,
 	GetTemplateUseCase,
 	GetTokenMetricsUseCase,
+	GetTraceabilityByCodeUseCase,
 	GetTraceabilityByConversationUseCase,
 	GetTraceabilityUseCase,
 	GetUsersByRoleWithEffortUseCase,
@@ -250,6 +251,7 @@ export class Container {
 	private _deleteTemplateStageUseCase?: DeleteTemplateStageUseCase
 	private _listTraceabilitiesUseCase?: ListTraceabilitiesUseCase
 	private _getTraceabilityUseCase?: GetTraceabilityUseCase
+	private _getTraceabilityByCodeUseCase?: GetTraceabilityByCodeUseCase
 	private _createTraceabilityUseCase?: CreateTraceabilityUseCase
 	private _updateTraceabilityUseCase?: UpdateTraceabilityUseCase
 	private _deleteTraceabilityUseCase?: DeleteTraceabilityUseCase
@@ -647,6 +649,12 @@ export class Container {
 	get getTraceabilityUseCase(): GetTraceabilityUseCase {
 		if (!this._getTraceabilityUseCase) this._getTraceabilityUseCase = new GetTraceabilityUseCase(this._traceabilityRepository)
 		return this._getTraceabilityUseCase
+	}
+
+	get getTraceabilityByCodeUseCase(): GetTraceabilityByCodeUseCase {
+		if (!this._getTraceabilityByCodeUseCase)
+			this._getTraceabilityByCodeUseCase = new GetTraceabilityByCodeUseCase(this._traceabilityRepository)
+		return this._getTraceabilityByCodeUseCase
 	}
 
 	get createTraceabilityUseCase(): CreateTraceabilityUseCase {
