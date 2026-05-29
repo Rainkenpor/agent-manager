@@ -1,16 +1,11 @@
 /**
- * codex-usage.service.ts — Consulta los límites de uso de Codex (ChatGPT) por curl.
+ * codex-usage.service.ts — Consulta los límites de uso de Codex (ChatGPT).
  *
- * Reutiliza el token OpenAI almacenado (providerAuthService) y llama por curl al
- * endpoint de uso de Codex. Se usa curl vía child_process por requerimiento
- * explícito; no se añaden librerías HTTP nuevas.
+ * Reutiliza el token OpenAI almacenado (providerAuthService) y llama al endpoint
+ * de uso de Codex con el fetch nativo de Node; no se añaden librerías HTTP nuevas.
  */
-import { execFile } from 'node:child_process'
-import { promisify } from 'node:util'
 import type { CodexUsage, CodexUsageWindow } from '@domain/entities/token-audit.entity.js'
 import { providerAuthService } from './provider-auth.service.js'
-
-const execFileAsync = promisify(execFile)
 
 const USAGE_ENDPOINT = 'https://chatgpt.com/backend-api/wham/usage'
 
@@ -63,32 +58,24 @@ export class CodexUsageService {
 		const accessToken = token.access_token || token.accessToken
 		const accountId = extractAccountId(token.id_token ?? '', accessToken)
 
-		const { stdout } = await execFileAsync(
-			'curl',
-			[
-				'-s',
-				USAGE_ENDPOINT,
-				'-H',
-				`Authorization: Bearer ${accessToken}`,
-				'-H',
-				`ChatGPT-Account-Id: ${accountId}`,
-				'-H',
-				'Accept: application/json',
-				'-H',
-				'User-Agent: codex-cli',
-				'-H',
-				'Origin: https://chatgpt.com',
-				'-H',
-				'Referer: https://chatgpt.com/'
-			],
-			{ maxBuffer: 10 * 1024 * 1024 }
-		)
+		const response = await fetch(USAGE_ENDPOINT, {
+			headers: {
+				Authorization: `Bearer ${accessToken}`,
+				'ChatGPT-Account-Id': accountId,
+				Accept: 'application/json',
+				'User-Agent': 'codex-cli',
+				Origin: 'https://chatgpt.com',
+				Referer: 'https://chatgpt.com/'
+			}
+		})
+
+		const body = await response.text()
 
 		let parsed: RawUsageResponse
 		try {
-			parsed = JSON.parse(stdout) as RawUsageResponse
+			parsed = JSON.parse(body) as RawUsageResponse
 		} catch {
-			throw new Error(`Respuesta inválida del endpoint de uso de Codex: ${stdout.slice(0, 200)}`)
+			throw new Error(`Respuesta inválida del endpoint de uso de Codex: ${body.slice(0, 200)}`)
 		}
 
 		const rl = parsed.rate_limit ?? {}
