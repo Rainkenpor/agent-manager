@@ -35,9 +35,27 @@ interface TokenMetrics {
   byModel: ModelMetric[]
 }
 
+interface CodexUsageWindow {
+  usedPercent: number
+  remainingPercent: number
+  limitWindowSeconds: number
+  resetAfterSeconds: number
+  resetAt: number
+}
+
+interface CodexUsage {
+  planType: string | null
+  limitReached: boolean
+  primaryWindow: CodexUsageWindow | null
+  secondaryWindow: CodexUsageWindow | null
+}
+
 const metrics = ref<TokenMetrics | null>(null)
 const loading = ref(false)
 const error = ref('')
+
+const codexUsage = ref<CodexUsage | null>(null)
+const codexError = ref('')
 
 async function fetchMetrics() {
   loading.value = true
@@ -50,6 +68,50 @@ async function fetchMetrics() {
   } finally {
     loading.value = false
   }
+}
+
+async function fetchCodexUsage() {
+  codexError.value = ''
+  try {
+    const res = await api.getCodexUsage()
+    codexUsage.value = res.data ?? null
+  } catch (e: any) {
+    codexError.value = e.message
+    codexUsage.value = null
+  }
+}
+
+function refreshAll() {
+  fetchMetrics()
+  fetchCodexUsage()
+}
+
+function windowLabel(seconds: number): string {
+  if (seconds >= 604800) return `Semanal (${Math.round(seconds / 86400)}d)`
+  if (seconds >= 86400) return `Diario (${Math.round(seconds / 86400)}d)`
+  if (seconds >= 3600) return `${Math.round(seconds / 3600)} horas`
+  return `${Math.round(seconds / 60)} min`
+}
+
+function fmtResetAt(resetAt: number): string {
+  if (!resetAt) return '—'
+  return new Date(resetAt * 1000).toLocaleString('es-GT', {
+    weekday: 'short',
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+function fmtCountdown(seconds: number): string {
+  if (!seconds || seconds <= 0) return '0m'
+  const d = Math.floor(seconds / 86400)
+  const h = Math.floor((seconds % 86400) / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  if (d > 0) return `${d}d ${h}h`
+  if (h > 0) return `${h}h ${m}m`
+  return `${m}m`
 }
 
 const maxDailyTotal = computed(() => {
@@ -68,13 +130,13 @@ function fmtDate(iso: string): string {
   return `${d}/${m}`
 }
 
-onMounted(fetchMetrics)
+onMounted(refreshAll)
 </script>
 
 <template>
   <PageLayout title="Consumo de Tokens LLM" description="Métricas de uso de tokens en llamadas a modelos de lenguaje">
     <template #actions>
-      <button @click="fetchMetrics"
+      <button @click="refreshAll"
         class="flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg bg-base-200 hover:bg-base-100 text-base-content transition-colors">
         <svg class="w-3.5 h-3.5" :class="loading ? 'animate-spin' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -86,6 +148,54 @@ onMounted(fetchMetrics)
 
     <div v-if="error" class="mb-4 p-3 rounded-lg bg-red-900/30 border border-red-500/30 text-red-400 text-sm">
       {{ error }}
+    </div>
+
+    <!-- Codex (ChatGPT) usage windows -->
+    <div v-if="codexUsage || codexError" class="mb-6">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-sm font-semibold text-base-content">Límites de uso de Codex</h3>
+        <span v-if="codexUsage?.planType" class="text-xs px-2 py-0.5 rounded-full bg-base-200 text-base-content/70 uppercase tracking-wider">
+          {{ codexUsage.planType }}
+        </span>
+      </div>
+
+      <div v-if="codexError" class="p-3 rounded-lg bg-amber-900/30 border border-amber-500/30 text-amber-400 text-sm">
+        No se pudo obtener el uso de Codex: {{ codexError }}
+      </div>
+
+      <div v-else-if="codexUsage" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div v-for="w in [
+            { key: 'primary', label: 'Uso diario', win: codexUsage.primaryWindow },
+            { key: 'secondary', label: 'Uso semanal', win: codexUsage.secondaryWindow }
+          ]"
+          :key="w.key"
+          class="rounded-2xl p-5 bg-base-300 border border-base-300">
+          <template v-if="w.win">
+            <div class="flex items-center justify-between mb-3">
+              <p class="text-xs text-base-content/60 font-semibold uppercase tracking-wider">{{ w.label }}</p>
+              <span class="text-xs font-mono text-base-content/50">{{ windowLabel(w.win.limitWindowSeconds) }}</span>
+            </div>
+            <div class="flex items-end justify-between mb-2">
+              <span class="text-2xl font-bold font-mono"
+                :class="w.win.remainingPercent <= 10 ? 'text-red-400' : w.win.remainingPercent <= 25 ? 'text-amber-400' : 'text-emerald-300'">
+                {{ w.win.remainingPercent }}%
+              </span>
+              <span class="text-xs text-base-content/50">restante</span>
+            </div>
+            <div class="h-2 rounded-full bg-base-100 overflow-hidden mb-3">
+              <div class="h-full rounded-full transition-all"
+                :class="w.win.usedPercent >= 90 ? 'bg-red-500' : w.win.usedPercent >= 75 ? 'bg-amber-500' : 'bg-indigo-500'"
+                :style="{ width: `${w.win.usedPercent}%` }" />
+            </div>
+            <div class="flex justify-between items-center text-xs">
+              <span class="text-base-content/50">Usado {{ w.win.usedPercent }}%</span>
+              <span class="text-base-content/60">Reinicia en {{ fmtCountdown(w.win.resetAfterSeconds) }}</span>
+            </div>
+            <p class="text-xs text-base-content/40 mt-1">{{ fmtResetAt(w.win.resetAt) }}</p>
+          </template>
+          <p v-else class="text-sm text-base-content/40 italic">Sin datos para esta ventana.</p>
+        </div>
+      </div>
     </div>
 
     <div v-if="loading && !metrics" class="flex justify-center items-center py-20">

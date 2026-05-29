@@ -9,6 +9,16 @@ export function registerTokenAuditRoutes(): void {
 		inputSchema: {},
 		requiresAuth: true,
 		requiredPermission: { resource: 'llm_tokens', action: 'read' },
-		handler: async () => container.getTokenMetricsUseCase.execute(),
+		handler: async () => container.getTokenMetricsUseCase.execute()
+	})
+
+	registry.register({
+		useBy: ['server'],
+		method: 'GET',
+		path: '/api/token-audit/codex-usage',
+		inputSchema: {},
+		requiresAuth: true,
+		requiredPermission: { resource: 'llm_tokens', action: 'read' },
+		handler: async () => container.getCodexUsageUseCase.execute()
 	})
 }

@@ -48,7 +48,6 @@ import {
 	CreateAgentGroupUseCase,
 	// Agent Use Cases
 	CreateAgentUseCase,
-	GetTokenMetricsUseCase,
 	// Chat Use Cases
 	CreateConversationUseCase,
 	CreateDocumentUseCase,
@@ -82,18 +81,22 @@ import {
 	DuplicateAgentUseCase,
 	ExportConfigUseCase,
 	GetAgentUseCase,
+	GetCodexUsageUseCase,
 	GetConversationUseCase,
 	GetDocumentHistoryUseCase,
 	GetDocumentUseCase,
 	GetEventListenerUseCase,
 	GetGovernanceSuggestionUseCase,
 	GetGovernanceUseCase,
+	GetLinksByStageUseCase,
 	// MCP Credential Use Cases
 	GetMcpCredentialsUseCase,
 	GetMyStagesUseCase,
 	GetSkillUseCase,
+	GetTasksByStageUseCase,
 	GetTemplateByCodeUseCase,
 	GetTemplateUseCase,
+	GetTokenMetricsUseCase,
 	GetTraceabilityByConversationUseCase,
 	GetTraceabilityUseCase,
 	GetUsersByRoleWithEffortUseCase,
@@ -254,8 +257,10 @@ export class Container {
 	private _updateTaskUseCase?: UpdateTaskUseCase
 	private _completeTaskUseCase?: CompleteTaskUseCase
 	private _deleteTaskUseCase?: DeleteTaskUseCase
+	private _getTasksByStageUseCase?: GetTasksByStageUseCase
 	private _createLinkUseCase?: CreateLinkUseCase
 	private _deleteLinkUseCase?: DeleteLinkUseCase
+	private _getLinksByStageUseCase?: GetLinksByStageUseCase
 	private _createDocumentUseCase?: CreateDocumentUseCase
 	private _updateDocumentUseCase?: UpdateDocumentUseCase
 	private _deleteDocumentUseCase?: DeleteDocumentUseCase
@@ -282,6 +287,7 @@ export class Container {
 	// Token Audit Repository & Use Cases
 	readonly tokenAuditRepository: ITokenAuditRepository
 	private _getTokenMetricsUseCase?: GetTokenMetricsUseCase
+	private _getCodexUsageUseCase?: GetCodexUsageUseCase
 
 	constructor() {
 		// Initialize repositories with concrete implementations
@@ -692,6 +698,11 @@ export class Container {
 		return this._deleteTaskUseCase
 	}
 
+	get getTasksByStageUseCase(): GetTasksByStageUseCase {
+		if (!this._getTasksByStageUseCase) this._getTasksByStageUseCase = new GetTasksByStageUseCase(this._traceabilityRepository)
+		return this._getTasksByStageUseCase
+	}
+
 	get createLinkUseCase(): CreateLinkUseCase {
 		if (!this._createLinkUseCase) this._createLinkUseCase = new CreateLinkUseCase(this._traceabilityRepository)
 		return this._createLinkUseCase
@@ -700,6 +711,11 @@ export class Container {
 	get deleteLinkUseCase(): DeleteLinkUseCase {
 		if (!this._deleteLinkUseCase) this._deleteLinkUseCase = new DeleteLinkUseCase(this._traceabilityRepository)
 		return this._deleteLinkUseCase
+	}
+
+	get getLinksByStageUseCase(): GetLinksByStageUseCase {
+		if (!this._getLinksByStageUseCase) this._getLinksByStageUseCase = new GetLinksByStageUseCase(this._traceabilityRepository)
+		return this._getLinksByStageUseCase
 	}
 
 	get createDocumentUseCase(): CreateDocumentUseCase {
@@ -973,6 +989,13 @@ export class Container {
 			this._getTokenMetricsUseCase = new GetTokenMetricsUseCase(this.tokenAuditRepository)
 		}
 		return this._getTokenMetricsUseCase
+	}
+
+	get getCodexUsageUseCase(): GetCodexUsageUseCase {
+		if (!this._getCodexUsageUseCase) {
+			this._getCodexUsageUseCase = new GetCodexUsageUseCase()
+		}
+		return this._getCodexUsageUseCase
 	}
 }
 

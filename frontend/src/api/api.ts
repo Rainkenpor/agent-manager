@@ -86,8 +86,7 @@ export const createAgentGroup = (data: { name: string; slug: string; description
 	request<{ success: boolean; data: any }>('/agent-groups', { method: 'POST', body: JSON.stringify(data) })
 export const updateAgentGroup = (id: string, data: { name?: string; slug?: string; description?: string | null }) =>
 	request<{ success: boolean; data: any }>(`/agent-groups/${id}`, { method: 'PUT', body: JSON.stringify({ id, ...data }) })
-export const deleteAgentGroup = (id: string) =>
-	request<{ success: boolean }>(`/agent-groups/${id}`, { method: 'DELETE' })
+export const deleteAgentGroup = (id: string) => request<{ success: boolean }>(`/agent-groups/${id}`, { method: 'DELETE' })
 export const getAgentsForChat = () =>
 	request<{ success: boolean; data: Array<{ id: string; name: string; slug: string; description: string | null }> }>('/agents/for-chat')
 export const getAgentById = (id: string) => request<any>(`/agents/${id}`)
@@ -182,16 +181,15 @@ export const removeSkillFromRole = (roleId: string, skillId: string) =>
 // Governance
 export const getGovernance = () => request<{ success: boolean; data: any[] }>('/governance')
 export const getGovernanceById = (id: string) => request<{ success: boolean; data: any }>(`/governance/${id}`)
-export const createGovernance = (data: any) => request<{ success: boolean; data: any }>('/governance', { method: 'POST', body: JSON.stringify(data) })
+export const createGovernance = (data: any) =>
+	request<{ success: boolean; data: any }>('/governance', { method: 'POST', body: JSON.stringify(data) })
 export const updateGovernance = (id: string, data: any) =>
 	request<{ success: boolean; data: any }>(`/governance/${id}`, { method: 'PUT', body: JSON.stringify({ id, ...data }) })
 export const deleteGovernance = (id: string) => request<{ success: boolean }>(`/governance/${id}`, { method: 'DELETE' })
 
 // Governance Suggestions
-export const getGovernanceSuggestions = () =>
-	request<{ success: boolean; data: any[] }>('/governance-suggestions')
-export const getGovernanceSuggestionById = (id: string) =>
-	request<{ success: boolean; data: any }>(`/governance-suggestions/${id}`)
+export const getGovernanceSuggestions = () => request<{ success: boolean; data: any[] }>('/governance-suggestions')
+export const getGovernanceSuggestionById = (id: string) => request<{ success: boolean; data: any }>(`/governance-suggestions/${id}`)
 export const deleteGovernanceSuggestion = (id: string) =>
 	request<{ success: boolean }>(`/governance-suggestions/${id}`, { method: 'DELETE' })
 
@@ -249,6 +247,7 @@ export const updateTraceability = (
 export const deleteTraceability = (id: string) => request<{ success: boolean }>(`/traceability/${id}`, { method: 'DELETE' })
 
 // Tasks
+export const getStageTasks = (stageId: string) => request<{ success: boolean; data: any[] }>(`/traceability/stages/${stageId}/tasks`)
 export const createTraceabilityTask = (data: { stageId: string; title: string; description?: string; type?: string; status?: string }) =>
 	request<{ success: boolean; data: any }>('/traceability/tasks', { method: 'POST', body: JSON.stringify(data) })
 export const updateTraceabilityTask = (id: string, data: { title?: string; description?: string | null; type?: string; status?: string }) =>
@@ -257,16 +256,31 @@ export const deleteTraceabilityTask = (id: string, stageId: string) =>
 	request<{ success: boolean; data: any }>(`/traceability/tasks/${id}`, { method: 'DELETE', body: JSON.stringify({ stageId }) })
 
 // Links
+export const getStageLinks = (stageId: string) => request<{ success: boolean; data: any[] }>(`/traceability/stages/${stageId}/links`)
 export const createTraceabilityLink = (data: { stageId: string; label: string; url: string; platform?: string }) =>
 	request<{ success: boolean; data: any }>('/traceability/links', { method: 'POST', body: JSON.stringify(data) })
 export const deleteTraceabilityLink = (id: string) => request<{ success: boolean }>(`/traceability/links/${id}`, { method: 'DELETE' })
 
 // Traceability Documents
+export const getStageDocuments = (stageId: string) =>
+	request<{ success: boolean; data: any[] }>(`/traceability/stages/${stageId}/documents`)
 export const createTraceabilityDocument = (data: { stageId: string; name: string; content?: string }) =>
 	request<{ success: boolean; data: any }>('/traceability/documents', { method: 'POST', body: JSON.stringify(data) })
 export const getTraceabilityDocument = (id: string) => request<{ success: boolean; data: any }>(`/traceability/documents/${id}`)
 export const getTraceabilityDocumentHistory = (id: string) =>
-	request<{ success: boolean; data: Array<{ id: string; stageId: string; name: string; content: string; active: boolean; originalId: string | null; createdAt: string; updatedAt: string }> }>(`/traceability/documents/${id}/history`)
+	request<{
+		success: boolean
+		data: Array<{
+			id: string
+			stageId: string
+			name: string
+			content: string
+			active: boolean
+			originalId: string | null
+			createdAt: string
+			updatedAt: string
+		}>
+	}>(`/traceability/documents/${id}/history`)
 export const updateTraceabilityDocument = (id: string, data: { name?: string; content?: string }) =>
 	request<{ success: boolean; data: any }>(`/traceability/documents/${id}`, { method: 'PUT', body: JSON.stringify({ id, ...data }) })
 export const deleteTraceabilityDocument = (id: string) =>
@@ -282,20 +296,22 @@ export const addTraceabilityParticipant = (traceabilityId: string, userId: strin
 	})
 export const removeTraceabilityParticipant = (traceabilityId: string, userId: string) =>
 	request<{ success: boolean }>(`/traceability/${traceabilityId}/participants/${userId}`, { method: 'DELETE' })
-export const listTraceabilityInvitations = () =>
-	request<{ success: boolean; data: any[] }>('/chat/traceability-invitations')
+export const listTraceabilityInvitations = () => request<{ success: boolean; data: any[] }>('/chat/traceability-invitations')
 export const getTraceabilityGroupsForUser = () =>
 	request<{
 		success: boolean
-		data: Record<string, {
-			traceabilityId: string
-			title: string
-			ownerUserId: string | null
-			participants: Array<{ userId: string; chatId: string | null }>
-			stageId: string | null
-			stageName: string | null
-			myEligibleStages: Array<{ stageId: string; stageName: string; chatId: string | null }>
-		}>
+		data: Record<
+			string,
+			{
+				traceabilityId: string
+				title: string
+				ownerUserId: string | null
+				participants: Array<{ userId: string; chatId: string | null }>
+				stageId: string | null
+				stageName: string | null
+				myEligibleStages: Array<{ stageId: string; stageName: string; chatId: string | null }>
+			}
+		>
 	}>('/chat/traceability-groups')
 export const openTraceabilityInvitation = (traceabilityId: string, stageId?: string | null) =>
 	request<{
@@ -320,7 +336,9 @@ export const streamAgentLogs = (signal?: AbortSignal) => requestAsync('/logs/str
 
 // Release notes (doc/<version>.md)
 export const getReleaseNotes = () =>
-	request<{ success: boolean; data: Array<{ version: string; title: string | null; date: string | null; content: string }> }>('/release-notes')
+	request<{ success: boolean; data: Array<{ version: string; title: string | null; date: string | null; content: string }> }>(
+		'/release-notes'
+	)
 
 // Hook Servers
 export const getHookServers = () => request<{ success: boolean; data: any[] }>('/hook-servers')
@@ -438,12 +456,11 @@ export const getNotifications = (unreadOnly = false) => {
 	return request<{ success: boolean; data: { items: NotificationItem[]; unreadCount: number } }>(`/notifications${qs}`)
 }
 
-export const markNotificationRead = (id: string) =>
-	request<{ success: boolean }>(`/notifications/${id}/read`, { method: 'PUT' })
+export const markNotificationRead = (id: string) => request<{ success: boolean }>(`/notifications/${id}/read`, { method: 'PUT' })
 
-export const markAllNotificationsRead = () =>
-	request<{ success: boolean }>(`/notifications/read-all`, { method: 'PUT' })
+export const markAllNotificationsRead = () => request<{ success: boolean }>(`/notifications/read-all`, { method: 'PUT' })
 
 // Token Audit
-export const getTokenMetrics = () =>
-	request<{ success: boolean; data: any }>('/token-audit/metrics')
+export const getTokenMetrics = () => request<{ success: boolean; data: any }>('/token-audit/metrics')
+
+export const getCodexUsage = () => request<{ success: boolean; data: any }>('/token-audit/codex-usage')

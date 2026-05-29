@@ -54,3 +54,18 @@ export interface TokenMetrics {
 	last30Days: TokenDailyMetric[]
 	byModel: TokenMetricsByModel[]
 }
+
+export interface CodexUsageWindow {
+	usedPercent: number
+	remainingPercent: number
+	limitWindowSeconds: number
+	resetAfterSeconds: number
+	resetAt: number // epoch seconds
+}
+
+export interface CodexUsage {
+	planType: string | null
+	limitReached: boolean
+	primaryWindow: CodexUsageWindow | null // ventana corta (5h)
+	secondaryWindow: CodexUsageWindow | null // ventana semanal (7d)
+}
