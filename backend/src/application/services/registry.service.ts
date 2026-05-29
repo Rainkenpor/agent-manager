@@ -1,5 +1,6 @@
+import type { McpOAuthService } from '@infra/service/mcp-oauth.service.js'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import { z, type ZodRawShape } from 'zod'
+import { type ZodRawShape, z } from 'zod'
 import type {
 	HttpContext,
 	HttpMethod,
@@ -8,7 +9,6 @@ import type {
 	RouterPromptConfig,
 	RouteToolConfig
 } from '../interfaces/route.interface.js'
-import type { McpOAuthService } from '@infra/service/mcp-oauth.service.js'
 
 /**
  * Registry that links Express routes with MCP tools
@@ -26,8 +26,8 @@ export class RouteToolRegistry {
 			path: config.path,
 			toolName: config.toolName,
 			toolDescription: config.toolDescription,
-      toolSource: config.toolSource,
-      toolAlwaysAvailable: config.toolAlwaysAvailable,
+			toolSource: config.toolSource,
+			toolAlwaysAvailable: config.toolAlwaysAvailable,
 			inputSchema: config.inputSchema as any, // Cast to any to avoid complex Zod generic issues
 			handler: config.handler as (input: unknown, context?: any, oauthService?: McpOAuthService) => Promise<unknown>,
 			requiresAuth: config.requiresAuth,
@@ -180,7 +180,7 @@ export class RouteToolRegistry {
 	 * This is set externally by the MCP route handler
 	 */
 	private getSessionContext(sessionId: string): HttpContext {
-		// @ts-ignore - Access to internal sessionContexts from mcp.route.ts
+		// @ts-expect-error - Access to internal sessionContexts from mcp.route.ts
 		return (
 			globalThis.__mcpSessionContexts?.[sessionId] || {
 				req: {},

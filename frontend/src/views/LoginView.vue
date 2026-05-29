@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/useAuth'
 
 const router = useRouter()
@@ -14,47 +14,47 @@ const loading = ref(false)
 const azureLoading = ref(false)
 
 onMounted(async () => {
-  // Manejar token retornado por Azure AD callback
-  const azureToken = route.query.azureToken as string | undefined
-  if (azureToken) {
-    azureLoading.value = true
-    try {
-      await auth.loginWithToken(azureToken)
-      router.replace('/')
-    } catch {
-      error.value = 'Azure login failed. Please try again.'
-    } finally {
-      azureLoading.value = false
-    }
-    return
-  }
+	// Manejar token retornado por Azure AD callback
+	const azureToken = route.query.azureToken as string | undefined
+	if (azureToken) {
+		azureLoading.value = true
+		try {
+			await auth.loginWithToken(azureToken)
+			router.replace('/')
+		} catch {
+			error.value = 'Azure login failed. Please try again.'
+		} finally {
+			azureLoading.value = false
+		}
+		return
+	}
 
-  // Mostrar error de Azure si viene en la URL
-  const azureError = route.query.error as string | undefined
-  if (azureError) {
-    error.value = `Azure login error: ${azureError}`
-  }
+	// Mostrar error de Azure si viene en la URL
+	const azureError = route.query.error as string | undefined
+	if (azureError) {
+		error.value = `Azure login error: ${azureError}`
+	}
 })
 
 async function handleLogin() {
-  if (!username.value || !password.value) {
-    error.value = 'Username and password are required.'
-    return
-  }
-  error.value = ''
-  loading.value = true
-  try {
-    await auth.login({ username: username.value, password: password.value })
-    router.push('/')
-  } catch (e: any) {
-    error.value = e.message ?? 'Login failed. Please try again.'
-  } finally {
-    loading.value = false
-  }
+	if (!username.value || !password.value) {
+		error.value = 'Username and password are required.'
+		return
+	}
+	error.value = ''
+	loading.value = true
+	try {
+		await auth.login({ username: username.value, password: password.value })
+		router.push('/')
+	} catch (e: any) {
+		error.value = e.message ?? 'Login failed. Please try again.'
+	} finally {
+		loading.value = false
+	}
 }
 
 function loginWithAzure() {
-  window.location.href = __AZURE_LOGIN_URL__
+	window.location.href = __AZURE_LOGIN_URL__
 }
 </script>
 

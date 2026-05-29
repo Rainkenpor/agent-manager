@@ -57,7 +57,7 @@ export async function listAvailableAgentTools(): Promise<AvailableTool[]> {
 		.map((r) => ({
 			name: `agent-manager_${r.toolName}`,
 			description: r.toolDescription as string,
-			source: String(r.toolSource || 'registry') 
+			source: String(r.toolSource || 'registry')
 		}))
 
 	const externalTools = await getExternalTools()

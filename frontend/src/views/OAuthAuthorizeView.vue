@@ -1,35 +1,35 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import * as api from '@/api/api'
 
 const route = useRoute()
 
 // OAuth params from query string
-const clientId = computed(() => route.query.client_id as string ?? '')
-const clientName = computed(() => route.query.client_name as string ?? route.query.client_id as string ?? 'Unknown App')
-const redirectUri = computed(() => route.query.redirect_uri as string ?? '')
-const state = computed(() => route.query.state as string ?? '')
-const scope = computed(() => route.query.scope as string ?? 'mcp:all')
+const clientId = computed(() => (route.query.client_id as string) ?? '')
+const clientName = computed(() => (route.query.client_name as string) ?? (route.query.client_id as string) ?? 'Unknown App')
+const redirectUri = computed(() => (route.query.redirect_uri as string) ?? '')
+const state = computed(() => (route.query.state as string) ?? '')
+const scope = computed(() => (route.query.scope as string) ?? 'mcp:all')
 
 const scopes = computed(() =>
-  scope.value
-    .split(/[\s,]+/)
-    .filter(Boolean)
-    .map((s) => ({
-      key: s,
-      label: scopeLabel(s),
-    }))
+	scope.value
+		.split(/[\s,]+/)
+		.filter(Boolean)
+		.map((s) => ({
+			key: s,
+			label: scopeLabel(s)
+		}))
 )
 
 function scopeLabel(s: string): string {
-  const labels: Record<string, string> = {
-    'mcp:all': 'Full access to all MCP tools and agents',
-    'mcp:tools': 'Access to MCP tools',
-    'mcp:resources': 'Access to MCP resources',
-    'mcp:prompts': 'Access to MCP prompts',
-  }
-  return labels[s] ?? s
+	const labels: Record<string, string> = {
+		'mcp:all': 'Full access to all MCP tools and agents',
+		'mcp:tools': 'Access to MCP tools',
+		'mcp:resources': 'Access to MCP resources',
+		'mcp:prompts': 'Access to MCP prompts'
+	}
+	return labels[s] ?? s
 }
 
 // Form state
@@ -45,70 +45,68 @@ const denied = ref(false)
 const isValid = computed(() => !!clientId.value && !!redirectUri.value)
 
 onMounted(async () => {
-  if (!isValid.value) {
-    error.value = 'Invalid OAuth request: missing client_id or redirect_uri.'
-    return
-  }
-  // Handle Azure AD callback: azureToken is appended to this page's URL
-  const token = route.query.azureToken as string | undefined
-  if (token) {
-    azureToken.value = token
-    azureLoading.value = true
-    await authorize(true)
-    azureLoading.value = false
-  }
+	if (!isValid.value) {
+		error.value = 'Invalid OAuth request: missing client_id or redirect_uri.'
+		return
+	}
+	// Handle Azure AD callback: azureToken is appended to this page's URL
+	const token = route.query.azureToken as string | undefined
+	if (token) {
+		azureToken.value = token
+		azureLoading.value = true
+		await authorize(true)
+		azureLoading.value = false
+	}
 })
 
 function loginWithAzure() {
-  // Build the return_to URL so Azure callback redirects back here with the OAuth params
-  const oauthParams = new URLSearchParams()
-  oauthParams.set('client_id', clientId.value)
-  oauthParams.set('redirect_uri', redirectUri.value)
-  if (state.value) oauthParams.set('state', state.value)
-  if (scope.value) oauthParams.set('scope', scope.value)
-  const clientNameVal = route.query.client_name as string | undefined
-  if (clientNameVal) oauthParams.set('client_name', clientNameVal)
-  const returnTo = `${window.location.origin}/oauth/authorize/mcp?${oauthParams.toString()}`
-  window.location.href = `${__AZURE_LOGIN_URL__}?return_to=${encodeURIComponent(returnTo)}`
+	// Build the return_to URL so Azure callback redirects back here with the OAuth params
+	const oauthParams = new URLSearchParams()
+	oauthParams.set('client_id', clientId.value)
+	oauthParams.set('redirect_uri', redirectUri.value)
+	if (state.value) oauthParams.set('state', state.value)
+	if (scope.value) oauthParams.set('scope', scope.value)
+	const clientNameVal = route.query.client_name as string | undefined
+	if (clientNameVal) oauthParams.set('client_name', clientNameVal)
+	const returnTo = `${window.location.origin}/oauth/authorize/mcp?${oauthParams.toString()}`
+	window.location.href = `${__AZURE_LOGIN_URL__}?return_to=${encodeURIComponent(returnTo)}`
 }
 
 async function authorize(approved: boolean) {
-  if (!isValid.value) return
-  error.value = ''
-  loading.value = true
-  denied.value = !approved
+	if (!isValid.value) return
+	error.value = ''
+	loading.value = true
+	denied.value = !approved
 
-  try {
-    const result = await api.oauthAuthorize({
-      client_id: clientId.value,
-      redirect_uri: redirectUri.value,
-      state: state.value || undefined,
-      scope: scope.value || undefined,
-      ...(azureToken.value
-        ? { token: azureToken.value }
-        : { username: username.value, password: password.value }),
-      approved,
-    })
+	try {
+		const result = await api.oauthAuthorize({
+			client_id: clientId.value,
+			redirect_uri: redirectUri.value,
+			state: state.value || undefined,
+			scope: scope.value || undefined,
+			...(azureToken.value ? { token: azureToken.value } : { username: username.value, password: password.value }),
+			approved
+		})
 
-    if (result.error) {
-      if (result.error === 'invalid_credentials') {
-        error.value = 'Invalid username or password.'
-      } else {
-        error.value = `Authorization failed: ${result.error}`
-      }
-      denied.value = false
-      return
-    }
+		if (result.error) {
+			if (result.error === 'invalid_credentials') {
+				error.value = 'Invalid username or password.'
+			} else {
+				error.value = `Authorization failed: ${result.error}`
+			}
+			denied.value = false
+			return
+		}
 
-    if (result.redirect) {
-      window.location.href = result.redirect
-    }
-  } catch (e: any) {
-    error.value = e.message ?? 'Authorization failed'
-    denied.value = false
-  } finally {
-    loading.value = false
-  }
+		if (result.redirect) {
+			window.location.href = result.redirect
+		}
+	} catch (e: any) {
+		error.value = e.message ?? 'Authorization failed'
+		denied.value = false
+	} finally {
+		loading.value = false
+	}
 }
 </script>
 

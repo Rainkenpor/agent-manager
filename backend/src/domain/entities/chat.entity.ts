@@ -20,6 +20,15 @@ export interface ConversationWithMessages extends ConversationRecord {
 	messages: MessageRecord[]
 }
 
+/** Miniatura de imagen (generada por una tool MCP) persistida junto a un mensaje. */
+export interface PersistedImage {
+	serverId?: string
+	toolName: string
+	args: Record<string, unknown>
+	mimeType: string
+	thumb: string
+}
+
 export interface CreateConversationDTO {
 	title: string
 	agentId: string

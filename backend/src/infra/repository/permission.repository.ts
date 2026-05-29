@@ -1,7 +1,7 @@
+import type { CreatePermission, Permission } from '@domain/entities/permission.entity.js'
+import type { IPermissionRepository } from '@domain/repositories/permission.repository.js'
 import { AppDataSource } from '@infra/db/database.js'
 import { PermissionEntity } from '@infra/db/entities.js'
-import type { IPermissionRepository } from '@domain/repositories/permission.repository.js'
-import type { Permission, CreatePermission } from '@domain/entities/permission.entity.js'
 import { randomUUID } from 'crypto'
 
 export class PermissionRepository implements IPermissionRepository {

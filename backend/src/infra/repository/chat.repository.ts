@@ -1,9 +1,16 @@
 import { AppDataSource } from '@infra/db/database.js'
 import { ConversationEntity, MessageEntity } from '@infra/db/entities.js'
+import { buildImageMarker, stripImageMarker } from '@infra/utils/image-marker.js'
 import { In } from 'typeorm'
 import { v4 as uuidv4 } from 'uuid'
+import type {
+	ConversationRecord,
+	ConversationWithMessages,
+	CreateConversationDTO,
+	MessageRecord,
+	PersistedImage
+} from '../../domain/entities/chat.entity.js'
 import type { IChatRepository } from '../../domain/repositories/chat.repository.js'
-import type { ConversationRecord, ConversationWithMessages, CreateConversationDTO, MessageRecord } from '../../domain/entities/chat.entity.js'
 
 export class ChatRepository implements IChatRepository {
 	private get convRepo() {
@@ -26,7 +33,15 @@ export class ChatRepository implements IChatRepository {
 			updatedAt: now
 		})
 		await this.convRepo.save(entity)
-		return { id: entity.id, title: entity.title, agentId: entity.agentId, userId: entity.userId, draft: null, createdAt: now, updatedAt: now }
+		return {
+			id: entity.id,
+			title: entity.title,
+			agentId: entity.agentId,
+			userId: entity.userId,
+			draft: null,
+			createdAt: now,
+			updatedAt: now
+		}
 	}
 
 	async findConversationsByUser(userId: string): Promise<ConversationRecord[]> {
@@ -59,6 +74,19 @@ export class ChatRepository implements IChatRepository {
 		})
 		await this.msgRepo.save(entity)
 		return { id: entity.id, conversationId, role, content, createdAt }
+	}
+
+	async findMessageById(id: string): Promise<MessageRecord | null> {
+		const row = await this.msgRepo.findOneBy({ id })
+		return (row as MessageRecord) ?? null
+	}
+
+	async appendMessageImages(id: string, images: PersistedImage[]): Promise<void> {
+		const row = await this.msgRepo.findOneBy({ id })
+		if (!row) return
+		// Reemplaza cualquier marcador previo para no duplicarlo si se reintenta.
+		const base = stripImageMarker(row.content)
+		await this.msgRepo.update(id, { content: base + buildImageMarker(images) })
 	}
 
 	async getMessages(conversationId: string): Promise<MessageRecord[]> {

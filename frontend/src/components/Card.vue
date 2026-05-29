@@ -35,22 +35,23 @@
 </template>
 
 <script setup lang="ts">
-import { blurOn, focusOn } from '@/utils/focus';
 import { onMounted, onUnmounted, ref } from 'vue'
+import { blurOn, focusOn } from '@/utils/focus'
+
 defineProps<{
-  header?: {
-    title?: string,
-    description?: string
-  }
+	header?: {
+		title?: string
+		description?: string
+	}
 }>()
 
 const showOption = ref<boolean>(false)
-const containerRef = ref<HTMLElement | null>(null);
+const containerRef = ref<HTMLElement | null>(null)
 
 onMounted(() => {
-  focusOn(containerRef, showOption);
-});
+	focusOn(containerRef, showOption)
+})
 onUnmounted(() => {
-  blurOn(containerRef, showOption);
-});
+	blurOn(containerRef, showOption)
+})
 </script>

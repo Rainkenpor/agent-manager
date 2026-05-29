@@ -6,10 +6,10 @@
  *   npm run models   → listar modelos por empresa
  */
 
+import { spawn } from 'node:child_process'
+import { createHash, randomBytes } from 'node:crypto'
 import fs from 'node:fs'
 import http from 'node:http'
-import { createHash, randomBytes } from 'node:crypto'
-import { spawn } from 'node:child_process'
 import { platform } from 'node:os'
 import { join } from 'node:path'
 import { envs } from '../backend/src/envs.js'

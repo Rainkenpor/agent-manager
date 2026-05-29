@@ -3,11 +3,7 @@ import type { IMcpUserCredentialRepository } from '@domain/repositories/mcp-user
 export class DeleteMcpCredentialUseCase {
 	constructor(private readonly repo: IMcpUserCredentialRepository) {}
 
-	async execute(
-		userId: string,
-		mcpServerId: string,
-		key: string
-	): Promise<{ success: true } | { success: false; error: string }> {
+	async execute(userId: string, mcpServerId: string, key: string): Promise<{ success: true } | { success: false; error: string }> {
 		try {
 			await this.repo.delete(userId, mcpServerId, key)
 			return { success: true }

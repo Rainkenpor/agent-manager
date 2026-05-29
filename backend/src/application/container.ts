@@ -40,6 +40,7 @@ import { HookDispatcherService } from '@infra/service/hook-dispatcher.service.js
 import { mcpExternalManager } from '@infra/service/mcp-external.js'
 import { TraceabilityAgentTriggerService } from '@infra/service/traceability-agent-trigger.service.js'
 import {
+	AppendMessageImagesUseCase,
 	AssignPermissionUseCase,
 	AssignRoleUseCase,
 	AssignStageUserUseCase,
@@ -194,6 +195,7 @@ export class Container {
 	private _deleteConversationUseCase?: DeleteConversationUseCase
 	private _streamMessageUseCase?: StreamMessageUseCase
 	private _truncateMessagesUseCase?: TruncateMessagesUseCase
+	private _appendMessageImagesUseCase?: AppendMessageImagesUseCase
 
 	// MCP User Credential Repository & Use Cases
 	private readonly _mcpUserCredentialRepository: IMcpUserCredentialRepository
@@ -500,6 +502,13 @@ export class Container {
 			this._truncateMessagesUseCase = new TruncateMessagesUseCase(this._chatRepository)
 		}
 		return this._truncateMessagesUseCase
+	}
+
+	get appendMessageImagesUseCase(): AppendMessageImagesUseCase {
+		if (!this._appendMessageImagesUseCase) {
+			this._appendMessageImagesUseCase = new AppendMessageImagesUseCase(this._chatRepository)
+		}
+		return this._appendMessageImagesUseCase
 	}
 
 	// ==========================================

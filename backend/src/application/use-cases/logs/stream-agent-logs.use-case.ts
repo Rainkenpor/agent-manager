@@ -16,7 +16,9 @@ export class StreamAgentLogsUseCase {
 			if (fs.existsSync(LOG_AGENT_PATH)) {
 				lastSize = fs.statSync(LOG_AGENT_PATH).size
 			}
-		} catch { /* ignorar */ }
+		} catch {
+			/* ignorar */
+		}
 
 		let watcher: fs.FSWatcher | null = null
 		let closed = false
@@ -32,7 +34,10 @@ export class StreamAgentLogsUseCase {
 					fs.readSync(fd, buffer, 0, buffer.length, lastSize)
 					fs.closeSync(fd)
 					lastSize = stat.size
-					const newLines = buffer.toString('utf-8').split('\n').filter((l) => l.trim())
+					const newLines = buffer
+						.toString('utf-8')
+						.split('\n')
+						.filter((l) => l.trim())
 					for (const line of newLines) {
 						sendEvent({ type: 'line', content: line })
 					}
@@ -40,7 +45,9 @@ export class StreamAgentLogsUseCase {
 					// Archivo rotado/truncado
 					lastSize = stat.size
 				}
-			} catch { /* ignorar */ }
+			} catch {
+				/* ignorar */
+			}
 		}
 
 		try {
@@ -66,7 +73,10 @@ export class StreamAgentLogsUseCase {
 				return
 			}
 			const content = fs.readFileSync(LOG_AGENT_PATH, 'utf-8')
-			const lines = content.split('\n').filter((l) => l.trim()).slice(-TAIL_LINES)
+			const lines = content
+				.split('\n')
+				.filter((l) => l.trim())
+				.slice(-TAIL_LINES)
 			sendEvent({ type: 'history', lines })
 		} catch {
 			sendEvent({ type: 'history', lines: [] })

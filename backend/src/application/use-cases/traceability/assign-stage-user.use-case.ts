@@ -1,5 +1,5 @@
+import type { MyStage, UserEffort } from '@domain/entities/traceability.entity.js'
 import type { ITraceabilityRepository } from '@domain/repositories/traceability.repository.js'
-import type { UserEffort, MyStage } from '@domain/entities/traceability.entity.js'
 
 export class GetUsersByRoleWithEffortUseCase {
 	constructor(private readonly repo: ITraceabilityRepository) {}

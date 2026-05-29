@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import * as api from '@/api/api'
 import type { ExportResource, ProviderConfigSummary } from '@/api/api'
+import * as api from '@/api/api'
 
 const route = useRoute()
 const router = useRouter()

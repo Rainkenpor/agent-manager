@@ -2,17 +2,13 @@
 Archivo creado con gobernanza AB900
 */
 
-import { AppDataSource } from '@infra/db/database.js'
-import {
-	ConversationEntity,
-	TraceabilityParticipantStageChatEntity,
-	TraceabilityStageEntity
-} from '@infra/db/entities.js'
-import { v4 as uuidv4 } from 'uuid'
 import type { IChatRepository } from '@domain/repositories/chat.repository.js'
 import type { ITraceabilityRepository } from '@domain/repositories/traceability.repository.js'
 import type { ITraceabilityParticipantRepository } from '@domain/repositories/traceability-participant.repository.js'
 import type { IUserRepository } from '@domain/repositories/user.repository.js'
+import { AppDataSource } from '@infra/db/database.js'
+import { ConversationEntity, TraceabilityParticipantStageChatEntity, TraceabilityStageEntity } from '@infra/db/entities.js'
+import { v4 as uuidv4 } from 'uuid'
 
 export interface EligibleStage {
 	id: string

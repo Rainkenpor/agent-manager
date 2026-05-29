@@ -1,8 +1,8 @@
-import passport from 'passport'
-import { Strategy as LocalStrategy } from 'passport-local'
-import { Strategy as JwtStrategy, ExtractJwt } from 'passport-jwt'
-import bcrypt from 'bcryptjs'
 import type { IUserRepository } from '@domain/repositories/user.repository.js'
+import bcrypt from 'bcryptjs'
+import passport from 'passport'
+import { ExtractJwt, Strategy as JwtStrategy } from 'passport-jwt'
+import { Strategy as LocalStrategy } from 'passport-local'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production'
 

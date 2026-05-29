@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import * as api from '@/api/api'
+import AppModal from '@/components/AppModal.vue'
+import Card from '@/components/Card.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import PageLayout from '@/components/PageLayout.vue'
-import AppModal from '@/components/AppModal.vue'
-import { useToastStore } from '@/store/useToast'
-import * as api from '@/api/api'
-import type { Agent, AgentGroup, AgentTool } from '@/types/types'
-import Card from '@/components/Card.vue'
 import TextAreaComplete from '@/components/TextAreaComplete.vue'
+import { useToastStore } from '@/store/useToast'
+import type { Agent, AgentGroup, AgentTool } from '@/types/types'
 
 const toast = useToastStore()
 
@@ -24,31 +24,31 @@ const editingAgent = ref<Agent | null>(null)
 const saving = ref(false)
 
 interface AgentFormData {
-  name: string
-  slug: string
-  description: string
-  mode: 'primary' | 'subagent'
-  groupIds: string[]
-  model: string
-  temperature: string
-  content: string
-  isActive: boolean
-  tools: Record<string, boolean>
-  subagentIds: string[]
+	name: string
+	slug: string
+	description: string
+	mode: 'primary' | 'subagent'
+	groupIds: string[]
+	model: string
+	temperature: string
+	content: string
+	isActive: boolean
+	tools: Record<string, boolean>
+	subagentIds: string[]
 }
 
 const defaultForm = (): AgentFormData => ({
-  name: '',
-  slug: '',
-  description: '',
-  mode: 'primary',
-  groupIds: [],
-  model: '',
-  temperature: '0.7',
-  content: '',
-  isActive: true,
-  tools: {},
-  subagentIds: [],
+	name: '',
+	slug: '',
+	description: '',
+	mode: 'primary',
+	groupIds: [],
+	model: '',
+	temperature: '0.7',
+	content: '',
+	isActive: true,
+	tools: {},
+	subagentIds: []
 })
 
 const agentForm = ref<AgentFormData>(defaultForm())
@@ -61,257 +61,248 @@ const deleting = ref(false)
 const detailAgent = ref<Agent | null>(null)
 
 const groupById = computed(() => {
-  const map = new Map<string, AgentGroup>()
-  for (const g of groups.value) map.set(g.id, g)
-  return map
+	const map = new Map<string, AgentGroup>()
+	for (const g of groups.value) map.set(g.id, g)
+	return map
 })
 
 const agentGroupCountByTab = computed(() => {
-  const counts: Record<string, number> = { __all__: agents.value.length, __ungrouped__: 0 }
-  for (const g of groups.value) counts[g.id] = 0
-  for (const a of agents.value) {
-    if (!a.groupIds || a.groupIds.length === 0) counts.__ungrouped__ += 1
-    else for (const gid of a.groupIds) if (counts[gid] !== undefined) counts[gid] += 1
-  }
-  return counts
+	const counts: Record<string, number> = { __all__: agents.value.length, __ungrouped__: 0 }
+	for (const g of groups.value) counts[g.id] = 0
+	for (const a of agents.value) {
+		if (!a.groupIds || a.groupIds.length === 0) counts.__ungrouped__ += 1
+		else for (const gid of a.groupIds) if (counts[gid] !== undefined) counts[gid] += 1
+	}
+	return counts
 })
 
 const filteredAgents = computed(() => {
-  if (activeTab.value === '__all__') return agents.value
-  if (activeTab.value === '__ungrouped__') return agents.value.filter((a) => !a.groupIds?.length)
-  return agents.value.filter((a) => a.groupIds?.includes(activeTab.value))
+	if (activeTab.value === '__all__') return agents.value
+	if (activeTab.value === '__ungrouped__') return agents.value.filter((a) => !a.groupIds?.length)
+	return agents.value.filter((a) => a.groupIds?.includes(activeTab.value))
 })
 
 const primaryAgents = computed(() => filteredAgents.value.filter((a) => a.mode === 'primary'))
 const subagents = computed(() => filteredAgents.value.filter((a) => a.mode === 'subagent'))
 
 function groupColorOrFallback(g: AgentGroup | undefined): string {
-  return g?.color || '#a855f7'
+	return g?.color || '#a855f7'
 }
 
 function groupChipStyle(groupId: string): { backgroundColor: string; color: string; borderColor: string } {
-  const g = groupById.value.get(groupId)
-  const color = groupColorOrFallback(g)
-  return {
-    backgroundColor: `${color}1f`,
-    color: color,
-    borderColor: `${color}66`
-  }
+	const g = groupById.value.get(groupId)
+	const color = groupColorOrFallback(g)
+	return {
+		backgroundColor: `${color}1f`,
+		color: color,
+		borderColor: `${color}66`
+	}
 }
 
 function tabStyle(groupId: string, active: boolean): Record<string, string> {
-  const g = groupById.value.get(groupId)
-  if (!g) return {}
-  const color = groupColorOrFallback(g)
-  if (active) {
-    return { backgroundColor: `${color}26`, color: color, borderColor: color }
-  }
-  return { color: color, borderColor: 'transparent' }
+	const g = groupById.value.get(groupId)
+	if (!g) return {}
+	const color = groupColorOrFallback(g)
+	if (active) {
+		return { backgroundColor: `${color}26`, color: color, borderColor: color }
+	}
+	return { color: color, borderColor: 'transparent' }
 }
 
 function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
+	return text
+		.toLowerCase()
+		.replace(/[^a-z0-9\s-]/g, '')
+		.replace(/\s+/g, '-')
+		.replace(/-+/g, '-')
+		.replace(/^-|-$/g, '')
 }
 
 watch(
-  () => agentForm.value.name,
-  (val) => {
-    if (!editingAgent.value) {
-      agentForm.value.slug = slugify(val)
-    }
-  },
+	() => agentForm.value.name,
+	(val) => {
+		if (!editingAgent.value) {
+			agentForm.value.slug = slugify(val)
+		}
+	}
 )
 
 async function fetchData() {
-  loading.value = true
-  try {
-    const [agentsRes, toolsRes, groupsRes] = await Promise.all([
-      api.getAgents(),
-      api.getAgentTools(),
-      api.getAgentGroups()
-    ])
-    agents.value = agentsRes.data ?? (agentsRes as any)
-    availableTools.value = toolsRes.data ?? (toolsRes as any)
-    groups.value = groupsRes.data ?? []
-  } catch (e: any) {
-    toast.error(e.message ?? 'Failed to load agents')
-  } finally {
-    loading.value = false
-  }
+	loading.value = true
+	try {
+		const [agentsRes, toolsRes, groupsRes] = await Promise.all([api.getAgents(), api.getAgentTools(), api.getAgentGroups()])
+		agents.value = agentsRes.data ?? (agentsRes as any)
+		availableTools.value = toolsRes.data ?? (toolsRes as any)
+		groups.value = groupsRes.data ?? []
+	} catch (e: any) {
+		toast.error(e.message ?? 'Failed to load agents')
+	} finally {
+		loading.value = false
+	}
 }
 
 onMounted(fetchData)
 
 function openCreate() {
-  editingAgent.value = null
-  const form = defaultForm()
-  // Initialize tools
-  for (const tool of availableTools.value) {
-    form.tools[tool.name] = false
-  }
-  agentForm.value = form
-  selectedToolSource.value = toolGroups.value[0]?.key ?? ''
-  showModal.value = true
+	editingAgent.value = null
+	const form = defaultForm()
+	// Initialize tools
+	for (const tool of availableTools.value) {
+		form.tools[tool.name] = false
+	}
+	agentForm.value = form
+	selectedToolSource.value = toolGroups.value[0]?.key ?? ''
+	showModal.value = true
 }
 
 function openEdit(agent: Agent) {
-  editingAgent.value = agent
-  const form: AgentFormData = {
-    name: agent.name,
-    slug: agent.slug,
-    description: agent.description ?? '',
-    mode: agent.mode,
-    groupIds: [...(agent.groupIds ?? [])],
-    model: agent.model,
-    temperature: agent.temperature,
-    content: agent.content,
-    isActive: agent.isActive,
-    tools: { ...agent.tools },
-    subagentIds: (agent.subagents ?? []).map((s) => s.id),
-  }
-  // Ensure all available tools are represented
-  for (const tool of availableTools.value) {
-    if (!(tool.name in form.tools)) {
-      form.tools[tool.name] = false
-    }
-  }
-  agentForm.value = form
-  selectedToolSource.value = toolGroups.value[0]?.key ?? ''
-  showModal.value = true
+	editingAgent.value = agent
+	const form: AgentFormData = {
+		name: agent.name,
+		slug: agent.slug,
+		description: agent.description ?? '',
+		mode: agent.mode,
+		groupIds: [...(agent.groupIds ?? [])],
+		model: agent.model,
+		temperature: agent.temperature,
+		content: agent.content,
+		isActive: agent.isActive,
+		tools: { ...agent.tools },
+		subagentIds: (agent.subagents ?? []).map((s) => s.id)
+	}
+	// Ensure all available tools are represented
+	for (const tool of availableTools.value) {
+		if (!(tool.name in form.tools)) {
+			form.tools[tool.name] = false
+		}
+	}
+	agentForm.value = form
+	selectedToolSource.value = toolGroups.value[0]?.key ?? ''
+	showModal.value = true
 }
 
 function closeModal() {
-  showModal.value = false
-  editingAgent.value = null
+	showModal.value = false
+	editingAgent.value = null
 }
 
 async function saveAgent() {
-  saving.value = true
-  try {
-    const payload: any = {
-      name: agentForm.value.name,
-      slug: agentForm.value.slug,
-      description: agentForm.value.description || undefined,
-      mode: agentForm.value.mode,
-      groupIds: agentForm.value.groupIds,
-      model: agentForm.value.model,
-      temperature: agentForm.value.temperature,
-      content: agentForm.value.content,
-      isActive: agentForm.value.isActive,
-      tools: agentForm.value.tools,
-    }
-    if (agentForm.value.mode === 'primary') {
-      payload.subagentIds = agentForm.value.subagentIds
-    }
+	saving.value = true
+	try {
+		const payload: any = {
+			name: agentForm.value.name,
+			slug: agentForm.value.slug,
+			description: agentForm.value.description || undefined,
+			mode: agentForm.value.mode,
+			groupIds: agentForm.value.groupIds,
+			model: agentForm.value.model,
+			temperature: agentForm.value.temperature,
+			content: agentForm.value.content,
+			isActive: agentForm.value.isActive,
+			tools: agentForm.value.tools
+		}
+		if (agentForm.value.mode === 'primary') {
+			payload.subagentIds = agentForm.value.subagentIds
+		}
 
-    if (editingAgent.value) {
-      await api.updateAgent(editingAgent.value.id, payload)
-      toast.success('Agent updated')
-    } else {
-      await api.createAgent(payload)
-      toast.success('Agent created')
-    }
-    closeModal()
-    await fetchData()
-  } catch (e: any) {
-    toast.error(e.message ?? 'Failed to save agent')
-  } finally {
-    saving.value = false
-  }
+		if (editingAgent.value) {
+			await api.updateAgent(editingAgent.value.id, payload)
+			toast.success('Agent updated')
+		} else {
+			await api.createAgent(payload)
+			toast.success('Agent created')
+		}
+		closeModal()
+		await fetchData()
+	} catch (e: any) {
+		toast.error(e.message ?? 'Failed to save agent')
+	} finally {
+		saving.value = false
+	}
 }
 
 function confirmDelete(agent: Agent) {
-  deleteTarget.value = agent
+	deleteTarget.value = agent
 }
 
 async function duplicateAgent(agent: Agent) {
-  try {
-    await api.duplicateAgent(agent.id)
-    toast.success(`Agente duplicado`)
-    await fetchData()
-  } catch (e: any) {
-    toast.error(e.message ?? 'Failed to duplicate agent')
-  }
+	try {
+		await api.duplicateAgent(agent.id)
+		toast.success(`Agente duplicado`)
+		await fetchData()
+	} catch (e: any) {
+		toast.error(e.message ?? 'Failed to duplicate agent')
+	}
 }
 
 async function doDelete() {
-  if (!deleteTarget.value) return
-  deleting.value = true
-  try {
-    await api.deleteAgent(deleteTarget.value.id)
-    toast.success('Agent deleted')
-    deleteTarget.value = null
-    await fetchData()
-  } catch (e: any) {
-    toast.error(e.message ?? 'Failed to delete agent')
-  } finally {
-    deleting.value = false
-  }
+	if (!deleteTarget.value) return
+	deleting.value = true
+	try {
+		await api.deleteAgent(deleteTarget.value.id)
+		toast.success('Agent deleted')
+		deleteTarget.value = null
+		await fetchData()
+	} catch (e: any) {
+		toast.error(e.message ?? 'Failed to delete agent')
+	} finally {
+		deleting.value = false
+	}
 }
 
 function openDetail(agent: Agent) {
-  detailAgent.value = agent
+	detailAgent.value = agent
 }
 
 function toggleSubagent(id: string) {
-  const idx = agentForm.value.subagentIds.indexOf(id)
-  if (idx === -1) {
-    agentForm.value.subagentIds.push(id)
-  } else {
-    agentForm.value.subagentIds.splice(idx, 1)
-  }
+	const idx = agentForm.value.subagentIds.indexOf(id)
+	if (idx === -1) {
+		agentForm.value.subagentIds.push(id)
+	} else {
+		agentForm.value.subagentIds.splice(idx, 1)
+	}
 }
 
 function toolDisplayName(toolName: string): string {
-  if (toolName.startsWith('mcp__')) {
-    const idx = toolName.indexOf('__', 5)
-    return idx !== -1 ? toolName.slice(idx + 2) : toolName
-  }
-  return toolName
+	if (toolName.startsWith('mcp__')) {
+		const idx = toolName.indexOf('__', 5)
+		return idx !== -1 ? toolName.slice(idx + 2) : toolName
+	}
+	return toolName
 }
 
 function selectGroup(group: string) {
-  if (selectedToolSource.value === group) {
-    selectedToolSource.value = ''
-    return
-  }
-  selectedToolSource.value = group
+	if (selectedToolSource.value === group) {
+		selectedToolSource.value = ''
+		return
+	}
+	selectedToolSource.value = group
 }
 
-function checkGroup(group: { key: string, label: string, tools: AgentTool[] }) {
-  if (group.tools.filter(t => agentForm.value.tools[t.name]).length === group.tools.length) {
-    group.tools.forEach(t => agentForm.value.tools[t.name] = false)
-  } else {
-    group.tools.forEach(t => agentForm.value.tools[t.name] = true)
-  }
-
+function checkGroup(group: { key: string; label: string; tools: AgentTool[] }) {
+	if (group.tools.filter((t) => agentForm.value.tools[t.name]).length === group.tools.length) {
+		group.tools.forEach((t) => (agentForm.value.tools[t.name] = false))
+	} else {
+		group.tools.forEach((t) => (agentForm.value.tools[t.name] = true))
+	}
 }
-
 
 const toolGroups = computed(() => {
-  const byKey: Record<string, AgentTool[]> = {}
-  for (const tool of availableTools.value) {
-    const key =
-      tool.source === 'external' && tool.name.startsWith('mcp__')
-        ? tool.name.slice(5).split('__')[0]
-        : tool.source
-    if (!byKey[key]) byKey[key] = []
-    byKey[key].push(tool)
-  }
-  const order = ['builtin', 'registry']
-  const result: Array<{ key: string; label: string; tools: AgentTool[] }> = []
-  for (const k of order) {
-    if (byKey[k]?.length) result.push({ key: k, label: k, tools: byKey[k] })
-  }
-  for (const [k, tools] of Object.entries(byKey)) {
-    if (!order.includes(k)) result.push({ key: k, label: k, tools })
-  }
-  return result
+	const byKey: Record<string, AgentTool[]> = {}
+	for (const tool of availableTools.value) {
+		const key = tool.source === 'external' && tool.name.startsWith('mcp__') ? tool.name.slice(5).split('__')[0] : tool.source
+		if (!byKey[key]) byKey[key] = []
+		byKey[key].push(tool)
+	}
+	const order = ['builtin', 'registry']
+	const result: Array<{ key: string; label: string; tools: AgentTool[] }> = []
+	for (const k of order) {
+		if (byKey[k]?.length) result.push({ key: k, label: k, tools: byKey[k] })
+	}
+	for (const [k, tools] of Object.entries(byKey)) {
+		if (!order.includes(k)) result.push({ key: k, label: k, tools })
+	}
+	return result
 })
 
 const selectedToolSource = ref<string>('')
@@ -327,87 +318,87 @@ const editingGroupId = ref<string | null>(null)
 const SYSTEM_GROUP_SLUGS = new Set(['traceability', 'chat'])
 
 function isSystemGroup(g: AgentGroup): boolean {
-  return SYSTEM_GROUP_SLUGS.has(g.slug)
+	return SYSTEM_GROUP_SLUGS.has(g.slug)
 }
 
 function groupAgentCount(groupId: string): number {
-  return agents.value.filter((a) => a.groupIds?.includes(groupId)).length
+	return agents.value.filter((a) => a.groupIds?.includes(groupId)).length
 }
 
 function toggleFormGroup(groupId: string) {
-  const idx = agentForm.value.groupIds.indexOf(groupId)
-  if (idx === -1) agentForm.value.groupIds.push(groupId)
-  else agentForm.value.groupIds.splice(idx, 1)
+	const idx = agentForm.value.groupIds.indexOf(groupId)
+	if (idx === -1) agentForm.value.groupIds.push(groupId)
+	else agentForm.value.groupIds.splice(idx, 1)
 }
 
 function resetGroupForm() {
-  editingGroupId.value = null
-  newGroupName.value = ''
-  newGroupSlug.value = ''
-  newGroupDescription.value = ''
-  newGroupIcon.value = 'mdi-folder-outline'
-  newGroupColor.value = '#a855f7'
+	editingGroupId.value = null
+	newGroupName.value = ''
+	newGroupSlug.value = ''
+	newGroupDescription.value = ''
+	newGroupIcon.value = 'mdi-folder-outline'
+	newGroupColor.value = '#a855f7'
 }
 
 function startEditGroup(g: AgentGroup) {
-  editingGroupId.value = g.id
-  newGroupName.value = g.name
-  newGroupSlug.value = g.slug
-  newGroupDescription.value = g.description ?? ''
-  newGroupIcon.value = g.icon || 'mdi-folder-outline'
-  newGroupColor.value = g.color || '#a855f7'
+	editingGroupId.value = g.id
+	newGroupName.value = g.name
+	newGroupSlug.value = g.slug
+	newGroupDescription.value = g.description ?? ''
+	newGroupIcon.value = g.icon || 'mdi-folder-outline'
+	newGroupColor.value = g.color || '#a855f7'
 }
 
 async function saveGroup() {
-  const name = newGroupName.value.trim()
-  const slug = newGroupSlug.value.trim() || slugify(name)
-  if (!name || !slug) return
-  savingGroup.value = true
-  try {
-    const payload = {
-      name,
-      slug,
-      description: newGroupDescription.value.trim() || null,
-      icon: newGroupIcon.value.trim() || null,
-      color: newGroupColor.value || null
-    }
-    if (editingGroupId.value) {
-      await api.updateAgentGroup(editingGroupId.value, payload)
-      toast.success('Grupo actualizado')
-    } else {
-      await api.createAgentGroup(payload)
-      toast.success('Grupo creado')
-    }
-    resetGroupForm()
-    const res = await api.getAgentGroups()
-    groups.value = res.data ?? []
-  } catch (e: any) {
-    toast.error(e.message ?? 'Failed to save group')
-  } finally {
-    savingGroup.value = false
-  }
+	const name = newGroupName.value.trim()
+	const slug = newGroupSlug.value.trim() || slugify(name)
+	if (!name || !slug) return
+	savingGroup.value = true
+	try {
+		const payload = {
+			name,
+			slug,
+			description: newGroupDescription.value.trim() || null,
+			icon: newGroupIcon.value.trim() || null,
+			color: newGroupColor.value || null
+		}
+		if (editingGroupId.value) {
+			await api.updateAgentGroup(editingGroupId.value, payload)
+			toast.success('Grupo actualizado')
+		} else {
+			await api.createAgentGroup(payload)
+			toast.success('Grupo creado')
+		}
+		resetGroupForm()
+		const res = await api.getAgentGroups()
+		groups.value = res.data ?? []
+	} catch (e: any) {
+		toast.error(e.message ?? 'Failed to save group')
+	} finally {
+		savingGroup.value = false
+	}
 }
 
 async function removeGroup(g: AgentGroup) {
-  if (isSystemGroup(g)) {
-    toast.error('No se puede eliminar un grupo del sistema')
-    return
-  }
-  if (groupAgentCount(g.id) > 0) {
-    toast.error('No se puede eliminar un grupo con agentes asignados')
-    return
-  }
-  try {
-    await api.deleteAgentGroup(g.id)
-    groups.value = groups.value.filter((x) => x.id !== g.id)
-    toast.success('Grupo eliminado')
-  } catch (e: any) {
-    toast.error(e.message ?? 'Failed to delete group')
-  }
+	if (isSystemGroup(g)) {
+		toast.error('No se puede eliminar un grupo del sistema')
+		return
+	}
+	if (groupAgentCount(g.id) > 0) {
+		toast.error('No se puede eliminar un grupo con agentes asignados')
+		return
+	}
+	try {
+		await api.deleteAgentGroup(g.id)
+		groups.value = groups.value.filter((x) => x.id !== g.id)
+		toast.success('Grupo eliminado')
+	} catch (e: any) {
+		toast.error(e.message ?? 'Failed to delete group')
+	}
 }
 
 watch(newGroupName, (v) => {
-  if (!newGroupSlug.value) newGroupSlug.value = slugify(v)
+	if (!newGroupSlug.value) newGroupSlug.value = slugify(v)
 })
 </script>
 

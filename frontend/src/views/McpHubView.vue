@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useAuthStore } from '@/store/useAuth'
-import McpServersView from './McpServersView.vue'
 import McpCredentialsView from './McpCredentialsView.vue'
+import McpServersView from './McpServersView.vue'
 
 const auth = useAuthStore()
 
 const allTabs = [
-  { key: 'servers', label: 'MCP Servers', icon: 'mdi-server', resource: 'mcp_servers', component: McpServersView },
-  { key: 'credentials', label: 'My Credentials', icon: 'mdi-key', resource: 'mcp_credentials', component: McpCredentialsView },
+	{ key: 'servers', label: 'MCP Servers', icon: 'mdi-server', resource: 'mcp_servers', component: McpServersView },
+	{ key: 'credentials', label: 'My Credentials', icon: 'mdi-key', resource: 'mcp_credentials', component: McpCredentialsView }
 ]
 
 const tabs = computed(() => allTabs.filter((t) => auth.hasResourceManageAccess(t.resource)))

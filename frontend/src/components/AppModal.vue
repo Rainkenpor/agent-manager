@@ -1,31 +1,34 @@
 <script setup lang="ts">
-const props = withDefaults(defineProps<{
-  title?: string
-  description?: string
-  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '5xl'
-  persistent?: boolean
-  scrollBody?: boolean
-  fullHeight?: boolean
-}>(), {
-  size: 'lg',
-  scrollBody: true,
-  fullHeight: false,
-  persistent: false,
-})
+const props = withDefaults(
+	defineProps<{
+		title?: string
+		description?: string
+		size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '5xl'
+		persistent?: boolean
+		scrollBody?: boolean
+		fullHeight?: boolean
+	}>(),
+	{
+		size: 'lg',
+		scrollBody: true,
+		fullHeight: false,
+		persistent: false
+	}
+)
 
 const emit = defineEmits<{ close: [] }>()
 
 const sizeMap: Record<string, string> = {
-  sm: 'max-w-sm',
-  md: 'max-w-md',
-  lg: 'max-w-lg',
-  xl: 'max-w-xl',
-  '2xl': 'max-w-2xl',
-  '5xl': 'max-w-5xl',
+	sm: 'max-w-sm',
+	md: 'max-w-md',
+	lg: 'max-w-lg',
+	xl: 'max-w-xl',
+	'2xl': 'max-w-2xl',
+	'5xl': 'max-w-5xl'
 }
 
 function handleBackdropClick() {
-  if (!props.persistent) emit('close')
+	if (!props.persistent) emit('close')
 }
 </script>
 

@@ -1,12 +1,10 @@
-import type { IChatRepository } from '@domain/repositories/chat.repository.js'
 import type { ConversationRecord } from '@domain/entities/chat.entity.js'
+import type { IChatRepository } from '@domain/repositories/chat.repository.js'
 
 export class ListConversationsUseCase {
 	constructor(private readonly chatRepository: IChatRepository) {}
 
-	async execute(
-		userId: string,
-	): Promise<{ success: true; data: ConversationRecord[] } | { success: false; error: string }> {
+	async execute(userId: string): Promise<{ success: true; data: ConversationRecord[] } | { success: false; error: string }> {
 		try {
 			const convs = await this.chatRepository.findConversationsByUser(userId)
 			return { success: true, data: convs }

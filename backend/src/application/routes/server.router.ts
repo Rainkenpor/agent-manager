@@ -1,7 +1,7 @@
 import { requireAuth, requirePermission } from '@application/interfaces/auth.middleware.js'
 import { registry } from '@application/services/registry.service.js'
 import type { McpOAuthService } from '@infra/service/mcp-oauth.service.js'
-import express, { type Request, type Response, type NextFunction } from 'express'
+import express, { type NextFunction, type Request, type Response } from 'express'
 import { z } from 'zod'
 /**
  * Creates the Express router for the standard API based on registered routes.

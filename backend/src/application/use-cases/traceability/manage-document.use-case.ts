@@ -1,5 +1,5 @@
-import type { ITraceabilityRepository } from '@domain/repositories/traceability.repository.js'
 import type { CreateDocumentDTO, UpdateDocumentDTO } from '@domain/entities/traceability.entity.js'
+import type { ITraceabilityRepository } from '@domain/repositories/traceability.repository.js'
 
 export class CreateDocumentUseCase {
 	constructor(private readonly repo: ITraceabilityRepository) {}

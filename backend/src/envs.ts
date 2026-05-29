@@ -1,13 +1,16 @@
 import dotenv from 'dotenv'
+
 dotenv.config({ path: ['../.env', '.env'] })
 
 const VITE_SERVER_URL = process.env.VITE_SERVER_URL || 'http://localhost:3001'
 const VITE_SERVER_API_PATH = process.env.VITE_SERVER_API_PATH || '/api'
 
 const SERVER_PORT = process.env.SERVER_PORT || 3001
-const SERVER_URL = process.env.SERVER_URL ?
-  (process.env.SERVER_URL.endsWith('/') ? process.env.SERVER_URL : `${process.env.SERVER_URL}/`) 
-  : 'http://localhost:80/'
+const SERVER_URL = process.env.SERVER_URL
+	? process.env.SERVER_URL.endsWith('/')
+		? process.env.SERVER_URL
+		: `${process.env.SERVER_URL}/`
+	: 'http://localhost:80/'
 const SERVER_API_PATH = process.env.SERVER_API_PATH || '/api'
 const SERVER_DATA_PATH = process.env.SERVER_DATA_PATH || './data'
 
@@ -65,5 +68,5 @@ export const envs = {
 	AZURE_CLIENT_ID,
 	AZURE_CLIENT_SECRET,
 	AZURE_TENANT_ID,
-	AZURE_REDIRECT_URI,
+	AZURE_REDIRECT_URI
 }

@@ -1,29 +1,29 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import TextAreaComplete from '@/components/TextAreaComplete.vue'
 import * as api from '@/api/api'
+import TextAreaComplete from '@/components/TextAreaComplete.vue'
 
 interface DocumentVersion {
-  id: string
-  stageId: string
-  name: string
-  content: string
-  active: boolean
-  originalId: string | null
-  createdAt: string
-  updatedAt: string
+	id: string
+	stageId: string
+	name: string
+	content: string
+	active: boolean
+	originalId: string | null
+	createdAt: string
+	updatedAt: string
 }
 
 const props = defineProps<{
-  documentId: string
-  canEdit?: boolean
-  subtitle?: string | null
+	documentId: string
+	canEdit?: boolean
+	subtitle?: string | null
 }>()
 
 const emit = defineEmits<{
-  close: []
-  saved: [doc: DocumentVersion]
-  error: [message: string]
+	close: []
+	saved: [doc: DocumentVersion]
+	error: [message: string]
 }>()
 
 type Tab = 'content' | 'history'
@@ -40,134 +40,144 @@ const historyLoading = ref(false)
 const selectedVersionId = ref<string | null>(null)
 
 async function loadDocument() {
-  loading.value = true
-  try {
-    const res = await api.getTraceabilityDocument(props.documentId)
-    activeDocument.value = res.data
-    editForm.value = { name: res.data.name, content: res.data.content ?? '' }
-  } catch (e: any) {
-    emit('error', e.message)
-  } finally {
-    loading.value = false
-  }
+	loading.value = true
+	try {
+		const res = await api.getTraceabilityDocument(props.documentId)
+		activeDocument.value = res.data
+		editForm.value = { name: res.data.name, content: res.data.content ?? '' }
+	} catch (e: any) {
+		emit('error', e.message)
+	} finally {
+		loading.value = false
+	}
 }
 
 async function loadHistory() {
-  if (!activeDocument.value) return
-  historyLoading.value = true
-  try {
-    const res = await api.getTraceabilityDocumentHistory(activeDocument.value.id)
-    history.value = res.data ?? []
-    if (history.value.length > 0 && !selectedVersionId.value) {
-      selectedVersionId.value = history.value[0].id
-    }
-  } catch (e: any) {
-    emit('error', e.message)
-  } finally {
-    historyLoading.value = false
-  }
+	if (!activeDocument.value) return
+	historyLoading.value = true
+	try {
+		const res = await api.getTraceabilityDocumentHistory(activeDocument.value.id)
+		history.value = res.data ?? []
+		if (history.value.length > 0 && !selectedVersionId.value) {
+			selectedVersionId.value = history.value[0].id
+		}
+	} catch (e: any) {
+		emit('error', e.message)
+	} finally {
+		historyLoading.value = false
+	}
 }
 
 watch(tab, (t) => {
-  if (t === 'history' && history.value.length === 0) loadHistory()
+	if (t === 'history' && history.value.length === 0) loadHistory()
 })
 
 async function save() {
-  if (!activeDocument.value) return
-  saving.value = true
-  try {
-    const res = await api.updateTraceabilityDocument(activeDocument.value.id, editForm.value)
-    activeDocument.value = res.data
-    editing.value = false
-    history.value = [] // invalidate; will reload on tab switch
-    selectedVersionId.value = null
-    emit('saved', res.data)
-  } catch (e: any) {
-    emit('error', e.message)
-  } finally {
-    saving.value = false
-  }
+	if (!activeDocument.value) return
+	saving.value = true
+	try {
+		const res = await api.updateTraceabilityDocument(activeDocument.value.id, editForm.value)
+		activeDocument.value = res.data
+		editing.value = false
+		history.value = [] // invalidate; will reload on tab switch
+		selectedVersionId.value = null
+		emit('saved', res.data)
+	} catch (e: any) {
+		emit('error', e.message)
+	} finally {
+		saving.value = false
+	}
 }
 
 function startEditing() {
-  if (!activeDocument.value) return
-  editForm.value = { name: activeDocument.value.name, content: activeDocument.value.content ?? '' }
-  editing.value = true
+	if (!activeDocument.value) return
+	editForm.value = { name: activeDocument.value.name, content: activeDocument.value.content ?? '' }
+	editing.value = true
 }
 
 function cancelEdit() {
-  editing.value = false
-  if (activeDocument.value) {
-    editForm.value = { name: activeDocument.value.name, content: activeDocument.value.content ?? '' }
-  }
+	editing.value = false
+	if (activeDocument.value) {
+		editForm.value = { name: activeDocument.value.name, content: activeDocument.value.content ?? '' }
+	}
 }
 
 // ── Diff (line-level LCS) ────────────────────────────────────────────────────
 type DiffOp = 'equal' | 'add' | 'remove'
-interface DiffLine { op: DiffOp; left: string | null; right: string | null; leftNum: number | null; rightNum: number | null }
-
-function diffLines(oldText: string, newText: string): DiffLine[] {
-  const a = oldText.split('\n')
-  const b = newText.split('\n')
-  const n = a.length, m = b.length
-  // DP table for LCS lengths
-  const dp: number[][] = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0))
-  for (let i = n - 1; i >= 0; i--) {
-    for (let j = m - 1; j >= 0; j--) {
-      dp[i][j] = a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1])
-    }
-  }
-  const result: DiffLine[] = []
-  let i = 0, j = 0, leftLine = 1, rightLine = 1
-  while (i < n && j < m) {
-    if (a[i] === b[j]) {
-      result.push({ op: 'equal', left: a[i], right: b[j], leftNum: leftLine++, rightNum: rightLine++ })
-      i++; j++
-    } else if (dp[i + 1][j] >= dp[i][j + 1]) {
-      result.push({ op: 'remove', left: a[i], right: null, leftNum: leftLine++, rightNum: null })
-      i++
-    } else {
-      result.push({ op: 'add', left: null, right: b[j], leftNum: null, rightNum: rightLine++ })
-      j++
-    }
-  }
-  while (i < n) result.push({ op: 'remove', left: a[i++], right: null, leftNum: leftLine++, rightNum: null })
-  while (j < m) result.push({ op: 'add', left: null, right: b[j++], leftNum: null, rightNum: rightLine++ })
-  return result
+interface DiffLine {
+	op: DiffOp
+	left: string | null
+	right: string | null
+	leftNum: number | null
+	rightNum: number | null
 }
 
-const selectedVersion = computed(() =>
-  history.value.find((v) => v.id === selectedVersionId.value) ?? null
-)
+function diffLines(oldText: string, newText: string): DiffLine[] {
+	const a = oldText.split('\n')
+	const b = newText.split('\n')
+	const n = a.length,
+		m = b.length
+	// DP table for LCS lengths
+	const dp: number[][] = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0))
+	for (let i = n - 1; i >= 0; i--) {
+		for (let j = m - 1; j >= 0; j--) {
+			dp[i][j] = a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1])
+		}
+	}
+	const result: DiffLine[] = []
+	let i = 0,
+		j = 0,
+		leftLine = 1,
+		rightLine = 1
+	while (i < n && j < m) {
+		if (a[i] === b[j]) {
+			result.push({ op: 'equal', left: a[i], right: b[j], leftNum: leftLine++, rightNum: rightLine++ })
+			i++
+			j++
+		} else if (dp[i + 1][j] >= dp[i][j + 1]) {
+			result.push({ op: 'remove', left: a[i], right: null, leftNum: leftLine++, rightNum: null })
+			i++
+		} else {
+			result.push({ op: 'add', left: null, right: b[j], leftNum: null, rightNum: rightLine++ })
+			j++
+		}
+	}
+	while (i < n) result.push({ op: 'remove', left: a[i++], right: null, leftNum: leftLine++, rightNum: null })
+	while (j < m) result.push({ op: 'add', left: null, right: b[j++], leftNum: null, rightNum: rightLine++ })
+	return result
+}
+
+const selectedVersion = computed(() => history.value.find((v) => v.id === selectedVersionId.value) ?? null)
 
 const previousVersion = computed(() => {
-  if (!selectedVersion.value) return null
-  const idx = history.value.findIndex((v) => v.id === selectedVersion.value!.id)
-  return idx >= 0 && idx + 1 < history.value.length ? history.value[idx + 1] : null
+	if (!selectedVersion.value) return null
+	const idx = history.value.findIndex((v) => v.id === selectedVersion.value!.id)
+	return idx >= 0 && idx + 1 < history.value.length ? history.value[idx + 1] : null
 })
 
 const currentDiff = computed<DiffLine[]>(() => {
-  if (!selectedVersion.value) return []
-  const oldText = previousVersion.value?.content ?? ''
-  const newText = selectedVersion.value.content ?? ''
-  return diffLines(oldText, newText)
+	if (!selectedVersion.value) return []
+	const oldText = previousVersion.value?.content ?? ''
+	const newText = selectedVersion.value.content ?? ''
+	return diffLines(oldText, newText)
 })
 
 const diffStats = computed(() => {
-  let adds = 0, removes = 0
-  for (const d of currentDiff.value) {
-    if (d.op === 'add') adds++
-    else if (d.op === 'remove') removes++
-  }
-  return { adds, removes }
+	let adds = 0,
+		removes = 0
+	for (const d of currentDiff.value) {
+		if (d.op === 'add') adds++
+		else if (d.op === 'remove') removes++
+	}
+	return { adds, removes }
 })
 
 function shortId(id: string): string {
-  return id.slice(0, 7)
+	return id.slice(0, 7)
 }
 
 function fmtDate(s: string): string {
-  return new Date(s).toLocaleString()
+	return new Date(s).toLocaleString()
 }
 
 onMounted(loadDocument)

@@ -4,7 +4,4 @@ export interface AiAssistInput {
 	systemPrompt?: string
 }
 
-export type AiAssistSseEvent =
-	| { type: 'chunk'; content: string }
-	| { type: 'done'; content: string }
-	| { type: 'error'; error: string }
+export type AiAssistSseEvent = { type: 'chunk'; content: string } | { type: 'done'; content: string } | { type: 'error'; error: string }

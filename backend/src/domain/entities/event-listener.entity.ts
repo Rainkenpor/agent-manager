@@ -1,15 +1,4 @@
-export type EventListenerOperator =
-	| '=='
-	| '==='
-	| '!='
-	| '!=='
-	| '>'
-	| '<'
-	| '>='
-	| '<='
-	| 'contains'
-	| 'startsWith'
-	| 'endsWith'
+export type EventListenerOperator = '==' | '===' | '!=' | '!==' | '>' | '<' | '>=' | '<=' | 'contains' | 'startsWith' | 'endsWith'
 
 export interface EventListenerSource {
 	/** Tool name in the registry. Format: mcp__{serverName}__{toolName}, e.g. "mcp__jira__get_issues" */

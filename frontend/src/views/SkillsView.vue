@@ -1,32 +1,32 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import * as api from '@/api/api'
+import AppModal from '@/components/AppModal.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import PageLayout from '@/components/PageLayout.vue'
-import AppModal from '@/components/AppModal.vue'
-import { useToastStore } from '@/store/useToast'
 import { useAuthStore } from '@/store/useAuth'
-import * as api from '@/api/api'
+import { useToastStore } from '@/store/useToast'
 
 const toast = useToastStore()
 const auth = useAuthStore()
 
 interface Skill {
-  id: string
-  name: string
-  slug: string
-  description: string | null
-  content: string
-  isActive: boolean
-  createdAt: string
-  updatedAt: string
+	id: string
+	name: string
+	slug: string
+	description: string | null
+	content: string
+	isActive: boolean
+	createdAt: string
+	updatedAt: string
 }
 
 interface SkillForm {
-  name: string
-  slug: string
-  description: string
-  content: string
-  isActive: boolean
+	name: string
+	slug: string
+	description: string
+	content: string
+	isActive: boolean
 }
 
 const skills = ref<Skill[]>([])
@@ -40,116 +40,116 @@ const selectedSkill = ref<Skill | null>(null)
 const slugManuallyEdited = ref(false)
 
 const defaultForm = (): SkillForm => ({
-  name: '',
-  slug: '',
-  description: '',
-  content: '',
-  isActive: true,
+	name: '',
+	slug: '',
+	description: '',
+	content: '',
+	isActive: true
 })
 
 const form = ref<SkillForm>(defaultForm())
 
 function generateSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
+	return name
+		.toLowerCase()
+		.normalize('NFD')
+		.replace(/[\u0300-\u036f]/g, '')
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/^-+|-+$/g, '')
 }
 
 watch(
-  () => form.value.name,
-  (name) => {
-    if (!editingSkill.value && !slugManuallyEdited.value) {
-      form.value.slug = generateSlug(name)
-    }
-  }
+	() => form.value.name,
+	(name) => {
+		if (!editingSkill.value && !slugManuallyEdited.value) {
+			form.value.slug = generateSlug(name)
+		}
+	}
 )
 
 function openCreate() {
-  editingSkill.value = null
-  form.value = defaultForm()
-  slugManuallyEdited.value = false
-  showModal.value = true
+	editingSkill.value = null
+	form.value = defaultForm()
+	slugManuallyEdited.value = false
+	showModal.value = true
 }
 
 function openEdit(skill: Skill) {
-  editingSkill.value = skill
-  form.value = {
-    name: skill.name,
-    slug: skill.slug,
-    description: skill.description ?? '',
-    content: skill.content,
-    isActive: skill.isActive,
-  }
-  slugManuallyEdited.value = true
-  showModal.value = true
+	editingSkill.value = skill
+	form.value = {
+		name: skill.name,
+		slug: skill.slug,
+		description: skill.description ?? '',
+		content: skill.content,
+		isActive: skill.isActive
+	}
+	slugManuallyEdited.value = true
+	showModal.value = true
 }
 
 function closeModal() {
-  showModal.value = false
-  editingSkill.value = null
+	showModal.value = false
+	editingSkill.value = null
 }
 
 async function fetchSkills() {
-  loading.value = true
-  try {
-    const res = await api.getSkills()
-    skills.value = res.data ?? []
-  } catch (e: any) {
-    toast.error(e.message ?? 'Error al cargar skills')
-  } finally {
-    loading.value = false
-  }
+	loading.value = true
+	try {
+		const res = await api.getSkills()
+		skills.value = res.data ?? []
+	} catch (e: any) {
+		toast.error(e.message ?? 'Error al cargar skills')
+	} finally {
+		loading.value = false
+	}
 }
 
 async function save() {
-  saving.value = true
-  try {
-    if (editingSkill.value) {
-      await api.updateSkill(editingSkill.value.id, {
-        name: form.value.name,
-        slug: form.value.slug,
-        description: form.value.description || null,
-        content: form.value.content,
-        isActive: form.value.isActive,
-      })
-      toast.success('Skill actualizado')
-    } else {
-      await api.createSkill({
-        name: form.value.name,
-        slug: form.value.slug,
-        description: form.value.description || undefined,
-        content: form.value.content,
-      })
-      toast.success('Skill creado')
-    }
-    closeModal()
-    await fetchSkills()
-  } catch (e: any) {
-    toast.error(e.message ?? 'Error al guardar skill')
-  } finally {
-    saving.value = false
-  }
+	saving.value = true
+	try {
+		if (editingSkill.value) {
+			await api.updateSkill(editingSkill.value.id, {
+				name: form.value.name,
+				slug: form.value.slug,
+				description: form.value.description || null,
+				content: form.value.content,
+				isActive: form.value.isActive
+			})
+			toast.success('Skill actualizado')
+		} else {
+			await api.createSkill({
+				name: form.value.name,
+				slug: form.value.slug,
+				description: form.value.description || undefined,
+				content: form.value.content
+			})
+			toast.success('Skill creado')
+		}
+		closeModal()
+		await fetchSkills()
+	} catch (e: any) {
+		toast.error(e.message ?? 'Error al guardar skill')
+	} finally {
+		saving.value = false
+	}
 }
 
 async function confirmDelete() {
-  if (!deleteTarget.value) return
-  deleting.value = true
-  try {
-    await api.deleteSkill(deleteTarget.value.id)
-    toast.success('Skill eliminado')
-    if (selectedSkill.value?.id === deleteTarget.value.id) {
-      selectedSkill.value = null
-    }
-    deleteTarget.value = null
-    await fetchSkills()
-  } catch (e: any) {
-    toast.error(e.message ?? 'Error al eliminar skill')
-  } finally {
-    deleting.value = false
-  }
+	if (!deleteTarget.value) return
+	deleting.value = true
+	try {
+		await api.deleteSkill(deleteTarget.value.id)
+		toast.success('Skill eliminado')
+		if (selectedSkill.value?.id === deleteTarget.value.id) {
+			selectedSkill.value = null
+		}
+		deleteTarget.value = null
+		await fetchSkills()
+	} catch (e: any) {
+		toast.error(e.message ?? 'Error al eliminar skill')
+	} finally {
+		deleting.value = false
+	}
 }
 
 const activeSkills = computed(() => skills.value.filter((s) => s.isActive))

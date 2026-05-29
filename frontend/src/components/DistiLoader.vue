@@ -4,28 +4,47 @@ import { computed } from 'vue'
 type DistiState = 'idle' | 'loading' | 'thinking' | 'happy' | 'excited' | 'sad' | 'done'
 type DistiSize = 'xs' | 'sm' | 'md' | 'lg'
 
-const props = withDefaults(defineProps<{
-  state?: DistiState
-  size?: DistiSize
-  label?: string
-  emoji?: string
-  theme?: 'light' | 'dark'
-}>(), {
-  state: 'loading',
-  size: 'md',
-  theme: 'light'
-})
+const props = withDefaults(
+	defineProps<{
+		state?: DistiState
+		size?: DistiSize
+		label?: string
+		emoji?: string
+		theme?: 'light' | 'dark'
+	}>(),
+	{
+		state: 'loading',
+		size: 'md',
+		theme: 'light'
+	}
+)
 
 // Geometría del logo: [x, y, layer]. layer: 0 = morado (atrás), 1 = azul (frente)
 const BLOCKS = [
-  [0, 0, 0], [1, 1, 0], [2, 2, 0], [1, 3, 0], [0, 4, 0],
-  [2, 0, 1], [3, 1, 1], [4, 2, 1], [3, 3, 1], [2, 4, 1],
+	[0, 0, 0],
+	[1, 1, 0],
+	[2, 2, 0],
+	[1, 3, 0],
+	[0, 4, 0],
+	[2, 0, 1],
+	[3, 1, 1],
+	[4, 2, 1],
+	[3, 3, 1],
+	[2, 4, 1]
 ]
 
 // Vectores de entrada/salida en celdas
 const VECTORS = [
-  [-3.0, -2.0], [ 2.5, -2.5], [-3.5,  0.0], [ 2.0,  3.0], [-2.5,  2.5],
-  [ 3.5, -1.5], [-1.5, -3.0], [ 4.0,  0.4], [-2.0,  2.5], [ 1.8,  3.5],
+	[-3.0, -2.0],
+	[2.5, -2.5],
+	[-3.5, 0.0],
+	[2.0, 3.0],
+	[-2.5, 2.5],
+	[3.5, -1.5],
+	[-1.5, -3.0],
+	[4.0, 0.4],
+	[-2.0, 2.5],
+	[1.8, 3.5]
 ]
 
 const CELL_SIZE: Record<DistiSize, number> = { xs: 6, sm: 10, md: 16, lg: 24 }
@@ -33,43 +52,47 @@ const CELL_SIZE: Record<DistiSize, number> = { xs: 6, sm: 10, md: 16, lg: 24 }
 const cell = computed(() => CELL_SIZE[props.size])
 
 const blocks = computed(() =>
-  BLOCKS.map(([x, y, layer], i) => ({
-    x,
-    y,
-    layer,
-    i,
-    dx: `calc(${VECTORS[i][0]} * ${cell.value}px)`,
-    dy: `calc(${VECTORS[i][1]} * ${cell.value}px)`,
-  }))
+	BLOCKS.map(([x, y, layer], i) => ({
+		x,
+		y,
+		layer,
+		i,
+		dx: `calc(${VECTORS[i][0]} * ${cell.value}px)`,
+		dy: `calc(${VECTORS[i][1]} * ${cell.value}px)`
+	}))
 )
 
 const stageStyle = computed(() => ({
-  width:  `${5 * cell.value}px`,
-  height: `${5 * cell.value}px`,
+	width: `${5 * cell.value}px`,
+	height: `${5 * cell.value}px`
 }))
 
-const blockStyle = (b: typeof blocks.value[0]) => ({
-  width:  `${cell.value}px`,
-  height: `${cell.value}px`,
-  left:   `${b.x * cell.value}px`,
-  top:    `${b.y * cell.value}px`,
-  borderRadius: `${cell.value * 0.18}px`,
-  '--dx': b.dx,
-  '--dy': b.dy,
-  '--i':  b.i,
-  animationDelay: animDelay(b.i),
+const blockStyle = (b: (typeof blocks.value)[0]) => ({
+	width: `${cell.value}px`,
+	height: `${cell.value}px`,
+	left: `${b.x * cell.value}px`,
+	top: `${b.y * cell.value}px`,
+	borderRadius: `${cell.value * 0.18}px`,
+	'--dx': b.dx,
+	'--dy': b.dy,
+	'--i': b.i,
+	animationDelay: animDelay(b.i)
 })
 
 function animDelay(i: number): string {
-  const ms: Record<DistiState, number> = {
-    idle: 0, loading: 60, thinking: 100, happy: 50, excited: 30, sad: 80, done: 0,
-  }
-  return `${i * (ms[props.state] ?? 60)}ms`
+	const ms: Record<DistiState, number> = {
+		idle: 0,
+		loading: 60,
+		thinking: 100,
+		happy: 50,
+		excited: 30,
+		sad: 80,
+		done: 0
+	}
+	return `${i * (ms[props.state] ?? 60)}ms`
 }
 
-const showLabel = computed(() =>
-  props.state !== 'done' && props.state !== 'idle' && !!props.label
-)
+const showLabel = computed(() => props.state !== 'done' && props.state !== 'idle' && !!props.label)
 </script>
 
 <template>

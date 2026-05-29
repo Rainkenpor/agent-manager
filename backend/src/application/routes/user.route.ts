@@ -1,6 +1,6 @@
-import { z } from 'zod'
-import { CreateUserSchema, UpdateUserSchema } from '@domain/entities/user.entity.js'
 import { registry } from '@application/services/registry.service.js'
+import { CreateUserSchema, UpdateUserSchema } from '@domain/entities/user.entity.js'
+import { z } from 'zod'
 import { container } from '../container.js'
 
 export function registerUserRoutes() {

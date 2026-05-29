@@ -1,53 +1,53 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import PageLayout from '@/components/PageLayout.vue'
+import { computed, onMounted, ref } from 'vue'
 import * as api from '@/api/api'
+import PageLayout from '@/components/PageLayout.vue'
 
 interface Period {
-  inputTokens: number
-  outputTokens: number
-  totalTokens: number
-  callCount: number
+	inputTokens: number
+	outputTokens: number
+	totalTokens: number
+	callCount: number
 }
 
 interface DailyMetric {
-  date: string
-  inputTokens: number
-  outputTokens: number
-  totalTokens: number
-  callCount: number
+	date: string
+	inputTokens: number
+	outputTokens: number
+	totalTokens: number
+	callCount: number
 }
 
 interface ModelMetric {
-  model: string
-  inputTokens: number
-  outputTokens: number
-  totalTokens: number
-  callCount: number
+	model: string
+	inputTokens: number
+	outputTokens: number
+	totalTokens: number
+	callCount: number
 }
 
 interface TokenMetrics {
-  today: Period
-  currentMonth: Period
-  currentYear: Period
-  allTime: Period
-  last30Days: DailyMetric[]
-  byModel: ModelMetric[]
+	today: Period
+	currentMonth: Period
+	currentYear: Period
+	allTime: Period
+	last30Days: DailyMetric[]
+	byModel: ModelMetric[]
 }
 
 interface CodexUsageWindow {
-  usedPercent: number
-  remainingPercent: number
-  limitWindowSeconds: number
-  resetAfterSeconds: number
-  resetAt: number
+	usedPercent: number
+	remainingPercent: number
+	limitWindowSeconds: number
+	resetAfterSeconds: number
+	resetAt: number
 }
 
 interface CodexUsage {
-  planType: string | null
-  limitReached: boolean
-  primaryWindow: CodexUsageWindow | null
-  secondaryWindow: CodexUsageWindow | null
+	planType: string | null
+	limitReached: boolean
+	primaryWindow: CodexUsageWindow | null
+	secondaryWindow: CodexUsageWindow | null
 }
 
 const metrics = ref<TokenMetrics | null>(null)
@@ -58,76 +58,76 @@ const codexUsage = ref<CodexUsage | null>(null)
 const codexError = ref('')
 
 async function fetchMetrics() {
-  loading.value = true
-  error.value = ''
-  try {
-    const res = await api.getTokenMetrics()
-    metrics.value = res.data ?? null
-  } catch (e: any) {
-    error.value = e.message
-  } finally {
-    loading.value = false
-  }
+	loading.value = true
+	error.value = ''
+	try {
+		const res = await api.getTokenMetrics()
+		metrics.value = res.data ?? null
+	} catch (e: any) {
+		error.value = e.message
+	} finally {
+		loading.value = false
+	}
 }
 
 async function fetchCodexUsage() {
-  codexError.value = ''
-  try {
-    const res = await api.getCodexUsage()
-    codexUsage.value = res.data ?? null
-  } catch (e: any) {
-    codexError.value = e.message
-    codexUsage.value = null
-  }
+	codexError.value = ''
+	try {
+		const res = await api.getCodexUsage()
+		codexUsage.value = res.data ?? null
+	} catch (e: any) {
+		codexError.value = e.message
+		codexUsage.value = null
+	}
 }
 
 function refreshAll() {
-  fetchMetrics()
-  fetchCodexUsage()
+	fetchMetrics()
+	fetchCodexUsage()
 }
 
 function windowLabel(seconds: number): string {
-  if (seconds >= 604800) return `Semanal (${Math.round(seconds / 86400)}d)`
-  if (seconds >= 86400) return `Diario (${Math.round(seconds / 86400)}d)`
-  if (seconds >= 3600) return `${Math.round(seconds / 3600)} horas`
-  return `${Math.round(seconds / 60)} min`
+	if (seconds >= 604800) return `Semanal (${Math.round(seconds / 86400)}d)`
+	if (seconds >= 86400) return `Diario (${Math.round(seconds / 86400)}d)`
+	if (seconds >= 3600) return `${Math.round(seconds / 3600)} horas`
+	return `${Math.round(seconds / 60)} min`
 }
 
 function fmtResetAt(resetAt: number): string {
-  if (!resetAt) return '—'
-  return new Date(resetAt * 1000).toLocaleString('es-GT', {
-    weekday: 'short',
-    day: '2-digit',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
+	if (!resetAt) return '—'
+	return new Date(resetAt * 1000).toLocaleString('es-GT', {
+		weekday: 'short',
+		day: '2-digit',
+		month: 'short',
+		hour: '2-digit',
+		minute: '2-digit'
+	})
 }
 
 function fmtCountdown(seconds: number): string {
-  if (!seconds || seconds <= 0) return '0m'
-  const d = Math.floor(seconds / 86400)
-  const h = Math.floor((seconds % 86400) / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  if (d > 0) return `${d}d ${h}h`
-  if (h > 0) return `${h}h ${m}m`
-  return `${m}m`
+	if (!seconds || seconds <= 0) return '0m'
+	const d = Math.floor(seconds / 86400)
+	const h = Math.floor((seconds % 86400) / 3600)
+	const m = Math.floor((seconds % 3600) / 60)
+	if (d > 0) return `${d}d ${h}h`
+	if (h > 0) return `${h}h ${m}m`
+	return `${m}m`
 }
 
 const maxDailyTotal = computed(() => {
-  if (!metrics.value) return 1
-  return Math.max(...metrics.value.last30Days.map(d => d.totalTokens), 1)
+	if (!metrics.value) return 1
+	return Math.max(...metrics.value.last30Days.map((d) => d.totalTokens), 1)
 })
 
 function fmt(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`
-  return String(n)
+	if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
+	if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`
+	return String(n)
 }
 
 function fmtDate(iso: string): string {
-  const [, m, d] = iso.split('-')
-  return `${d}/${m}`
+	const [, m, d] = iso.split('-')
+	return `${d}/${m}`
 }
 
 onMounted(refreshAll)

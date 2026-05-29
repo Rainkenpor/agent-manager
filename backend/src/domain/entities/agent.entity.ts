@@ -18,8 +18,18 @@ export interface GovernanceData {
 	}>
 }
 
+export interface ToolImageInfo {
+	serverName: string
+	serverId?: string
+	toolName: string
+	args: Record<string, unknown>
+	mimeType: string
+	data: string
+}
+
 export interface ToolCallbacks {
 	onToolCall: (toolName: string, args: any) => Promise<void>
+	onToolImage?: (info: ToolImageInfo) => Promise<void>
 	draftCallbacks: {
 		onUpdate: (draft: string) => Promise<void>
 		onRead: () => Promise<string | null>

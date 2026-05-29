@@ -1,12 +1,10 @@
-import type { IAgentRepository } from '@domain/repositories/agent.repository.js'
 import type { AgentWithSubagents } from '@domain/entities/agent.entity.js'
+import type { IAgentRepository } from '@domain/repositories/agent.repository.js'
 
 export class DuplicateAgentUseCase {
 	constructor(private readonly agentRepository: IAgentRepository) {}
 
-	async execute(
-		id: string,
-	): Promise<{ success: true; data: AgentWithSubagents } | { success: false; error: string }> {
+	async execute(id: string): Promise<{ success: true; data: AgentWithSubagents } | { success: false; error: string }> {
 		try {
 			const source = await this.agentRepository.findById(id)
 			if (!source) return { success: false, error: 'Agent not found' }
@@ -28,7 +26,7 @@ export class DuplicateAgentUseCase {
 				temperature: source.temperature,
 				tools: source.tools as Record<string, boolean>,
 				content: source.content,
-				subagentIds: source.subagents.map((s) => s.id),
+				subagentIds: source.subagents.map((s) => s.id)
 			})
 
 			return { success: true, data: duplicate }

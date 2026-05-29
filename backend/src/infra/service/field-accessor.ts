@@ -13,9 +13,7 @@
  * Callers should pass { element: data } as the root when the path starts with "element.".
  */
 
-type PathToken =
-	| { type: 'key'; value: string }
-	| { type: 'index'; index: number }
+type PathToken = { type: 'key'; value: string } | { type: 'index'; index: number }
 
 function tokenizePath(path: string): PathToken[] {
 	const tokens: PathToken[] = []
@@ -55,10 +53,7 @@ export function getFieldValue(obj: unknown, path: string): unknown {
  * Evaluate a condition against an object.
  * The `field` path is resolved starting from `{ element: data }` when it begins with "element".
  */
-export function evaluateCondition(
-	data: unknown,
-	condition: { field: string; operator: string; value: unknown }
-): boolean {
+export function evaluateCondition(data: unknown, condition: { field: string; operator: string; value: unknown }): boolean {
 	const { field, operator, value } = condition
 	const fieldValue = getFieldValue(data, field)
 

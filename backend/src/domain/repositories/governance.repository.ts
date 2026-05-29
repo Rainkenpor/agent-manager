@@ -1,4 +1,4 @@
-import type { GovernanceRecord, CreateGovernanceDTO, UpdateGovernanceDTO } from '../entities/governance.entity.js'
+import type { CreateGovernanceDTO, GovernanceRecord, UpdateGovernanceDTO } from '../entities/governance.entity.js'
 
 export interface IGovernanceRepository {
 	findAll(): Promise<GovernanceRecord[]>

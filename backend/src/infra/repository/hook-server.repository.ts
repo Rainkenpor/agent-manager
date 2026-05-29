@@ -1,14 +1,14 @@
 import { AppDataSource } from '@infra/db/database.js'
-import { HookServerEntity, HookAssignmentEntity } from '@infra/db/entities.js'
+import { HookAssignmentEntity, HookServerEntity } from '@infra/db/entities.js'
 import { v4 as uuidv4 } from 'uuid'
-import type { IHookServerRepository } from '../../domain/repositories/hook-server.repository.js'
 import type {
-	HookServerEntity as HookServerDomain,
+	CreateHookAssignmentDTO,
 	CreateHookServerDTO,
-	UpdateHookServerDTO,
 	HookAssignmentEntity as HookAssignmentDomain,
-	CreateHookAssignmentDTO
+	HookServerEntity as HookServerDomain,
+	UpdateHookServerDTO
 } from '../../domain/entities/hook-server.entity.js'
+import type { IHookServerRepository } from '../../domain/repositories/hook-server.repository.js'
 
 export class HookServerRepository implements IHookServerRepository {
 	private get serverRepo() {
@@ -78,7 +78,7 @@ export class HookServerRepository implements IHookServerRepository {
 			createdAt: new Date().toISOString()
 		})
 		await this.assignmentRepo.save(entity)
-		return this.mapAssignment((await this.assignmentRepo.findOneByOrFail({ id: entity.id })))
+		return this.mapAssignment(await this.assignmentRepo.findOneByOrFail({ id: entity.id }))
 	}
 
 	async deleteAssignment(assignmentId: string): Promise<void> {

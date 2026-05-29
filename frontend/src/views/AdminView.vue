@@ -1,22 +1,20 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useAuthStore } from '@/store/useAuth'
-import UsersView from './UsersView.vue'
 import RolesView from './RolesView.vue'
 import TokensView from './TokensView.vue'
+import UsersView from './UsersView.vue'
 
 const auth = useAuthStore()
 
 const allTabs = [
-  { key: 'users', label: 'Users', icon: 'mdi-account', resource: 'users', accessMode: 'manage', component: UsersView },
-  { key: 'roles', label: 'Roles', icon: 'mdi-shield-account', resource: 'roles', accessMode: 'manage', component: RolesView },
-  { key: 'tokens', label: 'Tokens LLM', icon: 'mdi-counter', resource: 'llm_tokens', accessMode: 'any', component: TokensView },
+	{ key: 'users', label: 'Users', icon: 'mdi-account', resource: 'users', accessMode: 'manage', component: UsersView },
+	{ key: 'roles', label: 'Roles', icon: 'mdi-shield-account', resource: 'roles', accessMode: 'manage', component: RolesView },
+	{ key: 'tokens', label: 'Tokens LLM', icon: 'mdi-counter', resource: 'llm_tokens', accessMode: 'any', component: TokensView }
 ]
 
 const tabs = computed(() =>
-  allTabs.filter((t) =>
-    t.accessMode === 'manage' ? auth.hasResourceManageAccess(t.resource) : auth.hasResourceAccess(t.resource)
-  )
+	allTabs.filter((t) => (t.accessMode === 'manage' ? auth.hasResourceManageAccess(t.resource) : auth.hasResourceAccess(t.resource)))
 )
 const activeTab = ref(tabs.value[0]?.key ?? allTabs[0].key)
 const activeComponent = computed(() => allTabs.find((t) => t.key === activeTab.value)?.component)

@@ -1,24 +1,24 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import * as api from '@/api/api'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import PageLayout from '@/components/PageLayout.vue'
-import { useToastStore } from '@/store/useToast'
 import { useAuthStore } from '@/store/useAuth'
-import * as api from '@/api/api'
+import { useToastStore } from '@/store/useToast'
 
 const toast = useToastStore()
 const auth = useAuthStore()
 
 interface Suggestion {
-  id: string
-  type: string
-  title: string
-  content: string
-  reason: string | null
-  agentSlug: string | null
-  userId: string | null
-  userEmail: string | null
-  createdAt: string
+	id: string
+	type: string
+	title: string
+	content: string
+	reason: string | null
+	agentSlug: string | null
+	userId: string | null
+	userEmail: string | null
+	createdAt: string
 }
 
 const items = ref<Suggestion[]>([])
@@ -28,52 +28,52 @@ const deleteTarget = ref<Suggestion | null>(null)
 const deleting = ref(false)
 
 const byType = computed(() => {
-  const map = new Map<string, Suggestion[]>()
-  for (const s of items.value) {
-    const list = map.get(s.type) ?? []
-    list.push(s)
-    map.set(s.type, list)
-  }
-  return map
+	const map = new Map<string, Suggestion[]>()
+	for (const s of items.value) {
+		const list = map.get(s.type) ?? []
+		list.push(s)
+		map.set(s.type, list)
+	}
+	return map
 })
 
 function formatDate(value: string): string {
-  try {
-    return new Date(value).toLocaleString()
-  } catch {
-    return value
-  }
+	try {
+		return new Date(value).toLocaleString()
+	} catch {
+		return value
+	}
 }
 
 async function fetchItems() {
-  loading.value = true
-  try {
-    const res = await api.getGovernanceSuggestions()
-    items.value = res.data ?? []
-    if (selected.value) {
-      selected.value = items.value.find((s) => s.id === selected.value!.id) ?? null
-    }
-  } catch (e: any) {
-    toast.error(e.message ?? 'Error al cargar sugerencias')
-  } finally {
-    loading.value = false
-  }
+	loading.value = true
+	try {
+		const res = await api.getGovernanceSuggestions()
+		items.value = res.data ?? []
+		if (selected.value) {
+			selected.value = items.value.find((s) => s.id === selected.value!.id) ?? null
+		}
+	} catch (e: any) {
+		toast.error(e.message ?? 'Error al cargar sugerencias')
+	} finally {
+		loading.value = false
+	}
 }
 
 async function confirmDelete() {
-  if (!deleteTarget.value) return
-  deleting.value = true
-  try {
-    await api.deleteGovernanceSuggestion(deleteTarget.value.id)
-    toast.success('Sugerencia eliminada')
-    if (selected.value?.id === deleteTarget.value.id) selected.value = null
-    deleteTarget.value = null
-    await fetchItems()
-  } catch (e: any) {
-    toast.error(e.message ?? 'Error al eliminar sugerencia')
-  } finally {
-    deleting.value = false
-  }
+	if (!deleteTarget.value) return
+	deleting.value = true
+	try {
+		await api.deleteGovernanceSuggestion(deleteTarget.value.id)
+		toast.success('Sugerencia eliminada')
+		if (selected.value?.id === deleteTarget.value.id) selected.value = null
+		deleteTarget.value = null
+		await fetchItems()
+	} catch (e: any) {
+		toast.error(e.message ?? 'Error al eliminar sugerencia')
+	} finally {
+		deleting.value = false
+	}
 }
 
 onMounted(fetchItems)

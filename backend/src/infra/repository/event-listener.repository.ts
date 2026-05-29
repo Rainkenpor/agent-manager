@@ -1,8 +1,8 @@
 import { AppDataSource } from '@infra/db/database.js'
 import { EventListenerEntity } from '@infra/db/entities.js'
 import { v4 as uuidv4 } from 'uuid'
+import type { CreateEventListenerDTO, EventListener, UpdateEventListenerDTO } from '../../domain/entities/event-listener.entity.js'
 import type { IEventListenerRepository } from '../../domain/repositories/event-listener.repository.js'
-import type { EventListener, CreateEventListenerDTO, UpdateEventListenerDTO } from '../../domain/entities/event-listener.entity.js'
 
 export class EventListenerRepository implements IEventListenerRepository {
 	private get repo() {

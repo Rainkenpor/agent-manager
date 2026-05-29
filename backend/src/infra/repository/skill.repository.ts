@@ -1,9 +1,9 @@
 import { AppDataSource } from '@infra/db/database.js'
-import { SkillEntity, RoleSkillEntity, UserRoleEntity } from '@infra/db/entities.js'
+import { RoleSkillEntity, SkillEntity, UserRoleEntity } from '@infra/db/entities.js'
 import { In } from 'typeorm'
 import { v4 as uuidv4 } from 'uuid'
+import type { CreateSkillDTO, SkillRecord, UpdateSkillDTO } from '../../domain/entities/skill.entity.js'
 import type { ISkillRepository } from '../../domain/repositories/skill.repository.js'
-import type { SkillRecord, CreateSkillDTO, UpdateSkillDTO } from '../../domain/entities/skill.entity.js'
 
 export class SkillRepository implements ISkillRepository {
 	private get repo() {

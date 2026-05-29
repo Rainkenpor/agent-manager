@@ -4,18 +4,18 @@ import * as api from '@/api/api'
 import AppModal from '@/components/AppModal.vue'
 
 const props = defineProps<{
-  traceabilityId: string
-  excludedUserIds: string[]
+	traceabilityId: string
+	excludedUserIds: string[]
 }>()
 
 const emit = defineEmits<{ close: []; saved: [userIds: string[]] }>()
 
 interface UserOption {
-  id: string
-  username: string
-  firstName?: string | null
-  lastName?: string | null
-  email?: string | null
+	id: string
+	username: string
+	firstName?: string | null
+	lastName?: string | null
+	email?: string | null
 }
 
 const users = ref<UserOption[]>([])
@@ -27,43 +27,43 @@ const error = ref('')
 const available = computed(() => users.value.filter((u) => !props.excludedUserIds.includes(u.id)))
 
 function displayName(u: UserOption) {
-  return [u.firstName, u.lastName].filter(Boolean).join(' ') || u.username
+	return [u.firstName, u.lastName].filter(Boolean).join(' ') || u.username
 }
 
 function toggle(id: string) {
-  if (selected.value.has(id)) selected.value.delete(id)
-  else selected.value.add(id)
-  selected.value = new Set(selected.value)
+	if (selected.value.has(id)) selected.value.delete(id)
+	else selected.value.add(id)
+	selected.value = new Set(selected.value)
 }
 
 async function fetchUsers() {
-  loading.value = true
-  try {
-    const res: any = await api.getUsers()
-    users.value = Array.isArray(res) ? res : res?.data ?? []
-  } catch (e: any) {
-    error.value = e.message
-  } finally {
-    loading.value = false
-  }
+	loading.value = true
+	try {
+		const res: any = await api.getUsers()
+		users.value = Array.isArray(res) ? res : (res?.data ?? [])
+	} catch (e: any) {
+		error.value = e.message
+	} finally {
+		loading.value = false
+	}
 }
 
 async function submit() {
-  if (selected.value.size === 0) return
-  saving.value = true
-  error.value = ''
-  const ids = Array.from(selected.value)
-  try {
-    for (const userId of ids) {
-      await api.addTraceabilityParticipant(props.traceabilityId, userId)
-    }
-    emit('saved', ids)
-    emit('close')
-  } catch (e: any) {
-    error.value = e.message
-  } finally {
-    saving.value = false
-  }
+	if (selected.value.size === 0) return
+	saving.value = true
+	error.value = ''
+	const ids = Array.from(selected.value)
+	try {
+		for (const userId of ids) {
+			await api.addTraceabilityParticipant(props.traceabilityId, userId)
+		}
+		emit('saved', ids)
+		emit('close')
+	} catch (e: any) {
+		error.value = e.message
+	} finally {
+		saving.value = false
+	}
 }
 
 onMounted(fetchUsers)

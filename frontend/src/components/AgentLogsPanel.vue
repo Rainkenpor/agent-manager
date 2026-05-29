@@ -1,34 +1,36 @@
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import * as api from '@/api/api'
 
 interface LogLine {
-  id: number
-  raw: string
-  timestamp: string
-  level: string
-  message: string
+	id: number
+	raw: string
+	timestamp: string
+	level: string
+	message: string
 }
 
 let lineCounter = 0
 const MAX_LINES = 500
 
 function parseLine(raw: string): LogLine {
-  const match = raw.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) \[(\w+)\]: (.*)$/)
-  if (match) {
-    return { id: ++lineCounter, raw, timestamp: match[1], level: match[2].toUpperCase(), message: match[3] }
-  }
-  return { id: ++lineCounter, raw, timestamp: '', level: 'INFO', message: raw }
+	const match = raw.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) \[(\w+)\]: (.*)$/)
+	if (match) {
+		return { id: ++lineCounter, raw, timestamp: match[1], level: match[2].toUpperCase(), message: match[3] }
+	}
+	return { id: ++lineCounter, raw, timestamp: '', level: 'INFO', message: raw }
 }
 
 function highlightMessage(msg: string): string {
-  return msg
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/\[([^\]]+)\]/g, '<span class="text-indigo-400">[$1]</span>')
-    .replace(/(→)/g, '<span class="text-emerald-400">$1</span>')
-    .replace(/(←)/g, '<span class="text-sky-400">$1</span>')
-    .replace(/(START|END|DONE)/g, '<span class="text-violet-400">$1</span>')
-    .replace(/(══+)/g, '<span class="text-base-content/70">$1</span>')
+	return msg
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
+		.replace(/\[([^\]]+)\]/g, '<span class="text-indigo-400">[$1]</span>')
+		.replace(/(→)/g, '<span class="text-emerald-400">$1</span>')
+		.replace(/(←)/g, '<span class="text-sky-400">$1</span>')
+		.replace(/(START|END|DONE)/g, '<span class="text-violet-400">$1</span>')
+		.replace(/(══+)/g, '<span class="text-base-content/70">$1</span>')
 }
 
 const isOpen = ref(false)
@@ -40,91 +42,95 @@ const isConnected = ref(false)
 const abortController = ref<AbortController | null>(null)
 
 const filteredLogs = computed(() => {
-  if (!filter.value.trim()) return logs.value
-  const q = filter.value.toLowerCase()
-  return logs.value.filter((l) => l.raw.toLowerCase().includes(q))
+	if (!filter.value.trim()) return logs.value
+	const q = filter.value.toLowerCase()
+	return logs.value.filter((l) => l.raw.toLowerCase().includes(q))
 })
 
 function levelClass(level: string) {
-  switch (level) {
-    case 'ERROR': return 'text-red-400'
-    case 'WARN': return 'text-yellow-400'
-    case 'DEBUG': return 'text-base-content/40'
-    default: return 'text-emerald-400'
-  }
+	switch (level) {
+		case 'ERROR':
+			return 'text-red-400'
+		case 'WARN':
+			return 'text-yellow-400'
+		case 'DEBUG':
+			return 'text-base-content/40'
+		default:
+			return 'text-emerald-400'
+	}
 }
 
 function rowClass(level: string) {
-  if (level === 'ERROR') return 'bg-red-950/20'
-  return ''
+	if (level === 'ERROR') return 'bg-red-950/20'
+	return ''
 }
 
 async function autoScroll() {
-  if (isPaused.value || !isOpen.value) return
-  await nextTick()
-  if (terminalRef.value) {
-    terminalRef.value.scrollTop = terminalRef.value.scrollHeight
-  }
+	if (isPaused.value || !isOpen.value) return
+	await nextTick()
+	if (terminalRef.value) {
+		terminalRef.value.scrollTop = terminalRef.value.scrollHeight
+	}
 }
 
 async function connect() {
-  abortController.value?.abort()
-  abortController.value = new AbortController()
-  isConnected.value = false
+	abortController.value?.abort()
+	abortController.value = new AbortController()
+	isConnected.value = false
 
-  try {
-    const response = await api.streamAgentLogs(abortController.value.signal)
-    if (!response.ok || !response.body) return
+	try {
+		const response = await api.streamAgentLogs(abortController.value.signal)
+		if (!response.ok || !response.body) return
 
-    isConnected.value = true
-    const reader = response.body.getReader()
-    const decoder = new TextDecoder()
-    let buffer = ''
+		isConnected.value = true
+		const reader = response.body.getReader()
+		const decoder = new TextDecoder()
+		let buffer = ''
 
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
+		while (true) {
+			const { done, value } = await reader.read()
+			if (done) break
 
-      buffer += decoder.decode(value, { stream: true })
-      const parts = buffer.split('\n\n')
-      buffer = parts.pop() ?? ''
+			buffer += decoder.decode(value, { stream: true })
+			const parts = buffer.split('\n\n')
+			buffer = parts.pop() ?? ''
 
-      for (const part of parts) {
-        const line = part.trim()
-        if (!line.startsWith('data: ')) continue
-        const event = JSON.parse(line.slice(6))
+			for (const part of parts) {
+				const line = part.trim()
+				if (!line.startsWith('data: ')) continue
+				const event = JSON.parse(line.slice(6))
 
-        if (event.type === 'history') {
-          logs.value = (event.lines as string[]).map(parseLine)
-          await autoScroll()
-        } else if (event.type === 'line') {
-          logs.value.push(parseLine(event.content))
-          if (logs.value.length > MAX_LINES) {
-            logs.value.splice(0, logs.value.length - MAX_LINES)
-          }
-          await autoScroll()
-        }
-      }
-    }
-  } catch (e: any) {
-    if (e.name !== 'AbortError') {
-      isConnected.value = false
-    }
-  }
+				if (event.type === 'history') {
+					logs.value = (event.lines as string[]).map(parseLine)
+					await autoScroll()
+				} else if (event.type === 'line') {
+					logs.value.push(parseLine(event.content))
+					if (logs.value.length > MAX_LINES) {
+						logs.value.splice(0, logs.value.length - MAX_LINES)
+					}
+					await autoScroll()
+				}
+			}
+		}
+	} catch (e: any) {
+		if (e.name !== 'AbortError') {
+			isConnected.value = false
+		}
+	}
 }
 
 function toggle() {
-  isOpen.value = !isOpen.value
-  if (isOpen.value) autoScroll()
+	isOpen.value = !isOpen.value
+	if (isOpen.value) autoScroll()
 }
 
 function togglePause() {
-  isPaused.value = !isPaused.value
-  if (!isPaused.value) autoScroll()
+	isPaused.value = !isPaused.value
+	if (!isPaused.value) autoScroll()
 }
 
 function clearLogs() {
-  logs.value = []
+	logs.value = []
 }
 
 onMounted(connect)

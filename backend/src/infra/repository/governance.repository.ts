@@ -1,8 +1,8 @@
+import { v4 as uuidv4 } from 'uuid'
+import type { CreateGovernanceDTO, GovernanceRecord, UpdateGovernanceDTO } from '../../domain/entities/governance.entity.js'
+import type { IGovernanceRepository } from '../../domain/repositories/governance.repository.js'
 import { AppDataSource } from '../db/database.js'
 import { GovernanceEntity } from '../db/entities.js'
-import { v4 as uuidv4 } from 'uuid'
-import type { IGovernanceRepository } from '../../domain/repositories/governance.repository.js'
-import type { GovernanceRecord, CreateGovernanceDTO, UpdateGovernanceDTO } from '../../domain/entities/governance.entity.js'
 
 export class GovernanceRepository implements IGovernanceRepository {
 	private get repo() {
@@ -33,7 +33,14 @@ export class GovernanceRepository implements IGovernanceRepository {
 
 	async create(data: CreateGovernanceDTO): Promise<GovernanceRecord> {
 		const now = new Date().toISOString()
-		const entity = this.repo.create({ id: uuidv4(), ...data, sections: data.sections ?? [], isActive: true, createdAt: now, updatedAt: now })
+		const entity = this.repo.create({
+			id: uuidv4(),
+			...data,
+			sections: data.sections ?? [],
+			isActive: true,
+			createdAt: now,
+			updatedAt: now
+		})
 		return this.normalize(await this.repo.save(entity)) as GovernanceRecord
 	}
 

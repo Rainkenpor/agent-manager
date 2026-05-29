@@ -1,9 +1,9 @@
 import type {
-	HookServerEntity,
+	CreateHookAssignmentDTO,
 	CreateHookServerDTO,
-	UpdateHookServerDTO,
 	HookAssignmentEntity,
-	CreateHookAssignmentDTO
+	HookServerEntity,
+	UpdateHookServerDTO
 } from '../entities/hook-server.entity.js'
 
 export interface IHookServerRepository {

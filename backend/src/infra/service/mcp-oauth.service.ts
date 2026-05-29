@@ -1,9 +1,9 @@
 import { randomBytes } from 'node:crypto'
-import jwt from 'jsonwebtoken'
-import { JWT_SECRET } from './passport.service.js'
 import type { IUserRepository } from '@domain/repositories/user.repository.js'
 import { AppDataSource } from '@infra/db/database.js'
 import { OAuthClientEntity, OAuthCodeEntity, OAuthRefreshTokenEntity } from '@infra/db/entities.js'
+import jwt from 'jsonwebtoken'
+import { JWT_SECRET } from './passport.service.js'
 
 export interface OAuthClientRecord {
 	client_id: string

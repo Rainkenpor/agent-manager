@@ -4,11 +4,12 @@
  * Maintains SSE connections to registered hook servers.
  * When a hook event fires, dispatches to all assigned agents / MCP tools.
  */
-import { AgentService } from './agent.service.js'
-import { mcpExternalManager } from './mcp-external.js'
-import { logger } from './logger.service.js'
-import type { IHookServerRepository } from '../../domain/repositories/hook-server.repository.js'
+
 import type { HookServerEntity } from '../../domain/entities/hook-server.entity.js'
+import type { IHookServerRepository } from '../../domain/repositories/hook-server.repository.js'
+import { AgentService } from './agent.service.js'
+import { logger } from './logger.service.js'
+import { mcpExternalManager } from './mcp-external.js'
 
 interface ActiveSubscription {
 	serverId: string

@@ -1,10 +1,10 @@
 import type { IAgentRepository } from '@domain/repositories/agent.repository.js'
-import type { ISkillRepository } from '@domain/repositories/skill.repository.js'
 import type { IMcpServerRepository } from '@domain/repositories/mcp-server.repository.js'
-import type { ITraceabilityRepository } from '@domain/repositories/traceability.repository.js'
-import type { IRoleRepository } from '@domain/repositories/role.repository.js'
-import type { IUserRepository } from '@domain/repositories/user.repository.js'
 import type { IPermissionRepository } from '@domain/repositories/permission.repository.js'
+import type { IRoleRepository } from '@domain/repositories/role.repository.js'
+import type { ISkillRepository } from '@domain/repositories/skill.repository.js'
+import type { ITraceabilityRepository } from '@domain/repositories/traceability.repository.js'
+import type { IUserRepository } from '@domain/repositories/user.repository.js'
 
 export interface ImportResult {
 	created: number
@@ -72,7 +72,10 @@ export class ImportConfigUseCase {
 		for (const a of agents) {
 			try {
 				const existing = await this.agentRepo.findBySlug(a.slug)
-				if (existing) { result.skipped++; continue }
+				if (existing) {
+					result.skipped++
+					continue
+				}
 				await this.agentRepo.create({
 					name: a.name,
 					slug: a.slug,
@@ -110,7 +113,10 @@ export class ImportConfigUseCase {
 		for (const s of skills) {
 			try {
 				const existing = await this.skillRepo.findBySlug(s.slug)
-				if (existing) { result.skipped++; continue }
+				if (existing) {
+					result.skipped++
+					continue
+				}
 				await this.skillRepo.create({
 					name: s.name,
 					slug: s.slug,
@@ -130,7 +136,10 @@ export class ImportConfigUseCase {
 		for (const m of mcps) {
 			try {
 				const existing = await this.mcpRepo.findByName(m.name)
-				if (existing) { result.skipped++; continue }
+				if (existing) {
+					result.skipped++
+					continue
+				}
 				await this.mcpRepo.create({
 					name: m.name,
 					displayName: m.displayName,
@@ -162,7 +171,10 @@ export class ImportConfigUseCase {
 			try {
 				const existingTemplates = await this.traceabilityRepo.findAllTemplates()
 				const exists = existingTemplates.some((et) => et.name === t.name)
-				if (exists) { result.skipped++; continue }
+				if (exists) {
+					result.skipped++
+					continue
+				}
 
 				const template = await this.traceabilityRepo.createTemplate({
 					name: t.name,
@@ -173,9 +185,7 @@ export class ImportConfigUseCase {
 				const sortedStages = [...(t.stages ?? [])].sort((a: any, b: any) => a.order - b.order)
 
 				for (const st of sortedStages) {
-					const predecessors = (st.predecessorOrders ?? [])
-						.map((ord: number) => stageIdByOrder[ord])
-						.filter(Boolean) as string[]
+					const predecessors = (st.predecessorOrders ?? []).map((ord: number) => stageIdByOrder[ord]).filter(Boolean) as string[]
 
 					const agentId = st.agentSlug ? (agentIdBySlug.get(st.agentSlug) ?? null) : null
 
@@ -223,7 +233,10 @@ export class ImportConfigUseCase {
 		for (const r of roles) {
 			try {
 				const existing = await this.roleRepo.findByName(r.name)
-				if (existing) { result.skipped++; continue }
+				if (existing) {
+					result.skipped++
+					continue
+				}
 				await this.roleRepo.create({ name: r.name, description: r.description })
 				result.created++
 			} catch (e) {
@@ -273,7 +286,10 @@ export class ImportConfigUseCase {
 		for (const u of users) {
 			try {
 				const existing = await this.userRepo.findByUsername(u.username)
-				if (existing) { result.skipped++; continue }
+				if (existing) {
+					result.skipped++
+					continue
+				}
 				const created = await this.userRepo.create({
 					username: u.username,
 					email: u.email,

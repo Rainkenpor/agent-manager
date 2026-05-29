@@ -1,8 +1,6 @@
-import { v4 as uuidv4 } from 'uuid'
 import { AppDataSource } from '@infra/db/database.js'
 import { ProviderConfigEntity } from '@infra/db/entities.js'
-import { envs } from '../../envs.js'
-import { decrypt, encrypt } from '../service/crypto.service.js'
+import { v4 as uuidv4 } from 'uuid'
 import type {
 	ProviderConfig,
 	ProviderName,
@@ -10,6 +8,8 @@ import type {
 	UpsertProviderConfigDTO
 } from '../../domain/entities/provider-config.entity.js'
 import type { IProviderConfigRepository } from '../../domain/repositories/provider-config.repository.js'
+import { envs } from '../../envs.js'
+import { decrypt, encrypt } from '../service/crypto.service.js'
 
 function parsePayload(raw: string): ProviderTokenPayload {
 	const decrypted = decrypt(raw, envs.CREDENTIAL_ENCRYPTION_KEY)

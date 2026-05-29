@@ -1,8 +1,8 @@
-import { AppDataSource } from '@infra/db/database.js'
-import { McpServerEntity, RoleMcpEntity, RoleAgentEntity, RoleMcpToolEntity, AgentEntity } from '@infra/db/entities.js'
-import { v4 as uuidv4 } from 'uuid'
+import type { CreateMcpServer, McpServerEntity as McpServerDomain, UpdateMcpServer } from '@domain/entities/mcp-server.entity.js'
 import type { IMcpServerRepository } from '@domain/repositories/mcp-server.repository.js'
-import type { McpServerEntity as McpServerDomain, CreateMcpServer, UpdateMcpServer } from '@domain/entities/mcp-server.entity.js'
+import { AppDataSource } from '@infra/db/database.js'
+import { AgentEntity, McpServerEntity, RoleAgentEntity, RoleMcpEntity, RoleMcpToolEntity } from '@infra/db/entities.js'
+import { v4 as uuidv4 } from 'uuid'
 
 export class McpServerRepository implements IMcpServerRepository {
 	private get repo() {
@@ -45,7 +45,7 @@ export class McpServerRepository implements IMcpServerRepository {
 			updatedAt: now
 		})
 		await this.repo.save(entity)
-		return this.mapToEntity((await this.repo.findOneByOrFail({ id: entity.id })))
+		return this.mapToEntity(await this.repo.findOneByOrFail({ id: entity.id }))
 	}
 
 	async findAll(): Promise<McpServerDomain[]> {
@@ -113,15 +113,15 @@ export class McpServerRepository implements IMcpServerRepository {
 		await repo.delete({ roleId, agentId })
 	}
 
-	async getAgentsByRole(roleId: string): Promise<Array<{ id: string; name: string; slug: string; mode: string, description:string }>> {
+	async getAgentsByRole(roleId: string): Promise<Array<{ id: string; name: string; slug: string; mode: string; description: string }>> {
 		const repo = AppDataSource.getRepository(RoleAgentEntity)
 		const relations = await repo.findBy({ roleId })
 		if (!relations.length) return []
 		const agentRepo = AppDataSource.getRepository(AgentEntity)
-		const results: Array<{ id: string; name: string; slug: string; mode: string, description:string }> = []
+		const results: Array<{ id: string; name: string; slug: string; mode: string; description: string }> = []
 		for (const rel of relations) {
 			const agent = await agentRepo.findOneBy({ id: rel.agentId })
-			if (agent) results.push({ id: agent.id, name: agent.name, slug: agent.slug, mode: agent.mode, description:agent.description })
+			if (agent) results.push({ id: agent.id, name: agent.name, slug: agent.slug, mode: agent.mode, description: agent.description })
 		}
 		return results
 	}

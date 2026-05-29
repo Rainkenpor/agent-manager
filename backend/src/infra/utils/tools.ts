@@ -1,11 +1,11 @@
-import type { IAgentServiceExecute, ToolCallbacks } from '@domain/entities/agent.entity.js'
-import { z, type ZodRawShape } from 'zod'
-import { registry } from '@applicationService/registry.service.js'
-import { agentLogger } from '../service/logger.service.js'
-import nodePath from 'node:path'
 import fs from 'node:fs'
-import { NextFunction, Request, Response } from 'express'
-import { mcpExternalManager } from '../service/mcp-external.js'
+import nodePath from 'node:path'
+import { registry } from '@applicationService/registry.service.js'
+import type { IAgentServiceExecute, ToolCallbacks } from '@domain/entities/agent.entity.js'
+import type { NextFunction, Request, Response } from 'express'
+import { type ZodRawShape, z } from 'zod'
+import { agentLogger } from '../service/logger.service.js'
+import { mcpExternalManager, parseMcpToolId } from '../service/mcp-external.js'
 
 interface Tool {
 	type: 'function'
@@ -272,7 +272,21 @@ export async function executeToolCall(
 			default:
 				// Primero intenta herramientas externas MCP, luego las registradas en el registry. Las herramientas externas tienen prioridad si hay nombres coincidentes, asumiendo que son más específicas para el contexto de agentes.
 				if (mcpExternalManager?.isMcpTool(toolName)) {
-					const data = await mcpExternalManager.callTool(toolName, args, originalParams.userId)
+					const onToolImage = originalParams.toolsCallbacks?.onToolImage
+					const parsed = parseMcpToolId(toolName)
+					const onImage = onToolImage
+						? (image: { mimeType: string; data: string }) => {
+								void onToolImage({
+									serverName: parsed?.serverName ?? '',
+									serverId: parsed ? mcpExternalManager.getServerDbId(parsed.serverName) : undefined,
+									toolName: parsed?.toolName ?? toolName,
+									args,
+									mimeType: image.mimeType,
+									data: image.data
+								})
+							}
+						: undefined
+					const data = await mcpExternalManager.callTool(toolName, args, originalParams.userId, onImage)
 					return data
 				}
 

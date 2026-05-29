@@ -1,5 +1,5 @@
-import type { IEventListenerRepository } from '@domain/repositories/event-listener.repository.js'
 import type { EventListener } from '@domain/entities/event-listener.entity.js'
+import type { IEventListenerRepository } from '@domain/repositories/event-listener.repository.js'
 
 export class GetEventListenerUseCase {
 	constructor(private readonly repo: IEventListenerRepository) {}

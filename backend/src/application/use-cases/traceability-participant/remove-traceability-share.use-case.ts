@@ -2,11 +2,11 @@
 Archivo creado con gobernanza AB900
 */
 
+import type { IChatRepository } from '@domain/repositories/chat.repository.js'
+import type { ITraceabilityParticipantRepository } from '@domain/repositories/traceability-participant.repository.js'
 import { AppDataSource } from '@infra/db/database.js'
 import { MessageEntity, TraceabilityParticipantStageChatEntity } from '@infra/db/entities.js'
 import { In } from 'typeorm'
-import type { IChatRepository } from '@domain/repositories/chat.repository.js'
-import type { ITraceabilityParticipantRepository } from '@domain/repositories/traceability-participant.repository.js'
 
 export class RemoveTraceabilityShareUseCase {
 	constructor(

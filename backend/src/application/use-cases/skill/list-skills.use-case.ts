@@ -1,5 +1,5 @@
-import type { ISkillRepository } from '@domain/repositories/skill.repository.js'
 import type { SkillRecord } from '@domain/entities/skill.entity.js'
+import type { ISkillRepository } from '@domain/repositories/skill.repository.js'
 
 export class ListSkillsUseCase {
 	constructor(private readonly skillRepository: ISkillRepository) {}

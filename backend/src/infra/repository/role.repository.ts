@@ -1,7 +1,7 @@
-import { AppDataSource } from '@infra/db/database.js'
-import { RoleEntity, RolePermissionEntity, PermissionEntity } from '@infra/db/entities.js'
+import type { CreateRole, Role, UpdateRole } from '@domain/entities/role.entity.js'
 import type { IRoleRepository } from '@domain/repositories/role.repository.js'
-import type { Role, CreateRole, UpdateRole } from '@domain/entities/role.entity.js'
+import { AppDataSource } from '@infra/db/database.js'
+import { PermissionEntity, RoleEntity, RolePermissionEntity } from '@infra/db/entities.js'
 import { randomUUID } from 'crypto'
 
 export class RoleRepository implements IRoleRepository {

@@ -1,5 +1,5 @@
-import { AgentService } from './agent.service.js'
 import type { IAgentRepository, ITraceabilityRepository } from '../../domain/repositories/index.js'
+import { AgentService } from './agent.service.js'
 
 export class TraceabilityAgentTriggerService {
 	private readonly agentService: AgentService

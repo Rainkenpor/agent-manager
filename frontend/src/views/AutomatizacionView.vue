@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useAuthStore } from '@/store/useAuth'
-import HookServersView from './HookServersView.vue'
 import EventListenerView from './EventListenerView.vue'
+import HookServersView from './HookServersView.vue'
 
 const auth = useAuthStore()
 
 const allTabs = [
-  { key: 'hooks', label: 'Hook Servers', icon: 'mdi-webhook', resource: 'hook_servers', component: HookServersView },
-  { key: 'listeners', label: 'Event Listeners', icon: 'mdi-broadcast', resource: 'event_listeners', component: EventListenerView },
+	{ key: 'hooks', label: 'Hook Servers', icon: 'mdi-webhook', resource: 'hook_servers', component: HookServersView },
+	{ key: 'listeners', label: 'Event Listeners', icon: 'mdi-broadcast', resource: 'event_listeners', component: EventListenerView }
 ]
 
 const tabs = computed(() => allTabs.filter((t) => auth.hasResourceManageAccess(t.resource)))

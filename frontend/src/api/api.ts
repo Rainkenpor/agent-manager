@@ -103,10 +103,13 @@ export const getMcpServerTools = (mcpServerId: string) =>
 	)
 
 export const callMcpServerTool = (mcpServerId: string, toolName: string, args: Record<string, unknown>) =>
-	request<{ success: boolean; data: string }>(`/mcp-servers/${mcpServerId}/tools/call`, {
-		method: 'POST',
-		body: JSON.stringify({ toolName, args })
-	})
+	request<{ success: boolean; data: string; images?: Array<{ mimeType: string; data: string }> }>(
+		`/mcp-servers/${mcpServerId}/tools/call`,
+		{
+			method: 'POST',
+			body: JSON.stringify({ toolName, args })
+		}
+	)
 
 // MCP Server connection status & reconnect
 export const getMcpServerStatus = (mcpServerId: string) =>
@@ -438,6 +441,20 @@ export function streamMessage(conversationId: string, content: string, signal?: 
 		signal
 	})
 }
+
+export interface MessageImage {
+	serverId?: string
+	toolName: string
+	args: Record<string, unknown>
+	mimeType: string
+	thumb: string
+}
+
+export const attachMessageImages = (messageId: string, images: MessageImage[]) =>
+	request<{ success: boolean }>(`/chat/messages/${messageId}/images`, {
+		method: 'POST',
+		body: JSON.stringify({ images })
+	})
 
 // Notifications
 export interface NotificationItem {

@@ -7,11 +7,11 @@
  *
  * Convención de nombres de herramientas:  mcp__<serverName>__<toolName>
  */
-import { spawn, type ChildProcess } from 'node:child_process'
+import { type ChildProcess, spawn } from 'node:child_process'
 import jwt from 'jsonwebtoken'
-import { agentLogger } from '../service/logger.service.js'
-import { ZodRawShape } from 'zod'
+import type { ZodRawShape } from 'zod'
 import type { IMcpCredentialProvider } from '../../domain/repositories/mcp-credential-provider.repository.js'
+import { agentLogger } from '../service/logger.service.js'
 import { JWT_SECRET } from './passport.service.js'
 
 // ── MCP config types ──────────────────────────────────────────────────────────
@@ -65,6 +65,40 @@ export interface AgentTool {
 		description: string
 		parameters: Record<string, unknown>
 	}
+}
+
+/** Imagen devuelta por una tool MCP (bloque content de tipo 'image'). */
+export interface McpImage {
+	mimeType: string
+	data: string
+}
+
+/** Callback invocado por cada bloque de imagen presente en el resultado de una tool. */
+export type OnMcpImage = (image: McpImage) => void
+
+type McpContentBlock = { type: string; text?: string; data?: string; mimeType?: string }
+
+/**
+ * Procesa el `content` de un resultado tools/call: une los bloques de texto y
+ * reenvía cada bloque de imagen a `onImage`. Las imágenes no se incluyen en el
+ * string devuelto (que va al historial del LLM); solo se deja un placeholder.
+ */
+function processToolContent(content: McpContentBlock[], isError: boolean | undefined, onImage?: OnMcpImage): string {
+	const parts: string[] = []
+	let imageCount = 0
+	for (const block of content) {
+		if (block.type === 'text' && block.text) {
+			parts.push(block.text)
+		} else if (block.type === 'image' && block.data) {
+			imageCount++
+			onImage?.({ mimeType: block.mimeType ?? 'image/png', data: block.data })
+		}
+	}
+	if (imageCount > 0) {
+		parts.push(`[${imageCount} imagen(es) generada(s) y mostrada(s) al usuario en el chat]`)
+	}
+	const text = parts.join('\n')
+	return isError ? `MCP tool error: ${text}` : text || 'OK'
 }
 
 // ── Tool ID convention ────────────────────────────────────────────────────────
@@ -201,7 +235,12 @@ class McpHttpClient {
 		return result?.tools ?? []
 	}
 
-	async callTool(toolName: string, args: Record<string, unknown>, additionalHeaders?: Record<string, string>): Promise<string> {
+	async callTool(
+		toolName: string,
+		args: Record<string, unknown>,
+		additionalHeaders?: Record<string, string>,
+		onImage?: OnMcpImage
+	): Promise<string> {
 		const result = (await this.sendRequest(
 			'tools/call',
 			{
@@ -210,16 +249,12 @@ class McpHttpClient {
 			},
 			additionalHeaders
 		)) as {
-			content?: Array<{ type: string; text?: string }>
+			content?: McpContentBlock[]
 			isError?: boolean
 		} | null
 
 		if (!result?.content) return 'Tool returned no content'
-		const text = result.content
-			.filter((c): c is { type: string; text: string } => c.type === 'text' && !!c.text)
-			.map((c) => c.text)
-			.join('\n')
-		return result.isError ? `MCP tool error: ${text}` : text || 'OK'
+		return processToolContent(result.content, result.isError, onImage)
 	}
 }
 
@@ -331,21 +366,17 @@ class McpStdioClient {
 		return result?.tools ?? []
 	}
 
-	async callTool(toolName: string, args: Record<string, unknown>): Promise<string> {
+	async callTool(toolName: string, args: Record<string, unknown>, onImage?: OnMcpImage): Promise<string> {
 		const result = (await this.sendRequest('tools/call', {
 			name: toolName,
 			arguments: args
 		})) as {
-			content?: Array<{ type: string; text?: string }>
+			content?: McpContentBlock[]
 			isError?: boolean
 		} | null
 
 		if (!result?.content) return 'Tool returned no content'
-		const text = result.content
-			.filter((c): c is { type: string; text: string } => c.type === 'text' && !!c.text)
-			.map((c) => c.text)
-			.join('\n')
-		return result.isError ? `MCP tool error: ${text}` : text || 'OK'
+		return processToolContent(result.content, result.isError, onImage)
 	}
 
 	cleanup(): void {
@@ -584,7 +615,7 @@ export class McpExternalManager {
 	 * permite que el MCP llame de vuelta a agent-manager (p.ej. para leer un
 	 * traceability_document) en nombre del usuario, sin tokens estáticos.
 	 */
-	async callTool(toolId: string, args: Record<string, unknown>, userId?: string): Promise<string> {
+	async callTool(toolId: string, args: Record<string, unknown>, userId?: string, onImage?: OnMcpImage): Promise<string> {
 		const entry = this.toolMap.get(toolId) ?? parseMcpToolId(toolId) ?? undefined
 		if (!entry) {
 			agentLogger.warn(`[McpExternal] Attempt to call unknown MCP tool '${toolId}'`)
@@ -600,7 +631,7 @@ export class McpExternalManager {
 		const http = this.httpClients.get(serverName)
 		if (http) {
 			try {
-				return await http.callTool(toolName, args, httpHeaders)
+				return await http.callTool(toolName, args, httpHeaders, onImage)
 			} catch (err) {
 				throw new Error(`MCP HTTP error (${serverName}/${toolName}): ${err instanceof Error ? err.message : String(err)}`)
 			}
@@ -618,7 +649,7 @@ export class McpExternalManager {
 					})
 					try {
 						await tempClient.initialize()
-						return await tempClient.callTool(toolName, args)
+						return await tempClient.callTool(toolName, args, onImage)
 					} catch (err) {
 						throw new Error(`MCP stdio error (${serverName}/${toolName}): ${err instanceof Error ? err.message : String(err)}`)
 					} finally {
@@ -627,7 +658,7 @@ export class McpExternalManager {
 				}
 			}
 			try {
-				return await stdio.callTool(toolName, args)
+				return await stdio.callTool(toolName, args, onImage)
 			} catch (err) {
 				throw new Error(`MCP stdio error (${serverName}/${toolName}): ${err instanceof Error ? err.message : String(err)}`)
 			}

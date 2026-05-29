@@ -116,17 +116,17 @@
 </template>
 
 <script setup lang="ts">
-import { blurOn, focusOn } from '@/utils/focus'
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import * as api from '@/api/api'
 import { computeDiff, type DiffLine } from '@/utils/diff'
+import { blurOn, focusOn } from '@/utils/focus'
 
 interface AiResult {
-  type: 'answer' | 'change' | 'error'
-  content?: string
-  modified?: string
-  explanation?: string
-  rawContent?: string
+	type: 'answer' | 'change' | 'error'
+	content?: string
+	modified?: string
+	explanation?: string
+	rawContent?: string
 }
 
 const showInput = ref(false)
@@ -141,10 +141,10 @@ const diffLines = ref<DiffLine[]>([])
 let abortController: AbortController | null = null
 
 const props = defineProps<{
-  placeholder: string
-  systemPrompt?: string
-  rows?: number
-  class?: string
+	placeholder: string
+	systemPrompt?: string
+	rows?: number
+	class?: string
 }>()
 
 const model = defineModel<string>()
@@ -153,112 +153,115 @@ const addedCount = computed(() => diffLines.value.filter((l) => l.type === 'adde
 const removedCount = computed(() => diffLines.value.filter((l) => l.type === 'removed').length)
 
 const showIA = () => {
-  showInput.value = true
-  IARequest.value = ''
-  nextTick(() => iaInputRef.value?.focus())
+	showInput.value = true
+	IARequest.value = ''
+	nextTick(() => iaInputRef.value?.focus())
 }
 
 const closeResult = () => {
-  showResult.value = false
-  result.value = null
-  diffLines.value = []
-  showInput.value = false
+	showResult.value = false
+	result.value = null
+	diffLines.value = []
+	showInput.value = false
 }
 
 const cancelRequest = () => {
-  abortController?.abort()
-  loading.value = false
-  showInput.value = false
+	abortController?.abort()
+	loading.value = false
+	showInput.value = false
 }
 
 function parseAiResponse(raw: string): AiResult {
-  const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
-  try {
-    const parsed = JSON.parse(cleaned)
-    if (parsed.type === 'answer' || parsed.type === 'change') return parsed as AiResult
-    return { type: 'error', rawContent: raw }
-  } catch {
-    return { type: 'error', rawContent: raw }
-  }
+	const cleaned = raw
+		.replace(/^```(?:json)?\s*/i, '')
+		.replace(/\s*```$/, '')
+		.trim()
+	try {
+		const parsed = JSON.parse(cleaned)
+		if (parsed.type === 'answer' || parsed.type === 'change') return parsed as AiResult
+		return { type: 'error', rawContent: raw }
+	} catch {
+		return { type: 'error', rawContent: raw }
+	}
 }
 
 const submitRequest = async () => {
-  const req = IARequest.value.trim()
-  if (!req) return
+	const req = IARequest.value.trim()
+	if (!req) return
 
-  showInput.value = false
-  loading.value = true
-  showResult.value = false
-  result.value = null
-  diffLines.value = []
+	showInput.value = false
+	loading.value = true
+	showResult.value = false
+	result.value = null
+	diffLines.value = []
 
-  abortController = new AbortController()
+	abortController = new AbortController()
 
-  try {
-    const response = await api.streamAiAssist(model.value ?? '', req, props.systemPrompt, abortController.signal)
-    if (!response.body) throw new Error('No response body')
+	try {
+		const response = await api.streamAiAssist(model.value ?? '', req, props.systemPrompt, abortController.signal)
+		if (!response.body) throw new Error('No response body')
 
-    const reader = response.body.getReader()
-    const decoder = new TextDecoder()
-    let buffer = ''
-    let fullContent = ''
+		const reader = response.body.getReader()
+		const decoder = new TextDecoder()
+		let buffer = ''
+		let fullContent = ''
 
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      buffer += decoder.decode(value, { stream: true })
-      const parts = buffer.split('\n\n')
-      buffer = parts.pop() ?? ''
+		while (true) {
+			const { done, value } = await reader.read()
+			if (done) break
+			buffer += decoder.decode(value, { stream: true })
+			const parts = buffer.split('\n\n')
+			buffer = parts.pop() ?? ''
 
-      for (const part of parts) {
-        const line = part.trim()
-        if (!line.startsWith('data: ')) continue
-        const event = JSON.parse(line.slice(6))
-        if (event.type === 'chunk') {
-          fullContent += event.content as string
-        } else if (event.type === 'done') {
-          fullContent = (event.content as string) || fullContent
-        } else if (event.type === 'error') {
-          throw new Error(event.error as string)
-        }
-      }
-    }
+			for (const part of parts) {
+				const line = part.trim()
+				if (!line.startsWith('data: ')) continue
+				const event = JSON.parse(line.slice(6))
+				if (event.type === 'chunk') {
+					fullContent += event.content as string
+				} else if (event.type === 'done') {
+					fullContent = (event.content as string) || fullContent
+				} else if (event.type === 'error') {
+					throw new Error(event.error as string)
+				}
+			}
+		}
 
-    const parsed = parseAiResponse(fullContent)
-    result.value = parsed
+		const parsed = parseAiResponse(fullContent)
+		result.value = parsed
 
-    if (parsed.type === 'change' && parsed.modified !== undefined) {
-      diffLines.value = computeDiff(model.value ?? '', parsed.modified)
-    }
+		if (parsed.type === 'change' && parsed.modified !== undefined) {
+			diffLines.value = computeDiff(model.value ?? '', parsed.modified)
+		}
 
-    showResult.value = true
-  } catch (err) {
-    if ((err as Error).name !== 'AbortError') {
-      result.value = { type: 'error', rawContent: (err as Error).message }
-      showResult.value = true
-    }
-  } finally {
-    loading.value = false
-    abortController = null
-  }
+		showResult.value = true
+	} catch (err) {
+		if ((err as Error).name !== 'AbortError') {
+			result.value = { type: 'error', rawContent: (err as Error).message }
+			showResult.value = true
+		}
+	} finally {
+		loading.value = false
+		abortController = null
+	}
 }
 
 const acceptChanges = () => {
-  if (result.value?.modified !== undefined) {
-    model.value = result.value.modified
-  }
-  closeResult()
+	if (result.value?.modified !== undefined) {
+		model.value = result.value.modified
+	}
+	closeResult()
 }
 
 const rejectChanges = () => {
-  closeResult()
+	closeResult()
 }
 
 onMounted(() => {
-  focusOn(containerRef, showInput)
+	focusOn(containerRef, showInput)
 })
 onUnmounted(() => {
-  abortController?.abort()
-  blurOn(containerRef, showInput)
+	abortController?.abort()
+	blurOn(containerRef, showInput)
 })
 </script>

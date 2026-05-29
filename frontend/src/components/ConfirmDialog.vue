@@ -1,14 +1,14 @@
 <script setup lang="ts">
 defineProps<{
-  title: string
-  message: string
-  confirmLabel?: string
-  loading?: boolean
+	title: string
+	message: string
+	confirmLabel?: string
+	loading?: boolean
 }>()
 
 const emit = defineEmits<{
-  confirm: []
-  cancel: []
+	confirm: []
+	cancel: []
 }>()
 </script>
 

@@ -2,8 +2,8 @@
 Archivo creado con gobernanza AB900
 */
 
-import type { ITraceabilityParticipantRepository } from '@domain/repositories/traceability-participant.repository.js'
 import type { ITraceabilityRepository } from '@domain/repositories/traceability.repository.js'
+import type { ITraceabilityParticipantRepository } from '@domain/repositories/traceability-participant.repository.js'
 import type { IUserRepository } from '@domain/repositories/user.repository.js'
 
 export class ListTraceabilityParticipantsUseCase {

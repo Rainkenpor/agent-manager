@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import * as api from '@/api/api'
+import AppModal from '@/components/AppModal.vue'
+import Card from '@/components/Card.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import PageLayout from '@/components/PageLayout.vue'
-import AppModal from '@/components/AppModal.vue'
 import { useToastStore } from '@/store/useToast'
-import * as api from '@/api/api'
-import type { McpServer, CredentialField } from '@/types/types'
-import Card from '@/components/Card.vue'
+import type { CredentialField, McpServer } from '@/types/types'
 
 const toast = useToastStore()
 
@@ -17,9 +17,9 @@ const reconnecting = ref<Record<string, boolean>>({})
 
 // ── Tools panel ───────────────────────────────────────────────────────────────
 interface McpToolMeta {
-  toolName: string
-  description: string
-  inputSchema: Record<string, any>
+	toolName: string
+	description: string
+	inputSchema: Record<string, any>
 }
 
 const toolsPanelServer = ref<McpServer | null>(null)
@@ -27,24 +27,24 @@ const toolsList = ref<McpToolMeta[]>([])
 const toolsLoading = ref(false)
 
 async function openToolsPanel(server: McpServer) {
-  toolsPanelServer.value = server
-  toolsList.value = []
-  toolsLoading.value = true
-  try {
-    const res = await api.getMcpServerTools(server.id)
-    toolsList.value = res.data ?? []
-  } catch (e: any) {
-    toast.error(e.message ?? 'Failed to load tools')
-  } finally {
-    toolsLoading.value = false
-  }
+	toolsPanelServer.value = server
+	toolsList.value = []
+	toolsLoading.value = true
+	try {
+		const res = await api.getMcpServerTools(server.id)
+		toolsList.value = res.data ?? []
+	} catch (e: any) {
+		toast.error(e.message ?? 'Failed to load tools')
+	} finally {
+		toolsLoading.value = false
+	}
 }
 
 function closeToolsPanel() {
-  toolsPanelServer.value = null
-  toolsList.value = []
-  callResult.value = null
-  callError.value = null
+	toolsPanelServer.value = null
+	toolsList.value = []
+	callResult.value = null
+	callError.value = null
 }
 
 // ── Tool call modal ───────────────────────────────────────────────────────────
@@ -55,67 +55,75 @@ const callResult = ref<string | null>(null)
 const callError = ref<string | null>(null)
 
 function schemaProperties(tool: McpToolMeta): Array<{ key: string; schema: any }> {
-  const props = tool.inputSchema?.properties ?? {}
-  return Object.entries(props).map(([key, schema]) => ({ key, schema: schema as any }))
+	const props = tool.inputSchema?.properties ?? {}
+	return Object.entries(props).map(([key, schema]) => ({ key, schema: schema as any }))
 }
 
 function requiredFields(tool: McpToolMeta): string[] {
-  return tool.inputSchema?.required ?? []
+	return tool.inputSchema?.required ?? []
 }
 
 function openCallModal(tool: McpToolMeta) {
-  callingTool.value = tool
-  callResult.value = null
-  callError.value = null
-  // Initialize args with empty strings
-  const initialArgs: Record<string, string> = {}
-  for (const { key } of schemaProperties(tool)) {
-    initialArgs[key] = ''
-  }
-  callArgs.value = initialArgs
+	callingTool.value = tool
+	callResult.value = null
+	callError.value = null
+	// Initialize args with empty strings
+	const initialArgs: Record<string, string> = {}
+	for (const { key } of schemaProperties(tool)) {
+		initialArgs[key] = ''
+	}
+	callArgs.value = initialArgs
 }
 
 function closeCallModal() {
-  callingTool.value = null
-  callArgs.value = {}
-  callResult.value = null
-  callError.value = null
+	callingTool.value = null
+	callArgs.value = {}
+	callResult.value = null
+	callError.value = null
 }
 
 async function executeTool() {
-  if (!callingTool.value || !toolsPanelServer.value) return
-  callRunning.value = true
-  callResult.value = null
-  callError.value = null
-  try {
-    // Build args: only include non-empty values, parse JSON for object/array fields
-    const args: Record<string, unknown> = {}
-    for (const [key, val] of Object.entries(callArgs.value)) {
-      if (val === '') continue
-      const propSchema = callingTool.value.inputSchema?.properties?.[key]
-      const type = propSchema?.type
-      if (type === 'number' || type === 'integer') {
-        args[key] = Number(val)
-      } else if (type === 'boolean') {
-        args[key] = val === 'true'
-      } else if (type === 'object' || type === 'array') {
-        try { args[key] = JSON.parse(val) } catch { args[key] = val }
-      } else {
-        args[key] = val
-      }
-    }
-    const res = await api.callMcpServerTool(toolsPanelServer.value.id, callingTool.value.toolName, args)
-    callResult.value = typeof res.data === 'string' ? res.data : JSON.stringify(res.data, null, 2)
-  } catch (e: any) {
-    callError.value = e.message ?? 'Tool call failed'
-  } finally {
-    callRunning.value = false
-  }
+	if (!callingTool.value || !toolsPanelServer.value) return
+	callRunning.value = true
+	callResult.value = null
+	callError.value = null
+	try {
+		// Build args: only include non-empty values, parse JSON for object/array fields
+		const args: Record<string, unknown> = {}
+		for (const [key, val] of Object.entries(callArgs.value)) {
+			if (val === '') continue
+			const propSchema = callingTool.value.inputSchema?.properties?.[key]
+			const type = propSchema?.type
+			if (type === 'number' || type === 'integer') {
+				args[key] = Number(val)
+			} else if (type === 'boolean') {
+				args[key] = val === 'true'
+			} else if (type === 'object' || type === 'array') {
+				try {
+					args[key] = JSON.parse(val)
+				} catch {
+					args[key] = val
+				}
+			} else {
+				args[key] = val
+			}
+		}
+		const res = await api.callMcpServerTool(toolsPanelServer.value.id, callingTool.value.toolName, args)
+		callResult.value = typeof res.data === 'string' ? res.data : JSON.stringify(res.data, null, 2)
+	} catch (e: any) {
+		callError.value = e.message ?? 'Tool call failed'
+	} finally {
+		callRunning.value = false
+	}
 }
 
 const formattedResult = computed(() => {
-  if (!callResult.value) return ''
-  try { return JSON.stringify(JSON.parse(callResult.value), null, 2) } catch { return callResult.value }
+	if (!callResult.value) return ''
+	try {
+		return JSON.stringify(JSON.parse(callResult.value), null, 2)
+	} catch {
+		return callResult.value
+	}
 })
 
 // Modal
@@ -124,37 +132,37 @@ const editingServer = ref<McpServer | null>(null)
 const saving = ref(false)
 
 interface ServerForm {
-  name: string
-  displayName: string
-  description: string
-  type: 'http' | 'stdio' | 'local'
-  url: string
-  command: string
-  args: string
-  active: boolean
-  credentialFields: CredentialField[]
+	name: string
+	displayName: string
+	description: string
+	type: 'http' | 'stdio' | 'local'
+	url: string
+	command: string
+	args: string
+	active: boolean
+	credentialFields: CredentialField[]
 }
 
 const defaultForm = (): ServerForm => ({
-  name: '',
-  displayName: '',
-  description: '',
-  type: 'http',
-  url: '',
-  command: '',
-  args: '',
-  active: true,
-  credentialFields: [],
+	name: '',
+	displayName: '',
+	description: '',
+	type: 'http',
+	url: '',
+	command: '',
+	args: '',
+	active: true,
+	credentialFields: []
 })
 
 const form = ref<ServerForm>(defaultForm())
 
 function addCredentialField() {
-  form.value.credentialFields.push({ key: '', description: '' })
+	form.value.credentialFields.push({ key: '', description: '' })
 }
 
 function removeCredentialField(index: number) {
-  form.value.credentialFields.splice(index, 1)
+	form.value.credentialFields.splice(index, 1)
 }
 
 // Delete
@@ -162,127 +170,131 @@ const deleteTarget = ref<McpServer | null>(null)
 const deleting = ref(false)
 
 async function fetchServers() {
-  loading.value = true
-  try {
-    const res = await api.getMcpServers()
-    servers.value = res.data ?? (res as any)
-    fetchStatuses()
-  } catch (e: any) {
-    toast.error(e.message ?? 'Failed to load MCP servers')
-  } finally {
-    loading.value = false
-  }
+	loading.value = true
+	try {
+		const res = await api.getMcpServers()
+		servers.value = res.data ?? (res as any)
+		fetchStatuses()
+	} catch (e: any) {
+		toast.error(e.message ?? 'Failed to load MCP servers')
+	} finally {
+		loading.value = false
+	}
 }
 
 async function fetchStatuses() {
-  for (const server of servers.value) {
-    connectionStatus.value[server.id] = 'checking'
-    api.getMcpServerStatus(server.id)
-      .then((res) => {
-        connectionStatus.value[server.id] = res.data.connected ? 'connected' : 'disconnected'
-      })
-      .catch(() => {
-        connectionStatus.value[server.id] = 'disconnected'
-      })
-  }
+	for (const server of servers.value) {
+		connectionStatus.value[server.id] = 'checking'
+		api
+			.getMcpServerStatus(server.id)
+			.then((res) => {
+				connectionStatus.value[server.id] = res.data.connected ? 'connected' : 'disconnected'
+			})
+			.catch(() => {
+				connectionStatus.value[server.id] = 'disconnected'
+			})
+	}
 }
 
 async function reconnect(server: McpServer) {
-  reconnecting.value[server.id] = true
-  try {
-    const res = await api.reconnectMcpServer(server.id)
-    connectionStatus.value[server.id] = res.data.connected ? 'connected' : 'disconnected'
-    toast.success(`${server.displayName || server.name} reconnected`)
-  } catch (e: any) {
-    connectionStatus.value[server.id] = 'disconnected'
-    toast.error(e.message ?? 'Failed to reconnect')
-  } finally {
-    reconnecting.value[server.id] = false
-  }
+	reconnecting.value[server.id] = true
+	try {
+		const res = await api.reconnectMcpServer(server.id)
+		connectionStatus.value[server.id] = res.data.connected ? 'connected' : 'disconnected'
+		toast.success(`${server.displayName || server.name} reconnected`)
+	} catch (e: any) {
+		connectionStatus.value[server.id] = 'disconnected'
+		toast.error(e.message ?? 'Failed to reconnect')
+	} finally {
+		reconnecting.value[server.id] = false
+	}
 }
 
 onMounted(fetchServers)
 
 function openCreate() {
-  editingServer.value = null
-  form.value = defaultForm()
-  showModal.value = true
+	editingServer.value = null
+	form.value = defaultForm()
+	showModal.value = true
 }
 
 function openEdit(server: McpServer) {
-  editingServer.value = server
-  form.value = {
-    name: server.name,
-    displayName: server.displayName ?? '',
-    description: server.description ?? '',
-    type: server.type,
-    url: server.url ?? '',
-    command: server.command ?? '',
-    args: (server.args ?? []).join(', '),
-    active: server.active,
-    credentialFields: (server.credentialFields ?? []).map((f) => ({ ...f })),
-  }
-  showModal.value = true
+	editingServer.value = server
+	form.value = {
+		name: server.name,
+		displayName: server.displayName ?? '',
+		description: server.description ?? '',
+		type: server.type,
+		url: server.url ?? '',
+		command: server.command ?? '',
+		args: (server.args ?? []).join(', '),
+		active: server.active,
+		credentialFields: (server.credentialFields ?? []).map((f) => ({ ...f }))
+	}
+	showModal.value = true
 }
 
 function closeModal() {
-  showModal.value = false
-  editingServer.value = null
+	showModal.value = false
+	editingServer.value = null
 }
 
 async function saveServer() {
-  saving.value = true
-  try {
-    const payload: any = {
-      name: form.value.name,
-      displayName: form.value.displayName || undefined,
-      description: form.value.description || undefined,
-      type: form.value.type,
-      active: form.value.active,
-      credentialFields: form.value.credentialFields.filter((f) => f.key.trim()),
-    }
-    if (form.value.type === 'http') {
-      payload.url = form.value.url || undefined
-    } else {
-      payload.command = form.value.command || undefined
-      payload.args = form.value.args
-        ? form.value.args.split(',').map((s) => s.trim()).filter(Boolean)
-        : []
-    }
+	saving.value = true
+	try {
+		const payload: any = {
+			name: form.value.name,
+			displayName: form.value.displayName || undefined,
+			description: form.value.description || undefined,
+			type: form.value.type,
+			active: form.value.active,
+			credentialFields: form.value.credentialFields.filter((f) => f.key.trim())
+		}
+		if (form.value.type === 'http') {
+			payload.url = form.value.url || undefined
+		} else {
+			payload.command = form.value.command || undefined
+			payload.args = form.value.args
+				? form.value.args
+						.split(',')
+						.map((s) => s.trim())
+						.filter(Boolean)
+				: []
+		}
 
-    if (editingServer.value) {
-      await api.updateMcpServer(editingServer.value.id, payload)
-      toast.success('MCP server updated')
-    } else {
-      await api.createMcpServer(payload)
-      toast.success('MCP server created')
-    }
-    closeModal()
-    await fetchServers()
-  } catch (e: any) {
-    toast.error(e.message ?? 'Failed to save MCP server')
-  } finally {
-    saving.value = false
-  }
+		if (editingServer.value) {
+			await api.updateMcpServer(editingServer.value.id, payload)
+			toast.success('MCP server updated')
+		} else {
+			await api.createMcpServer(payload)
+			toast.success('MCP server created')
+		}
+		closeModal()
+		await fetchServers()
+	} catch (e: any) {
+		toast.error(e.message ?? 'Failed to save MCP server')
+	} finally {
+		saving.value = false
+	}
 }
 
 function confirmDelete(server: McpServer) {
-  deleteTarget.value = server
+	deleteTarget.value = server
 }
 
 async function doDelete() {
-  if (!deleteTarget.value) return
-  deleting.value = true
-  try {
-    await api.deleteMcpServer(deleteTarget.value.id)
-    toast.success('MCP server deleted')
-    deleteTarget.value = null
-    await fetchServers()
-  } catch (e: any) {
-    toast.error(e.message ?? 'Failed to delete MCP server')
-  } finally {
-    deleting.value = false
-  }
+	if (!deleteTarget.value) return
+	deleting.value = true
+	try {
+		await api.deleteMcpServer(deleteTarget.value.id)
+		toast.success('MCP server deleted')
+		deleteTarget.value = null
+		await fetchServers()
+	} catch (e: any) {
+		toast.error(e.message ?? 'Failed to delete MCP server')
+	} finally {
+		deleting.value = false
+	}
 }
 </script>
 

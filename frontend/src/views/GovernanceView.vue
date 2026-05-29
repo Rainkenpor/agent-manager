@@ -1,40 +1,40 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import * as api from '@/api/api'
+import AppModal from '@/components/AppModal.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import PageLayout from '@/components/PageLayout.vue'
-import AppModal from '@/components/AppModal.vue'
-import { useToastStore } from '@/store/useToast'
-import { useAuthStore } from '@/store/useAuth'
-import * as api from '@/api/api'
 import TextAreaComplete from '@/components/TextAreaComplete.vue'
+import { useAuthStore } from '@/store/useAuth'
+import { useToastStore } from '@/store/useToast'
 
 const toast = useToastStore()
 const auth = useAuthStore()
 
 interface Governance {
-  id: string
-  name: string
-  type: string
-  description: string | null
-  content: string
-  sections: GovernanceSection[]
-  isActive: boolean
-  createdAt: string
-  updatedAt: string
+	id: string
+	name: string
+	type: string
+	description: string | null
+	content: string
+	sections: GovernanceSection[]
+	isActive: boolean
+	createdAt: string
+	updatedAt: string
 }
 
 interface GovernanceSection {
-  title: string
-  content: string
+	title: string
+	content: string
 }
 
 interface GovernanceForm {
-  name: string
-  type: string
-  description: string
-  content: string
-  sections: GovernanceSection[]
-  isActive: boolean
+	name: string
+	type: string
+	description: string
+	content: string
+	sections: GovernanceSection[]
+	isActive: boolean
 }
 
 const items = ref<Governance[]>([])
@@ -47,12 +47,12 @@ const deleting = ref(false)
 const selected = ref<Governance | null>(null)
 
 const defaultForm = (): GovernanceForm => ({
-  name: '',
-  type: '',
-  description: '',
-  content: '',
-  sections: [],
-  isActive: true,
+	name: '',
+	type: '',
+	description: '',
+	content: '',
+	sections: [],
+	isActive: true
 })
 
 const form = ref<GovernanceForm>(defaultForm())
@@ -63,119 +63,119 @@ const activeItems = computed(() => items.value.filter((g) => g.isActive))
 const inactiveItems = computed(() => items.value.filter((g) => !g.isActive))
 
 const activeByType = computed(() => {
-  const map = new Map<string, Governance[]>()
-  for (const g of activeItems.value) {
-    const list = map.get(g.type) ?? []
-    list.push(g)
-    map.set(g.type, list)
-  }
-  return map
+	const map = new Map<string, Governance[]>()
+	for (const g of activeItems.value) {
+		const list = map.get(g.type) ?? []
+		list.push(g)
+		map.set(g.type, list)
+	}
+	return map
 })
 
 // ── Actions ──────────────────────────────────────────────────────────────────
 
 function openCreate() {
-  editing.value = null
-  form.value = defaultForm()
-  showModal.value = true
+	editing.value = null
+	form.value = defaultForm()
+	showModal.value = true
 }
 
 function openEdit(item: Governance) {
-  editing.value = item
-  form.value = {
-    name: item.name,
-    type: item.type,
-    description: item.description ?? '',
-    content: item.content,
-    sections: (item.sections ?? []).map((section) => ({ ...section })),
-    isActive: item.isActive,
-  }
-  showModal.value = true
+	editing.value = item
+	form.value = {
+		name: item.name,
+		type: item.type,
+		description: item.description ?? '',
+		content: item.content,
+		sections: (item.sections ?? []).map((section) => ({ ...section })),
+		isActive: item.isActive
+	}
+	showModal.value = true
 }
 
 function closeModal() {
-  showModal.value = false
-  editing.value = null
+	showModal.value = false
+	editing.value = null
 }
 
 async function fetchItems() {
-  loading.value = true
-  try {
-    const res = await api.getGovernance()
-    items.value = (res.data ?? []).map((item: Governance) => ({
-      ...item,
-      sections: item.sections ?? [],
-    }))
-  } catch (e: any) {
-    toast.error(e.message ?? 'Error al cargar gobernanza')
-  } finally {
-    loading.value = false
-  }
+	loading.value = true
+	try {
+		const res = await api.getGovernance()
+		items.value = (res.data ?? []).map((item: Governance) => ({
+			...item,
+			sections: item.sections ?? []
+		}))
+	} catch (e: any) {
+		toast.error(e.message ?? 'Error al cargar gobernanza')
+	} finally {
+		loading.value = false
+	}
 }
 
 async function save() {
-  saving.value = true
-  try {
-    const sections = form.value.sections
-      .map((section) => ({
-        title: section.title.trim(),
-        content: section.content.trim(),
-      }))
-      .filter((section) => section.title || section.content)
+	saving.value = true
+	try {
+		const sections = form.value.sections
+			.map((section) => ({
+				title: section.title.trim(),
+				content: section.content.trim()
+			}))
+			.filter((section) => section.title || section.content)
 
-    if (editing.value) {
-      await api.updateGovernance(editing.value.id, {
-        name: form.value.name,
-        type: form.value.type,
-        description: form.value.description || null,
-        content: form.value.content,
-        sections,
-        isActive: form.value.isActive,
-      })
-      toast.success('Gobernanza actualizada')
-    } else {
-      await api.createGovernance({
-        name: form.value.name,
-        type: form.value.type,
-        description: form.value.description || undefined,
-        content: form.value.content,
-        sections,
-      })
-      toast.success('Gobernanza creada')
-    }
-    closeModal()
-    await fetchItems()
-  } catch (e: any) {
-    toast.error(e.message ?? 'Error al guardar gobernanza')
-  } finally {
-    saving.value = false
-  }
+		if (editing.value) {
+			await api.updateGovernance(editing.value.id, {
+				name: form.value.name,
+				type: form.value.type,
+				description: form.value.description || null,
+				content: form.value.content,
+				sections,
+				isActive: form.value.isActive
+			})
+			toast.success('Gobernanza actualizada')
+		} else {
+			await api.createGovernance({
+				name: form.value.name,
+				type: form.value.type,
+				description: form.value.description || undefined,
+				content: form.value.content,
+				sections
+			})
+			toast.success('Gobernanza creada')
+		}
+		closeModal()
+		await fetchItems()
+	} catch (e: any) {
+		toast.error(e.message ?? 'Error al guardar gobernanza')
+	} finally {
+		saving.value = false
+	}
 }
 
 async function confirmDelete() {
-  if (!deleteTarget.value) return
-  deleting.value = true
-  try {
-    await api.deleteGovernance(deleteTarget.value.id)
-    toast.success('Gobernanza eliminada')
-    if (selected.value?.id === deleteTarget.value.id) selected.value = null
-    deleteTarget.value = null
-    await fetchItems()
-  } catch (e: any) {
-    toast.error(e.message ?? 'Error al eliminar gobernanza')
-  } finally {
-    deleting.value = false
-  }
+	if (!deleteTarget.value) return
+	deleting.value = true
+	try {
+		await api.deleteGovernance(deleteTarget.value.id)
+		toast.success('Gobernanza eliminada')
+		if (selected.value?.id === deleteTarget.value.id) selected.value = null
+		deleteTarget.value = null
+		await fetchItems()
+	} catch (e: any) {
+		toast.error(e.message ?? 'Error al eliminar gobernanza')
+	} finally {
+		deleting.value = false
+	}
 }
 
 onMounted(fetchItems)
 
 function addSection() {
-  form.value.sections.push({ title: '', content: '' })
+	form.value.sections.push({ title: '', content: '' })
 }
 
 function removeSection(index: number) {
-  form.value.sections.splice(index, 1)
+	form.value.sections.splice(index, 1)
 }
 </script>
 

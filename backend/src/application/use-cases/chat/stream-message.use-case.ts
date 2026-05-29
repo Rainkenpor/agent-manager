@@ -1,13 +1,11 @@
-import type { IChatRepository } from '@domain/repositories/chat.repository.js'
-import type { IAgentRepository } from '@domain/repositories/agent.repository.js'
-import { MCPAgentService } from '@infra/service/mcp-agent.service'
+import type { ToolImageInfo } from '@domain/entities/agent.entity.js'
 import type { IMcpServerRepository, IMcpUserCredentialRepository } from '@domain/repositories'
+import type { IAgentRepository } from '@domain/repositories/agent.repository.js'
+import type { IChatRepository } from '@domain/repositories/chat.repository.js'
 import { AppDataSource } from '@infra/db/database.js'
-import {
-	TraceabilityEntity,
-	TraceabilityParticipantEntity,
-	TraceabilityParticipantStageChatEntity
-} from '@infra/db/entities.js'
+import { TraceabilityEntity, TraceabilityParticipantEntity, TraceabilityParticipantStageChatEntity } from '@infra/db/entities.js'
+import { MCPAgentService } from '@infra/service/mcp-agent.service'
+import { stripImageMarker } from '@infra/utils/image-marker.js'
 
 async function resolveTraceabilityContext(conversationId: string): Promise<{ traceabilityId: string | null; stageId: string | null }> {
 	const stageChatRepo = AppDataSource.getRepository(TraceabilityParticipantStageChatEntity)
@@ -28,6 +26,7 @@ async function resolveTraceabilityContext(conversationId: string): Promise<{ tra
 export type SseEvent =
 	| { type: 'chunk'; content: string }
 	| { type: 'tool'; name: string }
+	| { type: 'tool_image'; serverId?: string; toolName: string; args: Record<string, unknown>; mimeType: string; data: string }
 	| { type: 'draft_updated'; draft: string }
 	| {
 			type: 'done'
@@ -62,13 +61,24 @@ export class StreamMessageUseCase {
 		// Persist user message
 		await this.chatRepository.addMessage(conversationId, 'user', userContent)
 
-		// Build history from messages already in DB before this turn
-		const history = conv.messages.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }))
+		// Build history from messages already in DB before this turn.
+		// Strip any persisted image marker so base64 thumbnails never reach the LLM.
+		const history = conv.messages.map((m) => ({ role: m.role as 'user' | 'assistant', content: stripImageMarker(m.content) }))
 
 		const userId = conv.userId
 		const toolsCallbacks = {
 			onToolCall: async (toolName: string, args: any) => {
 				sendEvent({ type: 'tool', name: toolName })
+			},
+			onToolImage: async (info: ToolImageInfo) => {
+				sendEvent({
+					type: 'tool_image',
+					serverId: info.serverId,
+					toolName: info.toolName,
+					args: info.args,
+					mimeType: info.mimeType,
+					data: info.data
+				})
 			},
 			draftCallbacks: {
 				onUpdate: async (draft: string) => {

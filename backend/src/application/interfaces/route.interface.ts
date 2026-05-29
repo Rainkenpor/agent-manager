@@ -1,6 +1,6 @@
-import type { z, ZodRawShape } from 'zod'
-import type { NextFunction, Request, Response } from 'express'
 import type { McpOAuthService } from '@infra/service/mcp-oauth.service.js'
+import type { NextFunction, Request, Response } from 'express'
+import type { ZodRawShape, z } from 'zod'
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'
 
@@ -27,8 +27,8 @@ export interface RouteToolConfig<T extends ZodRawShape | z.ZodObject<any>> {
 	toolName?: string
 	toolDescription?: string
 	toolSource?: string
-  // Siempre disponible sin necesidad de rol
-  toolAlwaysAvailable?: boolean
+	// Siempre disponible sin necesidad de rol
+	toolAlwaysAvailable?: boolean
 
 	// Shared validation schema (Zod)
 	inputSchema?: T
@@ -64,9 +64,9 @@ export interface RegisteredRoute {
 	path: string
 	toolName?: string
 	toolDescription?: string
-  toolSource?: string
+	toolSource?: string
 	inputSchema: ZodRawShape
-  toolAlwaysAvailable?: boolean
+	toolAlwaysAvailable?: boolean
 	handler: ({ input, context, oauthService }: { input: unknown; context?: HttpContext; oauthService?: McpOAuthService }) => Promise<unknown>
 	requiresAuth?: boolean
 	requiredPermission?: { resource: string; action: string }

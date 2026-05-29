@@ -1,9 +1,9 @@
-import { z } from 'zod'
 import { registry } from '@application/services/registry.service.js'
-import { envs } from '../../envs.js'
+import { JWT_SECRET } from '@infra/service/passport.service.js'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
-import { JWT_SECRET } from '@infra/service/passport.service.js'
+import { z } from 'zod'
+import { envs } from '../../envs.js'
 import { container } from '../container.js'
 
 /**

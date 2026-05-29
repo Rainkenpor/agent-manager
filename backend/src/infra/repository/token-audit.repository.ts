@@ -5,7 +5,7 @@ import type {
 	TokenDailyMetric,
 	TokenMetrics,
 	TokenMetricsByModel,
-	TokenMetricsPeriod,
+	TokenMetricsPeriod
 } from '../../domain/entities/token-audit.entity.js'
 import type { ITokenAuditRepository } from '../../domain/repositories/token-audit.repository.js'
 import { AppDataSource } from '../db/database.js'

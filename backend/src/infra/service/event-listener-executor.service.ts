@@ -1,8 +1,8 @@
-import type { IEventListenerRepository } from '../../domain/repositories/event-listener.repository.js'
+import { executeToolCall } from '@infra/utils/tools.js'
 import type { EventListener } from '../../domain/entities/event-listener.entity.js'
+import type { IEventListenerRepository } from '../../domain/repositories/event-listener.repository.js'
 import { getNextCronRun } from './cron-parser.js'
 import { evaluateCondition } from './field-accessor.js'
-import { executeToolCall } from '@infra/utils/tools.js'
 import { logger } from './logger.service.js'
 
 /**

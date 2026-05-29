@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
+import * as api from '@/api/api'
+import AppModal from '@/components/AppModal.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import PageLayout from '@/components/PageLayout.vue'
 import { useToastStore } from '@/store/useToast'
-import * as api from '@/api/api'
-import type { User, Role } from '@/types/types'
-import AppModal from '@/components/AppModal.vue'
+import type { Role, User } from '@/types/types'
 
 const toast = useToastStore()
 
@@ -17,11 +17,11 @@ const loading = ref(false)
 const showUserModal = ref(false)
 const editingUser = ref<User | null>(null)
 const userForm = ref({
-  email: '',
-  username: '',
-  password: '',
-  firstName: '',
-  lastName: '',
+	email: '',
+	username: '',
+	password: '',
+	firstName: '',
+	lastName: ''
 })
 const saving = ref(false)
 
@@ -35,133 +35,133 @@ const rolesModalUserDetail = ref<User | null>(null)
 const togglingRole = ref<string | null>(null)
 
 async function fetchData() {
-  loading.value = true
-  try {
-    const [usersRes, rolesRes] = await Promise.all([api.getUsers(), api.getRoles()])
-    users.value = usersRes
-    allRoles.value = rolesRes
-  } catch (e: any) {
-    toast.error(e.message ?? 'Failed to load data')
-  } finally {
-    loading.value = false
-  }
+	loading.value = true
+	try {
+		const [usersRes, rolesRes] = await Promise.all([api.getUsers(), api.getRoles()])
+		users.value = usersRes
+		allRoles.value = rolesRes
+	} catch (e: any) {
+		toast.error(e.message ?? 'Failed to load data')
+	} finally {
+		loading.value = false
+	}
 }
 
 onMounted(fetchData)
 
 function openCreate() {
-  editingUser.value = null
-  userForm.value = { email: '', username: '', password: '', firstName: '', lastName: '' }
-  showUserModal.value = true
+	editingUser.value = null
+	userForm.value = { email: '', username: '', password: '', firstName: '', lastName: '' }
+	showUserModal.value = true
 }
 
 function openEdit(user: User) {
-  editingUser.value = user
-  userForm.value = {
-    email: user.email,
-    username: user.username,
-    password: '',
-    firstName: user.firstName ?? '',
-    lastName: user.lastName ?? '',
-  }
-  showUserModal.value = true
+	editingUser.value = user
+	userForm.value = {
+		email: user.email,
+		username: user.username,
+		password: '',
+		firstName: user.firstName ?? '',
+		lastName: user.lastName ?? ''
+	}
+	showUserModal.value = true
 }
 
 function closeUserModal() {
-  showUserModal.value = false
-  editingUser.value = null
+	showUserModal.value = false
+	editingUser.value = null
 }
 
 async function saveUser() {
-  saving.value = true
-  try {
-    if (editingUser.value) {
-      const payload: any = {
-        email: userForm.value.email,
-        firstName: userForm.value.firstName || undefined,
-        lastName: userForm.value.lastName || undefined,
-      }
-      if (userForm.value.password) payload.password = userForm.value.password
-      await api.updateUser(editingUser.value.id, payload)
-      toast.success('User updated successfully')
-    } else {
-      const payload: any = {
-        email: userForm.value.email,
-        username: userForm.value.username,
-        password: userForm.value.password,
-      }
-      if (userForm.value.firstName) payload.firstName = userForm.value.firstName
-      if (userForm.value.lastName) payload.lastName = userForm.value.lastName
-      await api.createUser(payload)
-      toast.success('User created successfully')
-    }
-    closeUserModal()
-    await fetchData()
-  } catch (e: any) {
-    toast.error(e.message ?? 'Failed to save user')
-  } finally {
-    saving.value = false
-  }
+	saving.value = true
+	try {
+		if (editingUser.value) {
+			const payload: any = {
+				email: userForm.value.email,
+				firstName: userForm.value.firstName || undefined,
+				lastName: userForm.value.lastName || undefined
+			}
+			if (userForm.value.password) payload.password = userForm.value.password
+			await api.updateUser(editingUser.value.id, payload)
+			toast.success('User updated successfully')
+		} else {
+			const payload: any = {
+				email: userForm.value.email,
+				username: userForm.value.username,
+				password: userForm.value.password
+			}
+			if (userForm.value.firstName) payload.firstName = userForm.value.firstName
+			if (userForm.value.lastName) payload.lastName = userForm.value.lastName
+			await api.createUser(payload)
+			toast.success('User created successfully')
+		}
+		closeUserModal()
+		await fetchData()
+	} catch (e: any) {
+		toast.error(e.message ?? 'Failed to save user')
+	} finally {
+		saving.value = false
+	}
 }
 
 function confirmDelete(user: User) {
-  deleteTarget.value = user
+	deleteTarget.value = user
 }
 
 async function doDelete() {
-  if (!deleteTarget.value) return
-  deleting.value = true
-  try {
-    await api.deleteUser(deleteTarget.value.id)
-    toast.success('User deleted')
-    deleteTarget.value = null
-    await fetchData()
-  } catch (e: any) {
-    toast.error(e.message ?? 'Failed to delete user')
-  } finally {
-    deleting.value = false
-  }
+	if (!deleteTarget.value) return
+	deleting.value = true
+	try {
+		await api.deleteUser(deleteTarget.value.id)
+		toast.success('User deleted')
+		deleteTarget.value = null
+		await fetchData()
+	} catch (e: any) {
+		toast.error(e.message ?? 'Failed to delete user')
+	} finally {
+		deleting.value = false
+	}
 }
 
 async function openRolesModal(user: User) {
-  rolesModalUser.value = user
-  rolesModalUserDetail.value = null
-  try {
-    const detail = await api.getUserById(user.id)
-    rolesModalUserDetail.value = detail
-  } catch (e: any) {
-    toast.error(e.message ?? 'Failed to load user details')
-  }
+	rolesModalUser.value = user
+	rolesModalUserDetail.value = null
+	try {
+		const detail = await api.getUserById(user.id)
+		rolesModalUserDetail.value = detail
+	} catch (e: any) {
+		toast.error(e.message ?? 'Failed to load user details')
+	}
 }
 
 function closeRolesModal() {
-  rolesModalUser.value = null
-  rolesModalUserDetail.value = null
+	rolesModalUser.value = null
+	rolesModalUserDetail.value = null
 }
 
 function userHasRole(roleId: string): boolean {
-  return (rolesModalUserDetail.value?.roles ?? []).some((r: Role) => r.id === roleId)
+	return (rolesModalUserDetail.value?.roles ?? []).some((r: Role) => r.id === roleId)
 }
 
 async function toggleRole(roleId: string) {
-  if (!rolesModalUser.value) return
-  togglingRole.value = roleId
-  try {
-    if (userHasRole(roleId)) {
-      await api.removeRole(rolesModalUser.value.id, roleId)
-      toast.success('Role removed')
-    } else {
-      await api.assignRole(rolesModalUser.value.id, roleId)
-      toast.success('Role assigned')
-    }
-    const detail = await api.getUserById(rolesModalUser.value.id)
-    rolesModalUserDetail.value = detail
-    await fetchData()
-  } catch (e: any) {
-    toast.error(e.message ?? 'Failed to update role')
-  } finally {
-    togglingRole.value = null
-  }
+	if (!rolesModalUser.value) return
+	togglingRole.value = roleId
+	try {
+		if (userHasRole(roleId)) {
+			await api.removeRole(rolesModalUser.value.id, roleId)
+			toast.success('Role removed')
+		} else {
+			await api.assignRole(rolesModalUser.value.id, roleId)
+			toast.success('Role assigned')
+		}
+		const detail = await api.getUserById(rolesModalUser.value.id)
+		rolesModalUserDetail.value = detail
+		await fetchData()
+	} catch (e: any) {
+		toast.error(e.message ?? 'Failed to update role')
+	} finally {
+		togglingRole.value = null
+	}
 }
 </script>
 

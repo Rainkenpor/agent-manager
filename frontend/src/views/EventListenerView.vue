@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import * as api from '@/api/api'
 import AppModal from '@/components/AppModal.vue'
 import { useAuthStore } from '@/store/useAuth'
@@ -11,30 +11,30 @@ const toast = useToastStore()
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface ELSource {
-  function_name: string
-  params: Record<string, unknown>
+	function_name: string
+	params: Record<string, unknown>
 }
 interface ELCondition {
-  field: string
-  operator: string
-  value: unknown
+	field: string
+	operator: string
+	value: unknown
 }
 interface ELAction {
-  function_name: string
-  params: Record<string, unknown>
+	function_name: string
+	params: Record<string, unknown>
 }
 interface EventListener {
-  id: string
-  name: string
-  schedule: string
-  source: ELSource
-  condition: ELCondition
-  action: ELAction[]
-  enabled: boolean
-  lastRunAt: string | null
-  lastRunResult: string | null
-  createdAt: string
-  updatedAt: string
+	id: string
+	name: string
+	schedule: string
+	source: ELSource
+	condition: ELCondition
+	action: ELAction[]
+	enabled: boolean
+	lastRunAt: string | null
+	lastRunResult: string | null
+	createdAt: string
+	updatedAt: string
 }
 
 // ── Permissions ───────────────────────────────────────────────────────────────
@@ -58,138 +58,138 @@ const saving = ref(false)
 const OPERATORS = ['==', '===', '!=', '!==', '>', '<', '>=', '<=', 'contains', 'startsWith', 'endsWith']
 
 const emptyForm = () => ({
-  name: '',
-  schedule: '*/15 * * * *',
-  source: { function_name: '', params: '{}' },
-  condition: { field: 'element.status.name', operator: '==', value: '' },
-  action: [{ function_name: '', params: '{}' }] as Array<{ function_name: string; params: string }>,
-  enabled: true
+	name: '',
+	schedule: '*/15 * * * *',
+	source: { function_name: '', params: '{}' },
+	condition: { field: 'element.status.name', operator: '==', value: '' },
+	action: [{ function_name: '', params: '{}' }] as Array<{ function_name: string; params: string }>,
+	enabled: true
 })
 
 const form = ref(emptyForm())
 const formErrors = ref<string[]>([])
 
 function openCreate() {
-  editing.value = null
-  form.value = emptyForm()
-  formErrors.value = []
-  showModal.value = true
+	editing.value = null
+	form.value = emptyForm()
+	formErrors.value = []
+	showModal.value = true
 }
 
 function openEdit(item: EventListener) {
-  editing.value = item
-  form.value = {
-    name: item.name,
-    schedule: item.schedule,
-    source: { function_name: item.source.function_name, params: JSON.stringify(item.source.params, null, 2) },
-    condition: { field: item.condition.field, operator: item.condition.operator, value: String(item.condition.value) },
-    action: item.action.map((a) => ({ function_name: a.function_name, params: JSON.stringify(a.params, null, 2) })),
-    enabled: item.enabled
-  }
-  formErrors.value = []
-  showModal.value = true
+	editing.value = item
+	form.value = {
+		name: item.name,
+		schedule: item.schedule,
+		source: { function_name: item.source.function_name, params: JSON.stringify(item.source.params, null, 2) },
+		condition: { field: item.condition.field, operator: item.condition.operator, value: String(item.condition.value) },
+		action: item.action.map((a) => ({ function_name: a.function_name, params: JSON.stringify(a.params, null, 2) })),
+		enabled: item.enabled
+	}
+	formErrors.value = []
+	showModal.value = true
 }
 
 function addAction() {
-  form.value.action.push({ function_name: '', params: '{}' })
+	form.value.action.push({ function_name: '', params: '{}' })
 }
 
 function removeAction(idx: number) {
-  form.value.action.splice(idx, 1)
+	form.value.action.splice(idx, 1)
 }
 
 function parseParams(raw: string): Record<string, unknown> {
-  try {
-    const parsed = JSON.parse(raw)
-    if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) return parsed
-    throw new Error()
-  } catch {
-    throw new Error(`Parámetros JSON inválidos: "${raw}"`)
-  }
+	try {
+		const parsed = JSON.parse(raw)
+		if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) return parsed
+		throw new Error()
+	} catch {
+		throw new Error(`Parámetros JSON inválidos: "${raw}"`)
+	}
 }
 
 function parseConditionValue(raw: string): unknown {
-  // Try to parse as JSON first (handles numbers, booleans, null), fallback to string
-  try {
-    return JSON.parse(raw)
-  } catch {
-    return raw
-  }
+	// Try to parse as JSON first (handles numbers, booleans, null), fallback to string
+	try {
+		return JSON.parse(raw)
+	} catch {
+		return raw
+	}
 }
 
 async function save() {
-  formErrors.value = []
-  const errors: string[] = []
+	formErrors.value = []
+	const errors: string[] = []
 
-  if (!form.value.name.trim()) errors.push('El nombre es requerido.')
-  if (!form.value.schedule.trim()) errors.push('La expresión cron es requerida.')
-  if (!form.value.source.function_name.trim()) errors.push('El nombre del tool fuente es requerido.')
-  if (!form.value.condition.field.trim()) errors.push('El campo de condición es requerido.')
-  if (form.value.action.length === 0) errors.push('Se requiere al menos una acción.')
-  form.value.action.forEach((a, i) => {
-    if (!a.function_name.trim()) errors.push(`Acción ${i + 1}: nombre del tool requerido.`)
-  })
+	if (!form.value.name.trim()) errors.push('El nombre es requerido.')
+	if (!form.value.schedule.trim()) errors.push('La expresión cron es requerida.')
+	if (!form.value.source.function_name.trim()) errors.push('El nombre del tool fuente es requerido.')
+	if (!form.value.condition.field.trim()) errors.push('El campo de condición es requerido.')
+	if (form.value.action.length === 0) errors.push('Se requiere al menos una acción.')
+	form.value.action.forEach((a, i) => {
+		if (!a.function_name.trim()) errors.push(`Acción ${i + 1}: nombre del tool requerido.`)
+	})
 
-  let sourceParams: Record<string, unknown> = {}
-  let actionParsed: Array<{ function_name: string; params: Record<string, unknown> }> = []
+	let sourceParams: Record<string, unknown> = {}
+	let actionParsed: Array<{ function_name: string; params: Record<string, unknown> }> = []
 
-  try {
-    sourceParams = parseParams(form.value.source.params)
-  } catch (e: any) {
-    errors.push(`Fuente → ${e.message}`)
-  }
+	try {
+		sourceParams = parseParams(form.value.source.params)
+	} catch (e: any) {
+		errors.push(`Fuente → ${e.message}`)
+	}
 
-  try {
-    actionParsed = form.value.action.map((a, i) => ({
-      function_name: a.function_name,
-      params: (() => {
-        try {
-          return parseParams(a.params)
-        } catch (e: any) {
-          throw new Error(`Acción ${i + 1} → ${e.message}`)
-        }
-      })()
-    }))
-  } catch (e: any) {
-    errors.push(e.message)
-  }
+	try {
+		actionParsed = form.value.action.map((a, i) => ({
+			function_name: a.function_name,
+			params: (() => {
+				try {
+					return parseParams(a.params)
+				} catch (e: any) {
+					throw new Error(`Acción ${i + 1} → ${e.message}`)
+				}
+			})()
+		}))
+	} catch (e: any) {
+		errors.push(e.message)
+	}
 
-  if (errors.length > 0) {
-    formErrors.value = errors
-    return
-  }
+	if (errors.length > 0) {
+		formErrors.value = errors
+		return
+	}
 
-  const payload = {
-    name: form.value.name.trim(),
-    schedule: form.value.schedule.trim(),
-    source: { function_name: form.value.source.function_name.trim(), params: sourceParams },
-    condition: {
-      field: form.value.condition.field.trim(),
-      operator: form.value.condition.operator,
-      value: parseConditionValue(String(form.value.condition.value))
-    },
-    action: actionParsed,
-    enabled: form.value.enabled
-  }
+	const payload = {
+		name: form.value.name.trim(),
+		schedule: form.value.schedule.trim(),
+		source: { function_name: form.value.source.function_name.trim(), params: sourceParams },
+		condition: {
+			field: form.value.condition.field.trim(),
+			operator: form.value.condition.operator,
+			value: parseConditionValue(String(form.value.condition.value))
+		},
+		action: actionParsed,
+		enabled: form.value.enabled
+	}
 
-  saving.value = true
-  try {
-    if (editing.value) {
-      const res = await api.updateEventListener(editing.value.id, payload)
-      if (!res.success) throw new Error((res as any).error)
-      toast.success('Listener actualizado')
-    } else {
-      const res = await api.createEventListener(payload)
-      if (!res.success) throw new Error((res as any).error)
-      toast.success('Listener creado')
-    }
-    showModal.value = false
-    await fetchListeners()
-  } catch (e: any) {
-    toast.error(e.message || 'Error al guardar')
-  } finally {
-    saving.value = false
-  }
+	saving.value = true
+	try {
+		if (editing.value) {
+			const res = await api.updateEventListener(editing.value.id, payload)
+			if (!res.success) throw new Error((res as any).error)
+			toast.success('Listener actualizado')
+		} else {
+			const res = await api.createEventListener(payload)
+			if (!res.success) throw new Error((res as any).error)
+			toast.success('Listener creado')
+		}
+		showModal.value = false
+		await fetchListeners()
+	} catch (e: any) {
+		toast.error(e.message || 'Error al guardar')
+	} finally {
+		saving.value = false
+	}
 }
 
 // ── Delete ────────────────────────────────────────────────────────────────────
@@ -197,65 +197,65 @@ async function save() {
 const deleting = ref<string | null>(null)
 
 async function remove(item: EventListener) {
-  if (!confirm(`¿Eliminar el listener "${item.name}"?`)) return
-  deleting.value = item.id
-  try {
-    await api.deleteEventListener(item.id)
-    toast.success('Listener eliminado')
-    await fetchListeners()
-  } catch (e: any) {
-    toast.error(e.message || 'Error al eliminar')
-  } finally {
-    deleting.value = null
-  }
+	if (!confirm(`¿Eliminar el listener "${item.name}"?`)) return
+	deleting.value = item.id
+	try {
+		await api.deleteEventListener(item.id)
+		toast.success('Listener eliminado')
+		await fetchListeners()
+	} catch (e: any) {
+		toast.error(e.message || 'Error al eliminar')
+	} finally {
+		deleting.value = null
+	}
 }
 
 // ── Trigger ───────────────────────────────────────────────────────────────────
 
 async function trigger(item: EventListener) {
-  triggering.value = item.id
-  try {
-    const res = await api.triggerEventListener(item.id)
-    if (res.success) {
-      const { conditionMet } = res.data as any
-      if (conditionMet) {
-        toast.success('Condición cumplida — acciones ejecutadas. El listener fue eliminado.')
-      } else {
-        toast.show('Listener disparado — condición no cumplida aún.', 'info')
-      }
-      await fetchListeners()
-    }
-  } catch (e: any) {
-    toast.error(e.message || 'Error al disparar')
-  } finally {
-    triggering.value = null
-  }
+	triggering.value = item.id
+	try {
+		const res = await api.triggerEventListener(item.id)
+		if (res.success) {
+			const { conditionMet } = res.data as any
+			if (conditionMet) {
+				toast.success('Condición cumplida — acciones ejecutadas. El listener fue eliminado.')
+			} else {
+				toast.show('Listener disparado — condición no cumplida aún.', 'info')
+			}
+			await fetchListeners()
+		}
+	} catch (e: any) {
+		toast.error(e.message || 'Error al disparar')
+	} finally {
+		triggering.value = null
+	}
 }
 
 // ── Toggle enabled ────────────────────────────────────────────────────────────
 
 async function toggleEnabled(item: EventListener) {
-  try {
-    await api.updateEventListener(item.id, { enabled: !item.enabled })
-    toast.success(item.enabled ? 'Listener desactivado' : 'Listener activado')
-    await fetchListeners()
-  } catch (e: any) {
-    toast.error(e.message || 'Error')
-  }
+	try {
+		await api.updateEventListener(item.id, { enabled: !item.enabled })
+		toast.success(item.enabled ? 'Listener desactivado' : 'Listener activado')
+		await fetchListeners()
+	} catch (e: any) {
+		toast.error(e.message || 'Error')
+	}
 }
 
 // ── Fetch ─────────────────────────────────────────────────────────────────────
 
 async function fetchListeners() {
-  loading.value = true
-  try {
-    const res = await api.getEventListeners()
-    listeners.value = res.data ?? []
-  } catch (e: any) {
-    toast.error(e.message || 'Error al cargar listeners')
-  } finally {
-    loading.value = false
-  }
+	loading.value = true
+	try {
+		const res = await api.getEventListeners()
+		listeners.value = res.data ?? []
+	} catch (e: any) {
+		toast.error(e.message || 'Error al cargar listeners')
+	} finally {
+		loading.value = false
+	}
 }
 
 onMounted(fetchListeners)
@@ -263,24 +263,24 @@ onMounted(fetchListeners)
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function resultClass(result: string | null): string {
-  if (!result) return 'text-base-content/50'
-  if (result === 'condition_met') return 'text-emerald-400'
-  if (result === 'condition_not_met') return 'text-base-content/60'
-  if (result.startsWith('error:')) return 'text-red-400'
-  return 'text-base-content/60'
+	if (!result) return 'text-base-content/50'
+	if (result === 'condition_met') return 'text-emerald-400'
+	if (result === 'condition_not_met') return 'text-base-content/60'
+	if (result.startsWith('error:')) return 'text-red-400'
+	return 'text-base-content/60'
 }
 
 function resultLabel(result: string | null): string {
-  if (!result) return '—'
-  if (result === 'condition_met') return 'Condición cumplida'
-  if (result === 'condition_not_met') return 'Condición no cumplida'
-  if (result.startsWith('error:')) return result
-  return result
+	if (!result) return '—'
+	if (result === 'condition_met') return 'Condición cumplida'
+	if (result === 'condition_not_met') return 'Condición no cumplida'
+	if (result.startsWith('error:')) return result
+	return result
 }
 
 function formatDate(iso: string | null): string {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleString()
+	if (!iso) return '—'
+	return new Date(iso).toLocaleString()
 }
 </script>
 

@@ -164,15 +164,18 @@ export function registerTraceabilityParticipantRoutes(): void {
 					chatId: string | null
 				}
 
-				const result: Record<string, {
-					traceabilityId: string
-					title: string
-					ownerUserId: string | null
-					participants: Array<{ userId: string; chatId: string | null }>
-					stageId: string | null
-					stageName: string | null
-					myEligibleStages: StageOption[]
-				}> = {}
+				const result: Record<
+					string,
+					{
+						traceabilityId: string
+						title: string
+						ownerUserId: string | null
+						participants: Array<{ userId: string; chatId: string | null }>
+						stageId: string | null
+						stageName: string | null
+						myEligibleStages: StageOption[]
+					}
+				> = {}
 
 				for (const t of allTracs) {
 					const parts = partsByTrac.get(t.id) ?? []
@@ -181,9 +184,7 @@ export function registerTraceabilityParticipantRoutes(): void {
 
 					// Eligible stages: owner sees nothing (their chat is the origin chat), participants see all their role matches
 					const stages = stagesByTrac.get(t.id) ?? []
-					const eligible = isOwner
-						? []
-						: stages.filter((s) => s.role && myRoleIds.has(s.role))
+					const eligible = isOwner ? [] : stages.filter((s) => s.role && myRoleIds.has(s.role))
 					const chatByStageId = new Map(myStageChats.map((sc) => [sc.stageId, sc.chatId]))
 					const myEligibleStages: StageOption[] = eligible.map((s) => ({
 						stageId: s.id,

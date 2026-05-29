@@ -1,25 +1,23 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import ConfirmDialog from '@/components/ConfirmDialog.vue'
-import PageLayout from '@/components/PageLayout.vue'
-import { useToastStore } from '@/store/useToast'
+import { computed, onMounted, ref } from 'vue'
 import * as api from '@/api/api'
 import AppModal from '@/components/AppModal.vue'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import NewCredential from '@/components/NewCredential.vue'
-import { McpServer } from '@/types/types'
+import PageLayout from '@/components/PageLayout.vue'
+import { useToastStore } from '@/store/useToast'
+import type { McpServer } from '@/types/types'
 
 const toast = useToastStore()
 
-
-
 interface Credential {
-  id: string
-  userId: string
-  mcpServerId: string
-  key: string
-  value: string
-  createdAt: string
-  updatedAt: string
+	id: string
+	userId: string
+	mcpServerId: string
+	key: string
+	value: string
+	createdAt: string
+	updatedAt: string
 }
 
 const servers = ref<McpServer[]>([])
@@ -28,17 +26,17 @@ const loading = ref(false)
 
 // Group credentials by mcpServerId
 const credentialsByServer = computed<Record<string, Credential[]>>(() => {
-  const map: Record<string, Credential[]> = {}
-  for (const cred of credentials.value) {
-    if (!map[cred.mcpServerId]) map[cred.mcpServerId] = []
-    map[cred.mcpServerId].push(cred)
-  }
-  return map
+	const map: Record<string, Credential[]> = {}
+	for (const cred of credentials.value) {
+		if (!map[cred.mcpServerId]) map[cred.mcpServerId] = []
+		map[cred.mcpServerId].push(cred)
+	}
+	return map
 })
 
 function serverLabel(id: string) {
-  const s = servers.value.find((s) => s.id === id)
-  return s ? (s.displayName || s.name) : id
+	const s = servers.value.find((s) => s.id === id)
+	return s ? s.displayName || s.name : id
 }
 
 // Form for adding/editing
@@ -46,73 +44,71 @@ const showForm = ref(false)
 const formEditing = ref<Credential | null>(null)
 
 function openAdd() {
-  formEditing.value = null
-  showForm.value = true
+	formEditing.value = null
+	showForm.value = true
 }
 
 function openEdit(cred: Credential) {
-  formEditing.value = cred
-  showForm.value = true
+	formEditing.value = cred
+	showForm.value = true
 }
 
 async function onCredentialSaved() {
-  showForm.value = false
-  formEditing.value = null
-  await fetchCredentials()
+	showForm.value = false
+	formEditing.value = null
+	await fetchCredentials()
 }
-
-
 
 // Delete
 const deleteTarget = ref<Credential | null>(null)
 const deleting = ref(false)
 
 async function confirmDelete() {
-  if (!deleteTarget.value) return
-  deleting.value = true
-  try {
-    await api.deleteMcpCredential(deleteTarget.value.mcpServerId, deleteTarget.value.key)
-    toast.success('Credencial eliminada')
-    deleteTarget.value = null
-    await fetchCredentials()
-  } catch (e: any) {
-    toast.error(e.message)
-  } finally {
-    deleting.value = false
-  }
+	if (!deleteTarget.value) return
+	deleting.value = true
+	try {
+		await api.deleteMcpCredential(deleteTarget.value.mcpServerId, deleteTarget.value.key)
+		toast.success('Credencial eliminada')
+		deleteTarget.value = null
+		await fetchCredentials()
+	} catch (e: any) {
+		toast.error(e.message)
+	} finally {
+		deleting.value = false
+	}
 }
 
 // Visibility toggle per credential
 const visibleValues = ref<Set<string>>(new Set())
 function toggleVisibility(id: string) {
-  if (visibleValues.value.has(id)) {
-    visibleValues.value.delete(id)
-  } else {
-    visibleValues.value.add(id)
-  }
+	if (visibleValues.value.has(id)) {
+		visibleValues.value.delete(id)
+	} else {
+		visibleValues.value.add(id)
+	}
 }
 
 async function fetchServers() {
-  try {
-    const res = await api.getMcpServers()
-    servers.value = (res.data ?? []).filter((s: McpServer) => s.active)
-  } catch { }
+	try {
+		const res = await api.getMcpServers()
+		servers.value = (res.data ?? []).filter((s: McpServer) => s.active)
+	} catch {}
 }
 
 async function fetchCredentials() {
-  loading.value = true
-  try {
-    const res = await api.getMcpCredentials()
-    credentials.value = res.data ?? []
-  } catch (e: any) {
-    toast.error(e.message)
-  } finally {
-    loading.value = false
-  }
+	loading.value = true
+	try {
+		const res = await api.getMcpCredentials()
+		credentials.value = res.data ?? []
+	} catch (e: any) {
+		toast.error(e.message)
+	} finally {
+		loading.value = false
+	}
 }
 
 onMounted(async () => {
-  await Promise.all([fetchServers(), fetchCredentials()])
+	await Promise.all([fetchServers(), fetchCredentials()])
 })
 </script>
 

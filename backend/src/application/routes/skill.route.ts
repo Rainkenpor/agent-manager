@@ -1,21 +1,28 @@
 import { registry } from '@applicationService/registry.service.js'
-import { container } from '../container.js'
 import { z } from 'zod'
+import { container } from '../container.js'
 
 const createSkillSchema = z.object({
 	name: z.string().min(1),
-	slug: z.string().min(1).regex(/^[a-z0-9-]+$/),
+	slug: z
+		.string()
+		.min(1)
+		.regex(/^[a-z0-9-]+$/),
 	description: z.string().optional(),
-	content: z.string().default(''),
+	content: z.string().default('')
 })
 
 const updateSkillSchema = z.object({
 	id: z.string(),
 	name: z.string().min(1).optional(),
-	slug: z.string().min(1).regex(/^[a-z0-9-]+$/).optional(),
+	slug: z
+		.string()
+		.min(1)
+		.regex(/^[a-z0-9-]+$/)
+		.optional(),
 	description: z.string().nullable().optional(),
 	content: z.string().optional(),
-	isActive: z.boolean().optional(),
+	isActive: z.boolean().optional()
 })
 
 export function registerSkillRoutes(): void {
@@ -28,7 +35,7 @@ export function registerSkillRoutes(): void {
 		requiredPermission: { resource: 'skills', action: 'read' },
 		handler: async () => {
 			return await container.listSkillsUseCase.execute()
-		},
+		}
 	})
 
 	registry.register({
@@ -40,7 +47,7 @@ export function registerSkillRoutes(): void {
 		requiredPermission: { resource: 'skills', action: 'read' },
 		handler: async ({ input }) => {
 			return await container.getSkillUseCase.execute(input.id)
-		},
+		}
 	})
 
 	registry.register({
@@ -52,7 +59,7 @@ export function registerSkillRoutes(): void {
 		requiredPermission: { resource: 'skills', action: 'create' },
 		handler: async ({ input }) => {
 			return await container.createSkillUseCase.execute(input)
-		},
+		}
 	})
 
 	registry.register({
@@ -64,7 +71,7 @@ export function registerSkillRoutes(): void {
 		requiredPermission: { resource: 'skills', action: 'update' },
 		handler: async ({ input }) => {
 			return await container.updateSkillUseCase.execute(input)
-		},
+		}
 	})
 
 	registry.register({
@@ -76,7 +83,7 @@ export function registerSkillRoutes(): void {
 		requiredPermission: { resource: 'skills', action: 'delete' },
 		handler: async ({ input }) => {
 			return await container.deleteSkillUseCase.execute(input.id)
-		},
+		}
 	})
 
 	// ── Role ↔ Skill assignment ─────────────────────────────────────────────────
@@ -91,7 +98,7 @@ export function registerSkillRoutes(): void {
 		handler: async ({ input }) => {
 			const skills = await container.skillRepository.getByRole(input.roleId)
 			return { success: true, data: skills }
-		},
+		}
 	})
 
 	registry.register({
@@ -104,7 +111,7 @@ export function registerSkillRoutes(): void {
 		handler: async ({ input }) => {
 			await container.skillRepository.assignToRole(input.roleId, input.skillId)
 			return { success: true }
-		},
+		}
 	})
 
 	registry.register({
@@ -117,6 +124,6 @@ export function registerSkillRoutes(): void {
 		handler: async ({ input }) => {
 			await container.skillRepository.removeFromRole(input.roleId, input.skillId)
 			return { success: true }
-		},
+		}
 	})
 }

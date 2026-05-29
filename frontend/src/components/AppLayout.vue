@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
-import SidebarNav from './SidebarNav.vue'
-import AgentLogsPanel from './AgentLogsPanel.vue'
 import { useAuthStore } from '@/store/useAuth'
+import AgentLogsPanel from './AgentLogsPanel.vue'
+import SidebarNav from './SidebarNav.vue'
 
 const auth = useAuthStore()
 </script>

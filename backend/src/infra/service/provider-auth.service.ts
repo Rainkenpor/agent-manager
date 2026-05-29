@@ -1,10 +1,10 @@
+import { createHash, randomBytes } from 'node:crypto'
 import fs from 'node:fs'
 import nodePath from 'node:path'
-import { createHash, randomBytes } from 'node:crypto'
 import NodeCache from 'node-cache'
+import type { ProviderConfig, ProviderName, ProviderTokenPayload } from '../../domain/entities/provider-config.entity.js'
 import { envs } from '../../envs.js'
 import { ProviderConfigRepository } from '../repository/provider-config.repository.js'
-import type { ProviderConfig, ProviderName, ProviderTokenPayload } from '../../domain/entities/provider-config.entity.js'
 
 const OPENAI_CLIENT_ID = 'app_EMoamEEZ73f0CkXaXp7hrann'
 const OPENAI_VERSION = '1.0.0'
@@ -128,7 +128,10 @@ export class ProviderAuthService {
 		return record
 	}
 
-	private async storePayload(provider: ProviderName, payloadInput: Partial<ProviderTokenPayload> & Record<string, unknown>): Promise<ProviderConfig> {
+	private async storePayload(
+		provider: ProviderName,
+		payloadInput: Partial<ProviderTokenPayload> & Record<string, unknown>
+	): Promise<ProviderConfig> {
 		const payload = normalizePayload(provider, {
 			...payloadInput,
 			provider,
@@ -216,8 +219,7 @@ export class ProviderAuthService {
 		const verifier = generateVerifier()
 		const challenge = generateChallenge(verifier)
 		const state = generateState()
-		const safeReturnTo =
-			returnTo?.trim() && returnTo.startsWith(envs.SERVER_URL) ? returnTo : `${envs.SERVER_URL}/config`
+		const safeReturnTo = returnTo?.trim() && returnTo.startsWith(envs.SERVER_URL) ? returnTo : `${envs.SERVER_URL}/config`
 		this.authStateCache.set(state, {
 			codeVerifier: verifier,
 			returnTo: safeReturnTo

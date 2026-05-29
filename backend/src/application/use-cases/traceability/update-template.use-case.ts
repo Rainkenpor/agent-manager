@@ -1,18 +1,18 @@
-import type { ITraceabilityRepository } from '@domain/repositories/traceability.repository.js'
 import type { UpdateTemplateDTO } from '@domain/entities/traceability.entity.js'
+import type { ITraceabilityRepository } from '@domain/repositories/traceability.repository.js'
 
 export class UpdateTemplateUseCase {
-  constructor(private readonly repo: ITraceabilityRepository) {}
+	constructor(private readonly repo: ITraceabilityRepository) {}
 
-  async execute(data: UpdateTemplateDTO) {
-    try {
-      const result = await this.repo.updateTemplate(data)
-      if (!result) return { success: false as const, error: 'Template not found' }
-      // Propagate name / description changes to all derived traceabilities
-      await this.repo.syncTraceabilitiesFromTemplate(data.id)
-      return { success: true as const, data: result }
-    } catch (error) {
-      return { success: false as const, error: error instanceof Error ? error.message : 'Unknown error' }
-    }
-  }
+	async execute(data: UpdateTemplateDTO) {
+		try {
+			const result = await this.repo.updateTemplate(data)
+			if (!result) return { success: false as const, error: 'Template not found' }
+			// Propagate name / description changes to all derived traceabilities
+			await this.repo.syncTraceabilitiesFromTemplate(data.id)
+			return { success: true as const, data: result }
+		} catch (error) {
+			return { success: false as const, error: error instanceof Error ? error.message : 'Unknown error' }
+		}
+	}
 }

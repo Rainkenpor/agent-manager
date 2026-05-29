@@ -1,6 +1,6 @@
 import { registry } from '@applicationService/registry.service.js'
-import { container } from '../container.js'
 import { z } from 'zod'
+import { container } from '../container.js'
 
 const createConversationSchema = z.object({
 	title: z.string().min(1),
@@ -15,6 +15,19 @@ const sendMessageSchema = z.object({
 const truncateSchema = z.object({
 	id: z.string(),
 	messageId: z.string()
+})
+
+const persistedImageSchema = z.object({
+	serverId: z.string().optional(),
+	toolName: z.string(),
+	args: z.record(z.string(), z.unknown()).default({}),
+	mimeType: z.string(),
+	thumb: z.string()
+})
+
+const attachImagesSchema = z.object({
+	id: z.string(),
+	images: z.array(persistedImageSchema)
 })
 
 export function registerChatRoutes(): void {
@@ -86,6 +99,20 @@ export function registerChatRoutes(): void {
 		requiredPermission: { resource: 'chat', action: 'delete' },
 		handler: async ({ input }) => {
 			return await container.truncateMessagesUseCase.execute(input.id, input.messageId)
+		}
+	})
+
+	// Attach persisted image thumbnails to an assistant message
+	registry.register({
+		useBy: ['server'],
+		method: 'POST',
+		path: '/api/chat/messages/:id/images',
+		inputSchema: attachImagesSchema.shape,
+		requiresAuth: true,
+		requiredPermission: { resource: 'chat', action: 'create' },
+		handler: async ({ input, context: { req } }) => {
+			const userId = (req as any).user?.id
+			return await container.appendMessageImagesUseCase.execute(input.id, userId, input.images)
 		}
 	})
 

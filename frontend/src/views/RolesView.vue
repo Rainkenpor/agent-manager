@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
+import * as api from '@/api/api'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import PageLayout from '@/components/PageLayout.vue'
 import { useToastStore } from '@/store/useToast'
-import * as api from '@/api/api'
-import type { Role, McpServer, Agent, McpTool } from '@/types/types'
+import type { Agent, McpServer, McpTool, Role } from '@/types/types'
 
 const toast = useToastStore()
 
@@ -53,14 +53,14 @@ const toolsLoading = ref(false)
 const toolsSaving = ref(false)
 
 async function fetchData() {
-  loading.value = true
-  try {
-    roles.value = await api.getRoles()
-  } catch (e: any) {
-    toast.error(e.message ?? 'Failed to load roles')
-  } finally {
-    loading.value = false
-  }
+	loading.value = true
+	try {
+		roles.value = await api.getRoles()
+	} catch (e: any) {
+		toast.error(e.message ?? 'Failed to load roles')
+	} finally {
+		loading.value = false
+	}
 }
 
 onMounted(fetchData)
@@ -68,275 +68,269 @@ onMounted(fetchData)
 // ── Role CRUD ──────────────────────────────────────────────────────────────
 
 function openCreate() {
-  editingRole.value = null
-  roleForm.value = { name: '', description: '' }
-  showRoleModal.value = true
+	editingRole.value = null
+	roleForm.value = { name: '', description: '' }
+	showRoleModal.value = true
 }
 
 function openEdit(role: Role) {
-  editingRole.value = role
-  roleForm.value = { name: role.name, description: role.description ?? '' }
-  showRoleModal.value = true
+	editingRole.value = role
+	roleForm.value = { name: role.name, description: role.description ?? '' }
+	showRoleModal.value = true
 }
 
 function closeRoleModal() {
-  showRoleModal.value = false
-  editingRole.value = null
+	showRoleModal.value = false
+	editingRole.value = null
 }
 
 async function saveRole() {
-  saving.value = true
-  try {
-    const payload = {
-      name: roleForm.value.name,
-      description: roleForm.value.description || undefined,
-    }
-    if (editingRole.value) {
-      await api.updateRole(editingRole.value.id, payload)
-      toast.success('Role updated')
-    } else {
-      await api.createRole(payload)
-      toast.success('Role created')
-    }
-    closeRoleModal()
-    await fetchData()
-  } catch (e: any) {
-    toast.error(e.message ?? 'Failed to save role')
-  } finally {
-    saving.value = false
-  }
+	saving.value = true
+	try {
+		const payload = {
+			name: roleForm.value.name,
+			description: roleForm.value.description || undefined
+		}
+		if (editingRole.value) {
+			await api.updateRole(editingRole.value.id, payload)
+			toast.success('Role updated')
+		} else {
+			await api.createRole(payload)
+			toast.success('Role created')
+		}
+		closeRoleModal()
+		await fetchData()
+	} catch (e: any) {
+		toast.error(e.message ?? 'Failed to save role')
+	} finally {
+		saving.value = false
+	}
 }
 
 function confirmDelete(role: Role) {
-  deleteTarget.value = role
+	deleteTarget.value = role
 }
 
 async function doDelete() {
-  if (!deleteTarget.value) return
-  deleting.value = true
-  try {
-    await api.deleteRole(deleteTarget.value.id)
-    toast.success('Role deleted')
-    deleteTarget.value = null
-    await fetchData()
-  } catch (e: any) {
-    toast.error(e.message ?? 'Failed to delete role')
-  } finally {
-    deleting.value = false
-  }
+	if (!deleteTarget.value) return
+	deleting.value = true
+	try {
+		await api.deleteRole(deleteTarget.value.id)
+		toast.success('Role deleted')
+		deleteTarget.value = null
+		await fetchData()
+	} catch (e: any) {
+		toast.error(e.message ?? 'Failed to delete role')
+	} finally {
+		deleting.value = false
+	}
 }
 
 // ── Associations modal ─────────────────────────────────────────────────────
 
 async function openAssocModal(role: Role) {
-  assocModalRole.value = role
-  assocTab.value = 'mcps'
-  assocLoading.value = true
-  assignedMcps.value = []
-  assignedAgents.value = []
-  assignedPermissions.value = []
-  assignedSkills.value = []
-  toolPanelMcp.value = null
-  try {
-    const [mcpsRes, agentsRes, mcpAssignedRes, agentAssignedRes, allPermsRes, rolePermsRes, allSkillsRes, roleSkillsRes] = await Promise.all([
-      api.getMcpServers(),
-      api.getAgents(),
-      api.getRoleMcps(role.id),
-      api.getRoleAgents(role.id),
-      api.getPermissions(),
-      api.getRolePermissions(role.id),
-      api.getSkills(),
-      api.getRoleSkills(role.id),
-    ])
-    allMcps.value = (mcpsRes.data ?? (mcpsRes as any)).filter((m: McpServer) => m.active)
-    allAgents.value = (agentsRes.data ?? (agentsRes as any)).filter((a: Agent) => a.isActive)
-    assignedMcps.value = mcpAssignedRes.data ?? (mcpAssignedRes as any)
-    assignedAgents.value = agentAssignedRes.data ?? (agentAssignedRes as any)
-    allPermissions.value = allPermsRes ?? []
-    assignedPermissions.value = rolePermsRes ?? []
-    allSkills.value = (allSkillsRes.data ?? []).filter((s: { isActive: boolean }) => s.isActive)
-    assignedSkills.value = roleSkillsRes.data ?? []
-  } catch (e: any) {
-    toast.error(e.message ?? 'Failed to load associations')
-  } finally {
-    assocLoading.value = false
-  }
+	assocModalRole.value = role
+	assocTab.value = 'mcps'
+	assocLoading.value = true
+	assignedMcps.value = []
+	assignedAgents.value = []
+	assignedPermissions.value = []
+	assignedSkills.value = []
+	toolPanelMcp.value = null
+	try {
+		const [mcpsRes, agentsRes, mcpAssignedRes, agentAssignedRes, allPermsRes, rolePermsRes, allSkillsRes, roleSkillsRes] =
+			await Promise.all([
+				api.getMcpServers(),
+				api.getAgents(),
+				api.getRoleMcps(role.id),
+				api.getRoleAgents(role.id),
+				api.getPermissions(),
+				api.getRolePermissions(role.id),
+				api.getSkills(),
+				api.getRoleSkills(role.id)
+			])
+		allMcps.value = (mcpsRes.data ?? (mcpsRes as any)).filter((m: McpServer) => m.active)
+		allAgents.value = (agentsRes.data ?? (agentsRes as any)).filter((a: Agent) => a.isActive)
+		assignedMcps.value = mcpAssignedRes.data ?? (mcpAssignedRes as any)
+		assignedAgents.value = agentAssignedRes.data ?? (agentAssignedRes as any)
+		allPermissions.value = allPermsRes ?? []
+		assignedPermissions.value = rolePermsRes ?? []
+		allSkills.value = (allSkillsRes.data ?? []).filter((s: { isActive: boolean }) => s.isActive)
+		assignedSkills.value = roleSkillsRes.data ?? []
+	} catch (e: any) {
+		toast.error(e.message ?? 'Failed to load associations')
+	} finally {
+		assocLoading.value = false
+	}
 }
 
 function closeAssocModal() {
-  assocModalRole.value = null
-  toolPanelMcp.value = null
+	assocModalRole.value = null
+	toolPanelMcp.value = null
 }
 
 function hasMcp(mcpId: string): boolean {
-  return assignedMcps.value.some((m) => m.id === mcpId)
+	return assignedMcps.value.some((m) => m.id === mcpId)
 }
 
 function hasAgent(agentId: string): boolean {
-  return assignedAgents.value.some((a) => a.id === agentId)
+	return assignedAgents.value.some((a) => a.id === agentId)
 }
 
 async function toggleMcp(mcpId: string) {
-  if (!assocModalRole.value) return
-  toggling.value = mcpId
-  try {
-    if (hasMcp(mcpId)) {
-      await api.removeMcpFromRole(assocModalRole.value.id, mcpId)
-      assignedMcps.value = assignedMcps.value.filter((m) => m.id !== mcpId)
-      if (toolPanelMcp.value?.id === mcpId) toolPanelMcp.value = null
-      toast.success('MCP removed from role')
-    } else {
-      await api.assignMcpToRole(assocModalRole.value.id, mcpId)
-      const mcp = allMcps.value.find((m) => m.id === mcpId)
-      if (mcp) assignedMcps.value.push(mcp)
-      toast.success('MCP assigned to role')
-    }
-  } catch (e: any) {
-    toast.error(e.message ?? 'Failed to update MCP')
-  } finally {
-    toggling.value = null
-  }
+	if (!assocModalRole.value) return
+	toggling.value = mcpId
+	try {
+		if (hasMcp(mcpId)) {
+			await api.removeMcpFromRole(assocModalRole.value.id, mcpId)
+			assignedMcps.value = assignedMcps.value.filter((m) => m.id !== mcpId)
+			if (toolPanelMcp.value?.id === mcpId) toolPanelMcp.value = null
+			toast.success('MCP removed from role')
+		} else {
+			await api.assignMcpToRole(assocModalRole.value.id, mcpId)
+			const mcp = allMcps.value.find((m) => m.id === mcpId)
+			if (mcp) assignedMcps.value.push(mcp)
+			toast.success('MCP assigned to role')
+		}
+	} catch (e: any) {
+		toast.error(e.message ?? 'Failed to update MCP')
+	} finally {
+		toggling.value = null
+	}
 }
 
 async function toggleAgent(agentId: string) {
-  if (!assocModalRole.value) return
-  toggling.value = agentId
-  try {
-    if (hasAgent(agentId)) {
-      await api.removeAgentFromRole(assocModalRole.value.id, agentId)
-      assignedAgents.value = assignedAgents.value.filter((a) => a.id !== agentId)
-      toast.success('Agent removed from role')
-    } else {
-      await api.assignAgentToRole(assocModalRole.value.id, agentId)
-      const agent = allAgents.value.find((a) => a.id === agentId)
-      if (agent) assignedAgents.value.push({ id: agent.id, name: agent.name, slug: agent.slug, mode: agent.mode })
-      toast.success('Agent assigned to role')
-    }
-  } catch (e: any) {
-    toast.error(e.message ?? 'Failed to update agent')
-  } finally {
-    toggling.value = null
-  }
+	if (!assocModalRole.value) return
+	toggling.value = agentId
+	try {
+		if (hasAgent(agentId)) {
+			await api.removeAgentFromRole(assocModalRole.value.id, agentId)
+			assignedAgents.value = assignedAgents.value.filter((a) => a.id !== agentId)
+			toast.success('Agent removed from role')
+		} else {
+			await api.assignAgentToRole(assocModalRole.value.id, agentId)
+			const agent = allAgents.value.find((a) => a.id === agentId)
+			if (agent) assignedAgents.value.push({ id: agent.id, name: agent.name, slug: agent.slug, mode: agent.mode })
+			toast.success('Agent assigned to role')
+		}
+	} catch (e: any) {
+		toast.error(e.message ?? 'Failed to update agent')
+	} finally {
+		toggling.value = null
+	}
 }
 
 // ── Permissions tab ────────────────────────────────────────────────────────
 
 function hasPermission(permId: string): boolean {
-  return assignedPermissions.value.some((p) => p.id === permId)
+	return assignedPermissions.value.some((p) => p.id === permId)
 }
 
 async function togglePermission(permId: string) {
-  if (!assocModalRole.value) return
-  toggling.value = permId
-  try {
-    if (hasPermission(permId)) {
-      await api.removePermission(assocModalRole.value.id, permId)
-      assignedPermissions.value = assignedPermissions.value.filter((p) => p.id !== permId)
-      toast.success('Permission removed from role')
-    } else {
-      await api.assignPermission(assocModalRole.value.id, permId)
-      const perm = allPermissions.value.find((p) => p.id === permId)
-      if (perm) assignedPermissions.value.push(perm)
-      toast.success('Permission assigned to role')
-    }
-  } catch (e: any) {
-    toast.error(e.message ?? 'Failed to update permission')
-  } finally {
-    toggling.value = null
-  }
+	if (!assocModalRole.value) return
+	toggling.value = permId
+	try {
+		if (hasPermission(permId)) {
+			await api.removePermission(assocModalRole.value.id, permId)
+			assignedPermissions.value = assignedPermissions.value.filter((p) => p.id !== permId)
+			toast.success('Permission removed from role')
+		} else {
+			await api.assignPermission(assocModalRole.value.id, permId)
+			const perm = allPermissions.value.find((p) => p.id === permId)
+			if (perm) assignedPermissions.value.push(perm)
+			toast.success('Permission assigned to role')
+		}
+	} catch (e: any) {
+		toast.error(e.message ?? 'Failed to update permission')
+	} finally {
+		toggling.value = null
+	}
 }
 
 // ── Skills tab ─────────────────────────────────────────────────────────────
 
 function hasSkill(skillId: string): boolean {
-  return assignedSkills.value.some((s) => s.id === skillId)
+	return assignedSkills.value.some((s) => s.id === skillId)
 }
 
 async function toggleSkill(skillId: string) {
-  if (!assocModalRole.value) return
-  toggling.value = skillId
-  try {
-    if (hasSkill(skillId)) {
-      await api.removeSkillFromRole(assocModalRole.value.id, skillId)
-      assignedSkills.value = assignedSkills.value.filter((s) => s.id !== skillId)
-      toast.success('Skill removed from role')
-    } else {
-      await api.assignSkillToRole(assocModalRole.value.id, skillId)
-      const skill = allSkills.value.find((s) => s.id === skillId)
-      if (skill) assignedSkills.value.push({ id: skill.id, name: skill.name, slug: skill.slug })
-      toast.success('Skill assigned to role')
-    }
-  } catch (e: any) {
-    toast.error(e.message ?? 'Failed to update skill')
-  } finally {
-    toggling.value = null
-  }
+	if (!assocModalRole.value) return
+	toggling.value = skillId
+	try {
+		if (hasSkill(skillId)) {
+			await api.removeSkillFromRole(assocModalRole.value.id, skillId)
+			assignedSkills.value = assignedSkills.value.filter((s) => s.id !== skillId)
+			toast.success('Skill removed from role')
+		} else {
+			await api.assignSkillToRole(assocModalRole.value.id, skillId)
+			const skill = allSkills.value.find((s) => s.id === skillId)
+			if (skill) assignedSkills.value.push({ id: skill.id, name: skill.name, slug: skill.slug })
+			toast.success('Skill assigned to role')
+		}
+	} catch (e: any) {
+		toast.error(e.message ?? 'Failed to update skill')
+	} finally {
+		toggling.value = null
+	}
 }
 
 // Group permissions by resource
 const permissionsByResource = computed(() => {
-  const groups: Record<string, typeof allPermissions.value> = {}
-  for (const perm of allPermissions.value) {
-    if (!groups[perm.resource]) groups[perm.resource] = []
-    groups[perm.resource].push(perm)
-  }
-  return groups
+	const groups: Record<string, typeof allPermissions.value> = {}
+	for (const perm of allPermissions.value) {
+		if (!groups[perm.resource]) groups[perm.resource] = []
+		groups[perm.resource].push(perm)
+	}
+	return groups
 })
 
 // ── Tool selection panel ───────────────────────────────────────────────────
 
 async function openToolPanel(mcp: McpServer) {
-  if (!assocModalRole.value) return
-  toolPanelMcp.value = mcp
-  toolsLoading.value = true
-  availableTools.value = []
-  selectedTools.value = new Set()
-  try {
-    const [toolsRes, selectedRes] = await Promise.all([
-      api.getMcpServerTools(mcp.id),
-      api.getRoleMcpTools(assocModalRole.value.id, mcp.id),
-    ])
-    availableTools.value = toolsRes.data ?? []
-    selectedTools.value = new Set(selectedRes.data ?? [])
-  } catch (e: any) {
-    toast.error(e.message ?? 'Failed to load tools')
-  } finally {
-    toolsLoading.value = false
-  }
+	if (!assocModalRole.value) return
+	toolPanelMcp.value = mcp
+	toolsLoading.value = true
+	availableTools.value = []
+	selectedTools.value = new Set()
+	try {
+		const [toolsRes, selectedRes] = await Promise.all([api.getMcpServerTools(mcp.id), api.getRoleMcpTools(assocModalRole.value.id, mcp.id)])
+		availableTools.value = toolsRes.data ?? []
+		selectedTools.value = new Set(selectedRes.data ?? [])
+	} catch (e: any) {
+		toast.error(e.message ?? 'Failed to load tools')
+	} finally {
+		toolsLoading.value = false
+	}
 }
 
 function toggleToolSelection(toolName: string) {
-  if (selectedTools.value.has(toolName)) {
-    selectedTools.value.delete(toolName)
-  } else {
-    selectedTools.value.add(toolName)
-  }
+	if (selectedTools.value.has(toolName)) {
+		selectedTools.value.delete(toolName)
+	} else {
+		selectedTools.value.add(toolName)
+	}
 }
 
 function selectAllTools() {
-  selectedTools.value = new Set(availableTools.value.map((t) => t.toolName))
+	selectedTools.value = new Set(availableTools.value.map((t) => t.toolName))
 }
 
 function clearAllTools() {
-  selectedTools.value = new Set()
+	selectedTools.value = new Set()
 }
 
 async function saveToolSelection() {
-  if (!assocModalRole.value || !toolPanelMcp.value) return
-  toolsSaving.value = true
-  try {
-    await api.setRoleMcpTools(
-      assocModalRole.value.id,
-      toolPanelMcp.value.id,
-      [...selectedTools.value],
-    )
-    toast.success('Tool selection saved')
-    toolPanelMcp.value = null
-  } catch (e: any) {
-    toast.error(e.message ?? 'Failed to save tools')
-  } finally {
-    toolsSaving.value = false
-  }
+	if (!assocModalRole.value || !toolPanelMcp.value) return
+	toolsSaving.value = true
+	try {
+		await api.setRoleMcpTools(assocModalRole.value.id, toolPanelMcp.value.id, [...selectedTools.value])
+		toast.success('Tool selection saved')
+		toolPanelMcp.value = null
+	} catch (e: any) {
+		toast.error(e.message ?? 'Failed to save tools')
+	} finally {
+		toolsSaving.value = false
+	}
 }
 </script>
 

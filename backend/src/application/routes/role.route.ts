@@ -1,6 +1,6 @@
-import { z } from 'zod'
-import { CreateRoleSchema, UpdateRoleSchema } from '@domain/entities/role.entity.js'
 import { registry } from '@application/services/registry.service.js'
+import { CreateRoleSchema, UpdateRoleSchema } from '@domain/entities/role.entity.js'
+import { z } from 'zod'
 import { container } from '../container.js'
 
 export function registerRoleRoutes() {

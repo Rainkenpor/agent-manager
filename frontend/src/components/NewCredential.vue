@@ -65,27 +65,27 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import * as api from '@/api/api'
 import { useToastStore } from '@/store/useToast'
-import type { McpServer, CredentialField } from '@/types/types'
+import type { CredentialField, McpServer } from '@/types/types'
 
 interface Credential {
-  id: string
-  mcpServerId: string
-  key: string
-  value: string
+	id: string
+	mcpServerId: string
+	key: string
+	value: string
 }
 
 const props = defineProps<{
-  servers: McpServer[]
-  editing?: Credential | null
-  initialServerId?: string
+	servers: McpServer[]
+	editing?: Credential | null
+	initialServerId?: string
 }>()
 
 const emit = defineEmits<{
-  saved: []
-  cancel: []
+	saved: []
+	cancel: []
 }>()
 
 const toast = useToastStore()
@@ -103,62 +103,62 @@ const selectedServerFields = computed<CredentialField[]>(() => selectedServer.va
 const hasExistingCredentials = computed(() => existingKeys.value.length > 0)
 
 async function fetchExistingCredentials(serverId: string) {
-  if (!serverId) return
-  try {
-    const res = await api.getMcpCredentials(serverId)
-    existingKeys.value = (res.data ?? []).map((c: any) => c.key)
-  } catch {
-    existingKeys.value = []
-  }
+	if (!serverId) return
+	try {
+		const res = await api.getMcpCredentials(serverId)
+		existingKeys.value = (res.data ?? []).map((c: any) => c.key)
+	} catch {
+		existingKeys.value = []
+	}
 }
 
 watch(selectedServerId, (id) => {
-  fieldValues.value = {}
-  manualKey.value = ''
-  manualValue.value = ''
-  fetchExistingCredentials(id)
+	fieldValues.value = {}
+	manualKey.value = ''
+	manualValue.value = ''
+	fetchExistingCredentials(id)
 })
 
 onMounted(() => fetchExistingCredentials(selectedServerId.value))
 
 watch(
-  () => props.editing,
-  (cred) => {
-    if (cred) {
-      selectedServerId.value = cred.mcpServerId
-      manualKey.value = cred.key
-    }
-  },
-  { immediate: true }
+	() => props.editing,
+	(cred) => {
+		if (cred) {
+			selectedServerId.value = cred.mcpServerId
+			manualKey.value = cred.key
+		}
+	},
+	{ immediate: true }
 )
 
 const canSave = computed(() => {
-  if (!selectedServerId.value) return false
-  if (selectedServerFields.value.length > 0) {
-    return selectedServerFields.value.some((f) => fieldValues.value[f.key]?.trim())
-  }
-  return !!manualKey.value.trim()
+	if (!selectedServerId.value) return false
+	if (selectedServerFields.value.length > 0) {
+		return selectedServerFields.value.some((f) => fieldValues.value[f.key]?.trim())
+	}
+	return !!manualKey.value.trim()
 })
 
 async function saveCredentials() {
-  if (!selectedServerId.value || !canSave.value) return
-  saving.value = true
-  try {
-    if (selectedServerFields.value.length > 0) {
-      for (const field of selectedServerFields.value) {
-        if (fieldValues.value[field.key]?.trim()) {
-          await api.upsertMcpCredential(selectedServerId.value, field.key, fieldValues.value[field.key])
-        }
-      }
-    } else {
-      await api.upsertMcpCredential(selectedServerId.value, manualKey.value.trim(), manualValue.value)
-    }
-    toast.success('Credencial guardada')
-    emit('saved')
-  } catch (e: any) {
-    toast.error(e.message)
-  } finally {
-    saving.value = false
-  }
+	if (!selectedServerId.value || !canSave.value) return
+	saving.value = true
+	try {
+		if (selectedServerFields.value.length > 0) {
+			for (const field of selectedServerFields.value) {
+				if (fieldValues.value[field.key]?.trim()) {
+					await api.upsertMcpCredential(selectedServerId.value, field.key, fieldValues.value[field.key])
+				}
+			}
+		} else {
+			await api.upsertMcpCredential(selectedServerId.value, manualKey.value.trim(), manualValue.value)
+		}
+		toast.success('Credencial guardada')
+		emit('saved')
+	} catch (e: any) {
+		toast.error(e.message)
+	} finally {
+		saving.value = false
+	}
 }
 </script>

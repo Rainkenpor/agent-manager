@@ -1,5 +1,5 @@
-import type { IGovernanceRepository } from '@domain/repositories/governance.repository.js'
 import type { GovernanceRecord } from '@domain/entities/governance.entity.js'
+import type { IGovernanceRepository } from '@domain/repositories/governance.repository.js'
 
 export class GetGovernanceUseCase {
 	constructor(private readonly repo: IGovernanceRepository) {}

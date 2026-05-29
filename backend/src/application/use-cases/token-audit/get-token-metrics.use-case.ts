@@ -1,5 +1,5 @@
-import type { ITokenAuditRepository } from '@domain/repositories/token-audit.repository.js'
 import type { TokenMetrics } from '@domain/entities/token-audit.entity.js'
+import type { ITokenAuditRepository } from '@domain/repositories/token-audit.repository.js'
 
 export class GetTokenMetricsUseCase {
 	constructor(private readonly repo: ITokenAuditRepository) {}

@@ -1,19 +1,19 @@
-import express, { type NextFunction, type Request, type Response } from 'express'
 import { randomUUID } from 'node:crypto'
+import type { HttpContext, RegisteredRoute } from '@application/interfaces/route.interface.js'
+import { registry } from '@applicationService/registry.service.js'
+import { AgentService } from '@infra/service/agent.service.js'
+import { MCPAgentService } from '@infra/service/mcp-agent.service.js'
+import { mcpExternalManager } from '@infra/service/mcp-external.js'
+import type { McpOAuthService } from '@infra/service/mcp-oauth.service.js'
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js'
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import { z, type ZodRawShape, type ZodTypeAny } from 'zod'
-import { registry } from '@applicationService/registry.service.js'
-import type { McpOAuthService } from '@infra/service/mcp-oauth.service.js'
-import { mcpTokenAuthMiddleware } from './middlewares/mcp-token-auth.middleware.js'
-import type { HttpContext, RegisteredRoute } from '@application/interfaces/route.interface.js'
-import { mcpExternalManager } from '@infra/service/mcp-external.js'
-import { AgentService } from '@infra/service/agent.service.js'
+import express, { type NextFunction, type Request, type Response } from 'express'
+import { type ZodRawShape, type ZodTypeAny, z } from 'zod'
 import { systemPrompt } from '../../const.js'
-import { MCPAgentService } from '@infra/service/mcp-agent.service.js'
-import { container } from '../container.js'
 import { envs } from '../../envs.js'
+import { container } from '../container.js'
+import { mcpTokenAuthMiddleware } from './middlewares/mcp-token-auth.middleware.js'
 
 let oauthService: McpOAuthService | null = null
 
@@ -135,9 +135,7 @@ async function applyRoleBasedTools(server: McpServer, user: Record<string, unkno
 	// otherwise abort the registration of the remaining external MCPs).
 	const registeredToolNames = new Set<string>()
 
-	const allMcpLocalRoutes = registry
-		.getRoutes()
-		.filter((r) => r.useBy?.includes('mcp') && r.toolName && r.toolDescription && r.inputSchema)
+	const allMcpLocalRoutes = registry.getRoutes().filter((r) => r.useBy?.includes('mcp') && r.toolName && r.toolDescription && r.inputSchema)
 
 	const tryRegisterLocal = (route: RegisteredRoute) => {
 		if (registeredToolNames.has(route.toolName!)) return

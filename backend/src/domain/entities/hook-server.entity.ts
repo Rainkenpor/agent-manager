@@ -1,7 +1,10 @@
 import { z } from 'zod'
 
 export const CreateHookServerSchema = z.object({
-	name: z.string().min(1).regex(/^[a-z0-9_-]+$/, 'Only lowercase letters, numbers, hyphens and underscores'),
+	name: z
+		.string()
+		.min(1)
+		.regex(/^[a-z0-9_-]+$/, 'Only lowercase letters, numbers, hyphens and underscores'),
 	displayName: z.string().optional(),
 	description: z.string().optional(),
 	url: z.string().url(),

@@ -1,5 +1,5 @@
-import { z } from 'zod'
 import { registry } from '@applicationService/registry.service.js'
+import { z } from 'zod'
 import { container } from '../container.js'
 
 const sourceSchema = z.object({
@@ -11,10 +11,7 @@ const sourceSchema = z.object({
 })
 
 const conditionSchema = z.object({
-	field: z
-		.string()
-		.min(1)
-		.describe('Ruta del campo a evaluar, e.g. "element.status.name"'),
+	field: z.string().min(1).describe('Ruta del campo a evaluar, e.g. "element.status.name"'),
 	operator: z
 		.enum(['==', '===', '!=', '!==', '>', '<', '>=', '<=', 'contains', 'startsWith', 'endsWith'])
 		.describe('Operador de comparación'),
@@ -31,10 +28,7 @@ const actionSchema = z.object({
 
 const createSchema = z.object({
 	name: z.string().min(1).describe('Nombre descriptivo del listener'),
-	schedule: z
-		.string()
-		.min(1)
-		.describe('Expresión cron de 5 campos, e.g. "*/15 * * * *"'),
+	schedule: z.string().min(1).describe('Expresión cron de 5 campos, e.g. "*/15 * * * *"'),
 	source: sourceSchema.describe('Tool que se ejecuta para obtener los datos'),
 	condition: conditionSchema.describe('Condición que debe cumplirse para disparar las acciones'),
 	action: z.array(actionSchema).min(1).describe('Lista de tools a ejecutar cuando la condición es verdadera'),

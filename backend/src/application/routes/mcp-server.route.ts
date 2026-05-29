@@ -1,8 +1,8 @@
-import { z } from 'zod'
 import { registry } from '@applicationService/registry.service.js'
 import { CreateMcpServerSchema, UpdateMcpServerSchema } from '@domain/entities/mcp-server.entity.js'
-import { container } from '../container.js'
 import { mcpExternalManager } from '@infra/service/mcp-external.js'
+import { z } from 'zod'
+import { container } from '../container.js'
 
 export function registerMcpServerRoutes(): void {
 	// List all MCP servers
@@ -287,17 +287,16 @@ export function registerMcpServerRoutes(): void {
 
 				if (server.type === 'local') {
 					// Para el MCP local, ejecutar la ruta registrada
-					const route = registry
-						.getRoutes()
-						.find((r) => r.useBy?.includes('mcp') && r.toolName === input.toolName)
+					const route = registry.getRoutes().find((r) => r.useBy?.includes('mcp') && r.toolName === input.toolName)
 					if (!route) return res.status(404).json({ error: `Tool "${input.toolName}" not found` })
 					const result = await route.handler({ input: args, context: { req, res } as any })
 					return { success: true, data: result }
 				}
 
 				const toolId = `mcp__${server.name}__${input.toolName}`
-				const result = await mcpExternalManager.callTool(toolId, args, userId)
-				return { success: true, data: result }
+				const images: Array<{ mimeType: string; data: string }> = []
+				const result = await mcpExternalManager.callTool(toolId, args, userId, (img) => images.push(img))
+				return { success: true, data: result, images }
 			} catch (error: any) {
 				res.status(500).json({ error: error.message })
 			}

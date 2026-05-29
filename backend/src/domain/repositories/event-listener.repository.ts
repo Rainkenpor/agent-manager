@@ -1,8 +1,4 @@
-import type {
-	EventListener,
-	CreateEventListenerDTO,
-	UpdateEventListenerDTO
-} from '../entities/event-listener.entity.js'
+import type { CreateEventListenerDTO, EventListener, UpdateEventListenerDTO } from '../entities/event-listener.entity.js'
 
 export interface IEventListenerRepository {
 	findAll(): Promise<EventListener[]>

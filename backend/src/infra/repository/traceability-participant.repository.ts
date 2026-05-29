@@ -118,7 +118,9 @@ export class TraceabilityParticipantRepository implements ITraceabilityParticipa
 			const opened = openedByTrac.get(r.traceabilityId) ?? new Set<string>()
 			const remainingStagesCount =
 				eligible.length === 0
-					? r.chatId ? 0 : 1 // fallback chat: 1 if not opened, 0 if opened
+					? r.chatId
+						? 0
+						: 1 // fallback chat: 1 if not opened, 0 if opened
 					: eligible.filter((s) => !opened.has(s.id)).length
 			return {
 				traceabilityId: r.traceabilityId,

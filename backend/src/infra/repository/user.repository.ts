@@ -1,15 +1,9 @@
-import { AppDataSource } from '@infra/db/database.js'
-import {
-	UserEntity,
-	UserRoleEntity,
-	RoleEntity,
-	RolePermissionEntity,
-	PermissionEntity
-} from '@infra/db/entities.js'
+import type { CreateUser, UpdateUser, User } from '@domain/entities/user.entity.js'
 import type { IUserRepository } from '@domain/repositories/user.repository.js'
-import type { User, CreateUser, UpdateUser } from '@domain/entities/user.entity.js'
-import { randomUUID } from 'crypto'
+import { AppDataSource } from '@infra/db/database.js'
+import { PermissionEntity, RoleEntity, RolePermissionEntity, UserEntity, UserRoleEntity } from '@infra/db/entities.js'
 import bcrypt from 'bcryptjs'
+import { randomUUID } from 'crypto'
 
 export class UserRepository implements IUserRepository {
 	private get repo() {

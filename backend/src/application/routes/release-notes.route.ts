@@ -1,6 +1,6 @@
-import { registry } from '@applicationService/registry.service.js'
 import { readdir, readFile, stat } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
+import { registry } from '@applicationService/registry.service.js'
 
 const VERSION_REGEX = /^(\d+)\.(\d+)\.(\d+)$/
 

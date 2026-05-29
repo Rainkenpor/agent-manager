@@ -1,5 +1,5 @@
-import { AgentService } from '@infra/service/agent.service.js'
 import type { AiAssistInput, AiAssistSseEvent } from '@domain/entities/ai-assist.entity.js'
+import { AgentService } from '@infra/service/agent.service.js'
 
 const DEFAULT_SYSTEM_PROMPT = `You are a text editing assistant. The user will give you a textarea content and a request.
 

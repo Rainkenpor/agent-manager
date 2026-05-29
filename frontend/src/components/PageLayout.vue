@@ -1,9 +1,9 @@
 <script setup lang="ts">
 defineProps<{
-  title?: string
-  description?: string
-  /** Clase extra para el contenedor del body (ej. 'max-w-4xl mx-auto') */
-  bodyClass?: string
+	title?: string
+	description?: string
+	/** Clase extra para el contenedor del body (ej. 'max-w-4xl mx-auto') */
+	bodyClass?: string
 }>()
 </script>
 

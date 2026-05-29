@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import * as api from '@/api/api'
 import { useAuthStore } from '@/store/useAuth'
 import { useToastStore } from '@/store/useToast'
@@ -10,44 +10,44 @@ const toast = useToastStore()
 // ── State ─────────────────────────────────────────────────────────────────────
 
 interface HookServer {
-  id: string
-  name: string
-  displayName?: string | null
-  description?: string | null
-  url: string
-  active: boolean
-  createdAt: string
-  updatedAt: string
+	id: string
+	name: string
+	displayName?: string | null
+	description?: string | null
+	url: string
+	active: boolean
+	createdAt: string
+	updatedAt: string
 }
 
 interface HookDefinition {
-  name: string
-  description: string
-  payload: Record<string, { type: string; description: string; optional: boolean }>
+	name: string
+	description: string
+	payload: Record<string, { type: string; description: string; optional: boolean }>
 }
 
 interface HookAssignment {
-  id: string
-  hookServerId: string
-  hookName: string
-  assignmentType: 'agent' | 'mcp_tool'
-  assignmentId: string
-  assignmentName: string
-  extraData?: Record<string, string> | null
-  createdAt: string
+	id: string
+	hookServerId: string
+	hookName: string
+	assignmentType: 'agent' | 'mcp_tool'
+	assignmentId: string
+	assignmentName: string
+	extraData?: Record<string, string> | null
+	createdAt: string
 }
 
 interface Agent {
-  id: string
-  name: string
-  slug: string
-  description?: string | null
-  mode: string
+	id: string
+	name: string
+	slug: string
+	description?: string | null
+	mode: string
 }
 
 interface McpTool {
-  toolName: string
-  description: string
+	toolName: string
+	description: string
 }
 
 const servers = ref<HookServer[]>([])
@@ -67,117 +67,117 @@ const discoverError = ref('')
 const showServerModal = ref(false)
 const editingServer = ref<HookServer | null>(null)
 const serverForm = ref({
-  name: '',
-  displayName: '',
-  description: '',
-  url: '',
-  active: true
+	name: '',
+	displayName: '',
+	description: '',
+	url: '',
+	active: true
 })
 const savingServer = ref(false)
 
 function openCreateServer() {
-  editingServer.value = null
-  serverForm.value = { name: '', displayName: '', description: '', url: '', active: true }
-  showServerModal.value = true
+	editingServer.value = null
+	serverForm.value = { name: '', displayName: '', description: '', url: '', active: true }
+	showServerModal.value = true
 }
 
 function openEditServer(server: HookServer) {
-  editingServer.value = server
-  serverForm.value = {
-    name: server.name,
-    displayName: server.displayName ?? '',
-    description: server.description ?? '',
-    url: server.url,
-    active: server.active
-  }
-  showServerModal.value = true
+	editingServer.value = server
+	serverForm.value = {
+		name: server.name,
+		displayName: server.displayName ?? '',
+		description: server.description ?? '',
+		url: server.url,
+		active: server.active
+	}
+	showServerModal.value = true
 }
 
 async function saveServer() {
-  savingServer.value = true
-  try {
-    if (editingServer.value) {
-      const res = await api.updateHookServer(editingServer.value.id, {
-        displayName: serverForm.value.displayName || undefined,
-        description: serverForm.value.description || undefined,
-        url: serverForm.value.url,
-        active: serverForm.value.active
-      })
-      const updated = res.data
-      const idx = servers.value.findIndex((s) => s.id === updated.id)
-      if (idx !== -1) servers.value[idx] = updated
-      if (selectedServer.value?.id === updated.id) selectedServer.value = updated
-      toast.success('Hook server updated')
-    } else {
-      const res = await api.createHookServer({
-        name: serverForm.value.name,
-        displayName: serverForm.value.displayName || undefined,
-        description: serverForm.value.description || undefined,
-        url: serverForm.value.url,
-        active: serverForm.value.active
-      })
-      servers.value.push(res.data)
-      toast.success('Hook server created')
-    }
-    showServerModal.value = false
-  } catch (e: any) {
-    toast.error(e.message)
-  } finally {
-    savingServer.value = false
-  }
+	savingServer.value = true
+	try {
+		if (editingServer.value) {
+			const res = await api.updateHookServer(editingServer.value.id, {
+				displayName: serverForm.value.displayName || undefined,
+				description: serverForm.value.description || undefined,
+				url: serverForm.value.url,
+				active: serverForm.value.active
+			})
+			const updated = res.data
+			const idx = servers.value.findIndex((s) => s.id === updated.id)
+			if (idx !== -1) servers.value[idx] = updated
+			if (selectedServer.value?.id === updated.id) selectedServer.value = updated
+			toast.success('Hook server updated')
+		} else {
+			const res = await api.createHookServer({
+				name: serverForm.value.name,
+				displayName: serverForm.value.displayName || undefined,
+				description: serverForm.value.description || undefined,
+				url: serverForm.value.url,
+				active: serverForm.value.active
+			})
+			servers.value.push(res.data)
+			toast.success('Hook server created')
+		}
+		showServerModal.value = false
+	} catch (e: any) {
+		toast.error(e.message)
+	} finally {
+		savingServer.value = false
+	}
 }
 
 async function deleteServer(server: HookServer) {
-  if (!confirm(`Delete hook server "${server.displayName || server.name}"?`)) return
-  try {
-    await api.deleteHookServer(server.id)
-    servers.value = servers.value.filter((s) => s.id !== server.id)
-    if (selectedServer.value?.id === server.id) {
-      selectedServer.value = null
-      discoveredHooks.value = []
-      assignments.value = []
-    }
-    toast.success('Hook server deleted')
-  } catch (e: any) {
-    toast.error(e.message)
-  }
+	if (!confirm(`Delete hook server "${server.displayName || server.name}"?`)) return
+	try {
+		await api.deleteHookServer(server.id)
+		servers.value = servers.value.filter((s) => s.id !== server.id)
+		if (selectedServer.value?.id === server.id) {
+			selectedServer.value = null
+			discoveredHooks.value = []
+			assignments.value = []
+		}
+		toast.success('Hook server deleted')
+	} catch (e: any) {
+		toast.error(e.message)
+	}
 }
 
 // ── Select server & discovery ─────────────────────────────────────────────────
 
 async function selectServer(server: HookServer) {
-  selectedServer.value = server
-  discoveredHooks.value = []
-  assignments.value = []
-  discoverError.value = ''
-  selectedHook.value = null
-  await Promise.all([discoverHooks(server), loadAssignments(server)])
+	selectedServer.value = server
+	discoveredHooks.value = []
+	assignments.value = []
+	discoverError.value = ''
+	selectedHook.value = null
+	await Promise.all([discoverHooks(server), loadAssignments(server)])
 }
 
 async function discoverHooks(server: HookServer) {
-  loadingHooks.value = true
-  discoverError.value = ''
-  try {
-    const res = await api.discoverHooks(server.id)
-    discoveredHooks.value = res.data ?? []
-  } catch (e: any) {
-    discoverError.value = e.message
-    discoveredHooks.value = []
-  } finally {
-    loadingHooks.value = false
-  }
+	loadingHooks.value = true
+	discoverError.value = ''
+	try {
+		const res = await api.discoverHooks(server.id)
+		discoveredHooks.value = res.data ?? []
+	} catch (e: any) {
+		discoverError.value = e.message
+		discoveredHooks.value = []
+	} finally {
+		loadingHooks.value = false
+	}
 }
 
 async function loadAssignments(server: HookServer) {
-  loadingAssignments.value = true
-  try {
-    const res = await api.getHookAssignments(server.id)
-    assignments.value = res.data ?? []
-  } catch {
-    assignments.value = []
-  } finally {
-    loadingAssignments.value = false
-  }
+	loadingAssignments.value = true
+	try {
+		const res = await api.getHookAssignments(server.id)
+		assignments.value = res.data ?? []
+	} catch {
+		assignments.value = []
+	} finally {
+		loadingAssignments.value = false
+	}
 }
 
 // ── Hook detail & assignments ─────────────────────────────────────────────────
@@ -185,13 +185,11 @@ async function loadAssignments(server: HookServer) {
 const selectedHook = ref<HookDefinition | null>(null)
 
 function selectHook(hook: HookDefinition) {
-  selectedHook.value = hook
-  showAssignModal.value = false
+	selectedHook.value = hook
+	showAssignModal.value = false
 }
 
-const hookAssignments = computed(() =>
-  assignments.value.filter((a) => a.hookName === selectedHook.value?.name)
-)
+const hookAssignments = computed(() => assignments.value.filter((a) => a.hookName === selectedHook.value?.name))
 
 // ── Assignment modal ──────────────────────────────────────────────────────────
 
@@ -208,130 +206,144 @@ const loadingMcpTools = ref(false)
 const totalSelected = computed(() => selectedAgentIds.value.size + selectedToolNames.value.size)
 
 function openAssignModal() {
-  selectedAgentIds.value = new Set()
-  selectedMcpServerId.value = ''
-  selectedToolNames.value = new Set()
-  mcpToolsForServer.value = []
-  showAssignModal.value = true
+	selectedAgentIds.value = new Set()
+	selectedMcpServerId.value = ''
+	selectedToolNames.value = new Set()
+	mcpToolsForServer.value = []
+	showAssignModal.value = true
 }
 
 function toggleAgent(agent: Agent) {
-  if (selectedAgentIds.value.has(agent.id)) {
-    selectedAgentIds.value.delete(agent.id)
-  } else {
-    selectedAgentIds.value.add(agent.id)
-  }
-  // trigger reactivity
-  selectedAgentIds.value = new Set(selectedAgentIds.value)
+	if (selectedAgentIds.value.has(agent.id)) {
+		selectedAgentIds.value.delete(agent.id)
+	} else {
+		selectedAgentIds.value.add(agent.id)
+	}
+	// trigger reactivity
+	selectedAgentIds.value = new Set(selectedAgentIds.value)
 }
 
 async function onMcpServerChange(mcpServerId: string) {
-  selectedToolNames.value = new Set()
-  if (!mcpServerId) { mcpToolsForServer.value = []; return }
-  loadingMcpTools.value = true
-  try {
-    const res = await api.getMcpServerTools(mcpServerId)
-    mcpToolsForServer.value = res.data ?? []
-  } catch {
-    mcpToolsForServer.value = []
-  } finally {
-    loadingMcpTools.value = false
-  }
+	selectedToolNames.value = new Set()
+	if (!mcpServerId) {
+		mcpToolsForServer.value = []
+		return
+	}
+	loadingMcpTools.value = true
+	try {
+		const res = await api.getMcpServerTools(mcpServerId)
+		mcpToolsForServer.value = res.data ?? []
+	} catch {
+		mcpToolsForServer.value = []
+	} finally {
+		loadingMcpTools.value = false
+	}
 }
 
 function toggleTool(tool: McpTool) {
-  if (selectedToolNames.value.has(tool.toolName)) {
-    selectedToolNames.value.delete(tool.toolName)
-  } else {
-    selectedToolNames.value.add(tool.toolName)
-  }
-  selectedToolNames.value = new Set(selectedToolNames.value)
+	if (selectedToolNames.value.has(tool.toolName)) {
+		selectedToolNames.value.delete(tool.toolName)
+	} else {
+		selectedToolNames.value.add(tool.toolName)
+	}
+	selectedToolNames.value = new Set(selectedToolNames.value)
 }
 
 async function saveAssignments() {
-  if (!selectedServer.value || !selectedHook.value) return
-  if (totalSelected.value === 0) {
-    toast.error('Select at least one agent or tool')
-    return
-  }
-  savingAssignment.value = true
-  try {
-    const hookName = selectedHook.value.name
-    const serverId = selectedServer.value.id
-    const created: HookAssignment[] = []
+	if (!selectedServer.value || !selectedHook.value) return
+	if (totalSelected.value === 0) {
+		toast.error('Select at least one agent or tool')
+		return
+	}
+	savingAssignment.value = true
+	try {
+		const hookName = selectedHook.value.name
+		const serverId = selectedServer.value.id
+		const created: HookAssignment[] = []
 
-    // Save agent assignments
-    for (const agentId of selectedAgentIds.value) {
-      const agent = agents.value.find((a) => a.id === agentId)
-      if (!agent) continue
-      // Skip if already assigned
-      if (assignments.value.some((a) => a.hookName === hookName && a.assignmentType === 'agent' && a.assignmentId === agentId)) continue
-      const res = await api.createHookAssignment(serverId, {
-        hookName,
-        assignmentType: 'agent',
-        assignmentId: agent.id,
-        assignmentName: agent.name
-      })
-      created.push(res.data)
-    }
+		// Save agent assignments
+		for (const agentId of selectedAgentIds.value) {
+			const agent = agents.value.find((a) => a.id === agentId)
+			if (!agent) continue
+			// Skip if already assigned
+			if (assignments.value.some((a) => a.hookName === hookName && a.assignmentType === 'agent' && a.assignmentId === agentId)) continue
+			const res = await api.createHookAssignment(serverId, {
+				hookName,
+				assignmentType: 'agent',
+				assignmentId: agent.id,
+				assignmentName: agent.name
+			})
+			created.push(res.data)
+		}
 
-    // Save tool assignments
-    const mcpServer = mcpServers.value.find((s) => s.id === selectedMcpServerId.value)
-    for (const toolName of selectedToolNames.value) {
-      // Skip if already assigned
-      if (assignments.value.some((a) => a.hookName === hookName && a.assignmentType === 'mcp_tool' && a.assignmentName === toolName && a.assignmentId === selectedMcpServerId.value)) continue
-      const res = await api.createHookAssignment(serverId, {
-        hookName,
-        assignmentType: 'mcp_tool',
-        assignmentId: selectedMcpServerId.value,
-        assignmentName: toolName,
-        extraData: mcpServer ? { mcpServerName: mcpServer.name, mcpServerUrl: mcpServer.url ?? '', toolName } : undefined
-      })
-      created.push(res.data)
-    }
+		// Save tool assignments
+		const mcpServer = mcpServers.value.find((s) => s.id === selectedMcpServerId.value)
+		for (const toolName of selectedToolNames.value) {
+			// Skip if already assigned
+			if (
+				assignments.value.some(
+					(a) =>
+						a.hookName === hookName &&
+						a.assignmentType === 'mcp_tool' &&
+						a.assignmentName === toolName &&
+						a.assignmentId === selectedMcpServerId.value
+				)
+			)
+				continue
+			const res = await api.createHookAssignment(serverId, {
+				hookName,
+				assignmentType: 'mcp_tool',
+				assignmentId: selectedMcpServerId.value,
+				assignmentName: toolName,
+				extraData: mcpServer ? { mcpServerName: mcpServer.name, mcpServerUrl: mcpServer.url ?? '', toolName } : undefined
+			})
+			created.push(res.data)
+		}
 
-    assignments.value.push(...created)
-    showAssignModal.value = false
-    toast.success(`${created.length} assignment${created.length !== 1 ? 's' : ''} added`)
-  } catch (e: any) {
-    toast.error(e.message)
-  } finally {
-    savingAssignment.value = false
-  }
+		assignments.value.push(...created)
+		showAssignModal.value = false
+		toast.success(`${created.length} assignment${created.length !== 1 ? 's' : ''} added`)
+	} catch (e: any) {
+		toast.error(e.message)
+	} finally {
+		savingAssignment.value = false
+	}
 }
 
 async function removeAssignment(assignment: HookAssignment) {
-  if (!selectedServer.value) return
-  try {
-    await api.deleteHookAssignment(selectedServer.value.id, assignment.id)
-    assignments.value = assignments.value.filter((a) => a.id !== assignment.id)
-    toast.success('Assignment removed')
-  } catch (e: any) {
-    toast.error(e.message)
-  }
+	if (!selectedServer.value) return
+	try {
+		await api.deleteHookAssignment(selectedServer.value.id, assignment.id)
+		assignments.value = assignments.value.filter((a) => a.id !== assignment.id)
+		toast.success('Assignment removed')
+	} catch (e: any) {
+		toast.error(e.message)
+	}
 }
 
 // ── Load data ─────────────────────────────────────────────────────────────────
 
 async function loadServers() {
-  loadingServers.value = true
-  try {
-    const res = await api.getHookServers()
-    servers.value = res.data ?? []
-  } catch (e: any) {
-    toast.error(e.message)
-  } finally {
-    loadingServers.value = false
-  }
+	loadingServers.value = true
+	try {
+		const res = await api.getHookServers()
+		servers.value = res.data ?? []
+	} catch (e: any) {
+		toast.error(e.message)
+	} finally {
+		loadingServers.value = false
+	}
 }
 
 onMounted(async () => {
-  await loadServers()
-  try {
-    const [agentsRes, mcpRes] = await Promise.all([api.getAgents(), api.getMcpServers()])
-    agents.value = agentsRes.data ?? []
-    mcpServers.value = mcpRes.data ?? []
-  } catch { /* non-critical */ }
+	await loadServers()
+	try {
+		const [agentsRes, mcpRes] = await Promise.all([api.getAgents(), api.getMcpServers()])
+		agents.value = agentsRes.data ?? []
+		mcpServers.value = mcpRes.data ?? []
+	} catch {
+		/* non-critical */
+	}
 })
 </script>
 

@@ -1,4 +1,4 @@
-import type { SkillRecord, CreateSkillDTO, UpdateSkillDTO } from '../entities/skill.entity.js'
+import type { CreateSkillDTO, SkillRecord, UpdateSkillDTO } from '../entities/skill.entity.js'
 
 export interface ISkillRepository {
 	findAll(): Promise<SkillRecord[]>
