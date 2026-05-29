@@ -1,21 +1,21 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
-import { useAuthStore } from '@/store/useAuth'
-import { useToastStore } from '@/store/useToast'
-import PageLayout from '@/components/PageLayout.vue'
+import { computed, onMounted, ref } from 'vue'
 import * as api from '@/api/api'
 import AppModal from '@/components/AppModal.vue'
 import DocumentViewerModal from '@/components/DocumentViewerModal.vue'
+import PageLayout from '@/components/PageLayout.vue'
+import { useAuthStore } from '@/store/useAuth'
+import { useToastStore } from '@/store/useToast'
 
 interface ITask {
-  id: string;
-  stageId: string;
-  title: string;
-  description: string;
-  type: string;
-  status: string;
-  createdAt: Date;
-  updatedAt: Date;
+	id: string
+	stageId: string
+	title: string
+	description: string
+	type: string
+	status: string
+	createdAt: Date
+	updatedAt: Date
 }
 
 const auth = useAuthStore()
@@ -37,42 +37,42 @@ const canUpdate = computed(() => auth.hasPermission('traceability', 'update'))
 const canDelete = computed(() => auth.hasPermission('traceability', 'delete'))
 
 function roleNameById(id: string) {
-  if (!id) return ''
-  return roles.value.find(r => r.id === id)?.name ?? id
+	if (!id) return ''
+	return roles.value.find((r) => r.id === id)?.name ?? id
 }
 
 function agentNameById(id: string) {
-  if (!id) return ''
-  return agents.value.find(a => a.id === id)?.name ?? id
+	if (!id) return ''
+	return agents.value.find((a) => a.id === id)?.name ?? id
 }
 
 function userNameById(id: string | null | undefined) {
-  if (!id) return ''
-  const u = allUsers.value.find((u: any) => u.id === id)
-  if (!u) return id
-  return [u.firstName, u.lastName].filter(Boolean).join(' ') || u.username
+	if (!id) return ''
+	const u = allUsers.value.find((u: any) => u.id === id)
+	if (!u) return id
+	return [u.firstName, u.lastName].filter(Boolean).join(' ') || u.username
 }
 
 async function fetchAll() {
-  loading.value = true
-  try {
-    const [tplRes, tracRes, rolesRes, agentsRes, usersRes] = await Promise.all([
-      api.getTraceabilityTemplates(),
-      api.getTraceabilities(),
-      api.getRoles(),
-      api.getAgents({ group: 'traceability' }),
-      api.getUsers(),
-    ])
-    templates.value = tplRes.data ?? []
-    traceabilities.value = tracRes.data ?? []
-    roles.value = Array.isArray(rolesRes) ? rolesRes : (rolesRes as any).data ?? []
-    agents.value = (Array.isArray(agentsRes) ? agentsRes : (agentsRes as any).data ?? []).filter((a: any) => a.isActive)
-    allUsers.value = Array.isArray(usersRes) ? usersRes : (usersRes as any).data ?? []
-  } catch (e: any) {
-    toast.error(e.message)
-  } finally {
-    loading.value = false
-  }
+	loading.value = true
+	try {
+		const [tplRes, tracRes, rolesRes, agentsRes, usersRes] = await Promise.all([
+			api.getTraceabilityTemplates(),
+			api.getTraceabilities(),
+			api.getRoles(),
+			api.getAgents({ group: 'traceability' }),
+			api.getUsers()
+		])
+		templates.value = tplRes.data ?? []
+		traceabilities.value = tracRes.data ?? []
+		roles.value = Array.isArray(rolesRes) ? rolesRes : ((rolesRes as any).data ?? [])
+		agents.value = (Array.isArray(agentsRes) ? agentsRes : ((agentsRes as any).data ?? [])).filter((a: any) => a.isActive)
+		allUsers.value = Array.isArray(usersRes) ? usersRes : ((usersRes as any).data ?? [])
+	} catch (e: any) {
+		toast.error(e.message)
+	} finally {
+		loading.value = false
+	}
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -91,211 +91,242 @@ const editTracForm = ref({ title: '', description: '', status: '' })
 
 const tracStatusLabel: Record<string, string> = { active: 'Activo', completed: 'Completado', archived: 'Archivado' }
 const tracStatusClass: Record<string, string> = {
-  active: 'bg-blue-500/10 text-blue-400 ring-1 ring-blue-500/20',
-  completed: 'bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20',
-  archived: 'bg-base-content/30/10 text-base-content/60 ring-1 ring-base-content/30/20',
+	active: 'bg-blue-500/10 text-blue-400 ring-1 ring-blue-500/20',
+	completed: 'bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20',
+	archived: 'bg-base-content/30/10 text-base-content/60 ring-1 ring-base-content/30/20'
 }
 
 const stageStatusLabel: Record<string, string> = {
-  pending: 'Pendiente', active: 'En progreso', completed: 'Completado',
-  blocked: 'Bloqueado', 'in-review': 'En revisión',
+	pending: 'Pendiente',
+	active: 'En progreso',
+	completed: 'Completado',
+	blocked: 'Bloqueado',
+	'in-review': 'En revisión'
 }
 const stageStatusClass: Record<string, string> = {
-  pending: 'bg-base-100 text-base-content',
-  active: 'bg-blue-500/20 text-blue-300',
-  completed: 'bg-emerald-500/20 text-emerald-300',
-  blocked: 'bg-red-500/20 text-red-300',
-  'in-review': 'bg-amber-500/20 text-amber-300',
+	pending: 'bg-base-100 text-base-content',
+	active: 'bg-blue-500/20 text-blue-300',
+	completed: 'bg-emerald-500/20 text-emerald-300',
+	blocked: 'bg-red-500/20 text-red-300',
+	'in-review': 'bg-amber-500/20 text-amber-300'
 }
 const taskStatusClass: Record<string, string> = {
-  todo: 'text-base-content/60', 'in-progress': 'text-blue-400', done: 'text-emerald-400', blocked: 'text-red-400',
+	todo: 'text-base-content/60',
+	'in-progress': 'text-blue-400',
+	done: 'text-emerald-400',
+	blocked: 'text-red-400'
 }
 const platformIcons: Record<string, string> = {
-  jira: '🟦', confluence: '🟩', github: '⬛', gitlab: '🟧', generic: '🔗',
+	jira: '🟦',
+	confluence: '🟩',
+	github: '⬛',
+	gitlab: '🟧',
+	generic: '🔗'
+}
+
+async function hydrateStage(stage: any) {
+	if (!stage) return
+	loadingStage.value = true
+	try {
+		const [tasks, links, documents] = await Promise.all([
+			api.getStageTasks(stage.id),
+			api.getStageLinks(stage.id),
+			api.getStageDocuments(stage.id)
+		])
+		stage.tasks = tasks.data ?? []
+		stage.links = links.data ?? []
+		stage.documents = documents.data ?? []
+	} catch (e: any) {
+		toast.error(e.message)
+	} finally {
+		loadingStage.value = false
+	}
 }
 
 async function selectTrac(summary: any) {
-  if (activeTrac.value?.id === summary.id) return
-  loadingTrac.value = true
-  editingTrac.value = false
-  activeStage.value = null
-  try {
-    const res = await api.getTraceabilityById(summary.id)
-    activeTrac.value = res.data
-    editTracForm.value = { title: res.data.title, description: res.data.description ?? '', status: res.data.status }
-  } catch (e: any) {
-    toast.error(e.message)
-  } finally {
-    loadingTrac.value = false
-  }
+	if (activeTrac.value?.id === summary.id) return
+	loadingTrac.value = true
+	editingTrac.value = false
+	activeStage.value = null
+	try {
+		const res = await api.getTraceabilityById(summary.id)
+		activeTrac.value = res.data
+		editTracForm.value = { title: res.data.title, description: res.data.description ?? '', status: res.data.status }
+	} catch (e: any) {
+		toast.error(e.message)
+	} finally {
+		loadingTrac.value = false
+	}
 }
 
 async function createTraceability() {
-  if (!tracForm.value.title || !tracForm.value.templateId) return
-  try {
-    const payload = { ...tracForm.value, chatId: tracForm.value.chatId.trim() || undefined }
-    const res = await api.createTraceability(payload)
-    toast.success('Trazabilidad creada')
-    showCreateTrac.value = false
-    tracForm.value = { title: '', description: '', templateId: '', chatId: '' }
-    await fetchAll()
-    await selectTrac(res.data)
-  } catch (e: any) {
-    toast.error(e.message)
-  }
+	if (!tracForm.value.title || !tracForm.value.templateId) return
+	try {
+		const payload = { ...tracForm.value, chatId: tracForm.value.chatId.trim() || undefined }
+		const res = await api.createTraceability(payload)
+		toast.success('Trazabilidad creada')
+		showCreateTrac.value = false
+		tracForm.value = { title: '', description: '', templateId: '', chatId: '' }
+		await fetchAll()
+		await selectTrac(res.data)
+	} catch (e: any) {
+		toast.error(e.message)
+	}
 }
 
 async function saveTrac() {
-  if (!activeTrac.value) return
-  try {
-    await api.updateTraceability(activeTrac.value.id, editTracForm.value)
-    toast.success('Actualizado')
-    editingTrac.value = false
-    const res = await api.getTraceabilityById(activeTrac.value.id)
-    activeTrac.value = res.data
-    await fetchAll()
-  } catch (e: any) {
-    toast.error(e.message)
-  }
+	if (!activeTrac.value) return
+	try {
+		await api.updateTraceability(activeTrac.value.id, editTracForm.value)
+		toast.success('Actualizado')
+		editingTrac.value = false
+		const res = await api.getTraceabilityById(activeTrac.value.id)
+		activeTrac.value = res.data
+		await fetchAll()
+	} catch (e: any) {
+		toast.error(e.message)
+	}
 }
 
 async function confirmDeleteTrac() {
-  if (!deleteTracTarget.value) return
-  try {
-    await api.deleteTraceability(deleteTracTarget.value.id)
-    toast.success('Trazabilidad eliminada')
-    if (activeTrac.value?.id === deleteTracTarget.value.id) activeTrac.value = null
-    deleteTracTarget.value = null
-    await fetchAll()
-  } catch (e: any) {
-    toast.error(e.message)
-  }
+	if (!deleteTracTarget.value) return
+	try {
+		await api.deleteTraceability(deleteTracTarget.value.id)
+		toast.success('Trazabilidad eliminada')
+		if (activeTrac.value?.id === deleteTracTarget.value.id) activeTrac.value = null
+		deleteTracTarget.value = null
+		await fetchAll()
+	} catch (e: any) {
+		toast.error(e.message)
+	}
 }
 
 // DAG layers: topological sort of stages by predecessor relationships
 function computeDagLayers(stages: any[]): any[][] {
-  if (!stages.length) return []
-  const layerOf = new Map<string, number>()
-  const remaining = new Set(stages.map((s: any) => s.id))
-  let layer = 0
-  while (remaining.size > 0) {
-    const ready = [...remaining].filter((id) => {
-      const s = stages.find((x: any) => x.id === id)
-      if (!s?.predecessors?.length) return true
-      return s.predecessors.every((pid: string) => layerOf.has(pid))
-    })
-    if (!ready.length) { for (const id of remaining) layerOf.set(id, layer); break }
-    for (const id of ready) { layerOf.set(id, layer); remaining.delete(id) }
-    layer++
-  }
-  const maxLayer = Math.max(...Array.from(layerOf.values()), 0)
-  const result: any[][] = []
-  for (let l = 0; l <= maxLayer; l++) result.push(stages.filter((s: any) => layerOf.get(s.id) === l))
-  return result
+	if (!stages.length) return []
+	const layerOf = new Map<string, number>()
+	const remaining = new Set(stages.map((s: any) => s.id))
+	let layer = 0
+	while (remaining.size > 0) {
+		const ready = [...remaining].filter((id) => {
+			const s = stages.find((x: any) => x.id === id)
+			if (!s?.predecessors?.length) return true
+			return s.predecessors.every((pid: string) => layerOf.has(pid))
+		})
+		if (!ready.length) {
+			for (const id of remaining) layerOf.set(id, layer)
+			break
+		}
+		for (const id of ready) {
+			layerOf.set(id, layer)
+			remaining.delete(id)
+		}
+		layer++
+	}
+	const maxLayer = Math.max(...Array.from(layerOf.values()), 0)
+	const result: any[][] = []
+	for (let l = 0; l <= maxLayer; l++) result.push(stages.filter((s: any) => layerOf.get(s.id) === l))
+	return result
 }
 
 const dagLayers = computed(() => {
-  if (!activeTrac.value?.stages) return []
-  return computeDagLayers(activeTrac.value.stages)
+	if (!activeTrac.value?.stages) return []
+	return computeDagLayers(activeTrac.value.stages)
 })
 
 const templateDagLayers = computed(() => {
-  if (!activeTemplate.value?.stages) return []
-  return computeDagLayers([...activeTemplate.value.stages].sort((a: any, b: any) => a.order - b.order))
+	if (!activeTemplate.value?.stages) return []
+	return computeDagLayers([...activeTemplate.value.stages].sort((a: any, b: any) => a.order - b.order))
 })
 
 // ── BPMN layout ───────────────────────────────────────────────────────────────
 
 const stageStatusSvgColor: Record<string, { fill: string; text: string }> = {
-  pending: { fill: '#475569', text: '#94a3b8' },
-  active: { fill: '#3b82f6', text: '#93c5fd' },
-  completed: { fill: '#10b981', text: '#6ee7b7' },
-  blocked: { fill: '#ef4444', text: '#fca5a5' },
-  'in-review': { fill: '#f59e0b', text: '#fcd34d' },
+	pending: { fill: '#475569', text: '#94a3b8' },
+	active: { fill: '#3b82f6', text: '#93c5fd' },
+	completed: { fill: '#10b981', text: '#6ee7b7' },
+	blocked: { fill: '#ef4444', text: '#fca5a5' },
+	'in-review': { fill: '#f59e0b', text: '#fcd34d' }
 }
 
 function truncateText(s: string, max: number) {
-  return s.length > max ? s.slice(0, max - 1) + '…' : s
+	return s.length > max ? s.slice(0, max - 1) + '…' : s
 }
 
 const bpmnLayout = computed(() => {
-  const layers = dagLayers.value
-  if (!layers.length) return { nodes: [], edges: [], width: 300, height: 300 }
+	const layers = dagLayers.value
+	if (!layers.length) return { nodes: [], edges: [], width: 300, height: 300 }
 
-  // Layout constants
-  const TW = 160, TH = 88      // task node size
-  const ER = 20                 // event (start/end) radius
-  const GH = 18                 // gateway half-size
-  const VG = 50                 // vertical gap between layers
-  const GVG = 20                // vertical gap gateway <-> task
-  const HG = 20                 // horizontal gap between parallel nodes
-  const PX = 40, PY = 36       // canvas padding
+	// Layout constants
+	const TW = 160,
+		TH = 88 // task node size
+	const ER = 20 // event (start/end) radius
+	const GH = 18 // gateway half-size
+	const VG = 50 // vertical gap between layers
+	const GVG = 20 // vertical gap gateway <-> task
+	const HG = 20 // horizontal gap between parallel nodes
+	const PX = 40,
+		PY = 36 // canvas padding
 
-  const nodes: any[] = []
-  const edges: any[] = []
+	const nodes: any[] = []
+	const edges: any[] = []
 
-  // Canvas width: fit the widest parallel layer
-  const maxLayerW = Math.max(TW, ...layers.map((l: any[]) =>
-    l.length === 1 ? TW : l.length * TW + (l.length - 1) * HG
-  ))
-  const totalW = maxLayerW + PX * 2
-  const cx = totalW / 2
+	// Canvas width: fit the widest parallel layer
+	const maxLayerW = Math.max(TW, ...layers.map((l: any[]) => (l.length === 1 ? TW : l.length * TW + (l.length - 1) * HG)))
+	const totalW = maxLayerW + PX * 2
+	const cx = totalW / 2
 
-  // Start event
-  let y = PY + ER
-  nodes.push({ id: '__start__', type: 'start', cx, cy: y, r: ER })
-  let prevExits: { x: number; y: number }[] = [{ x: cx, y: y + ER }]
-  y += ER + VG
+	// Start event
+	let y = PY + ER
+	nodes.push({ id: '__start__', type: 'start', cx, cy: y, r: ER })
+	let prevExits: { x: number; y: number }[] = [{ x: cx, y: y + ER }]
+	y += ER + VG
 
-  for (let li = 0; li < layers.length; li++) {
-    const layer = layers[li]
+	for (let li = 0; li < layers.length; li++) {
+		const layer = layers[li]
 
-    if (layer.length > 1) {
-      // Parallel split gateway
-      const gsy = y + GH
-      nodes.push({ id: `gws-${li}`, type: 'gateway', cx, cy: gsy, half: GH })
-      prevExits.forEach((pe, i) =>
-        edges.push({ id: `e-pre-gws-${li}-${i}`, x1: pe.x, y1: pe.y, x2: cx, y2: gsy - GH }))
-      y = gsy + GH + GVG
+		if (layer.length > 1) {
+			// Parallel split gateway
+			const gsy = y + GH
+			nodes.push({ id: `gws-${li}`, type: 'gateway', cx, cy: gsy, half: GH })
+			prevExits.forEach((pe, i) => edges.push({ id: `e-pre-gws-${li}-${i}`, x1: pe.x, y1: pe.y, x2: cx, y2: gsy - GH }))
+			y = gsy + GH + GVG
 
-      const totalLayerW = layer.length * TW + (layer.length - 1) * HG
-      const leftEdge = cx - totalLayerW / 2
-      const tex: { x: number; y: number }[] = []
+			const totalLayerW = layer.length * TW + (layer.length - 1) * HG
+			const leftEdge = cx - totalLayerW / 2
+			const tex: { x: number; y: number }[] = []
 
-      layer.forEach((stage: any, si: number) => {
-        const tx = leftEdge + si * (TW + HG)
-        const tcx = tx + TW / 2
-        nodes.push({ id: `task-${stage.id}`, type: 'task', x: tx, y, w: TW, h: TH, data: stage })
-        edges.push({ id: `e-gws-${li}-t-${si}`, x1: cx, y1: gsy + GH, x2: tcx, y2: y })
-        tex.push({ x: tcx, y: y + TH })
-      })
-      y += TH + GVG
+			layer.forEach((stage: any, si: number) => {
+				const tx = leftEdge + si * (TW + HG)
+				const tcx = tx + TW / 2
+				nodes.push({ id: `task-${stage.id}`, type: 'task', x: tx, y, w: TW, h: TH, data: stage })
+				edges.push({ id: `e-gws-${li}-t-${si}`, x1: cx, y1: gsy + GH, x2: tcx, y2: y })
+				tex.push({ x: tcx, y: y + TH })
+			})
+			y += TH + GVG
 
-      // Parallel join gateway
-      const gjy = y + GH
-      nodes.push({ id: `gwj-${li}`, type: 'gateway', cx, cy: gjy, half: GH })
-      tex.forEach((te, i) =>
-        edges.push({ id: `e-t-${li}-${i}-gwj`, x1: te.x, y1: te.y, x2: cx, y2: gjy - GH }))
-      y = gjy + GH + VG
-      prevExits = [{ x: cx, y: gjy + GH }]
-    } else {
-      const stage = layer[0]
-      const tx = cx - TW / 2
-      nodes.push({ id: `task-${stage.id}`, type: 'task', x: tx, y, w: TW, h: TH, data: stage })
-      prevExits.forEach((pe, i) =>
-        edges.push({ id: `e-pre-t-${stage.id}-${i}`, x1: pe.x, y1: pe.y, x2: cx, y2: y }))
-      y += TH + VG
-      prevExits = [{ x: cx, y: y - VG }]
-    }
-  }
+			// Parallel join gateway
+			const gjy = y + GH
+			nodes.push({ id: `gwj-${li}`, type: 'gateway', cx, cy: gjy, half: GH })
+			tex.forEach((te, i) => edges.push({ id: `e-t-${li}-${i}-gwj`, x1: te.x, y1: te.y, x2: cx, y2: gjy - GH }))
+			y = gjy + GH + VG
+			prevExits = [{ x: cx, y: gjy + GH }]
+		} else {
+			const stage = layer[0]
+			const tx = cx - TW / 2
+			nodes.push({ id: `task-${stage.id}`, type: 'task', x: tx, y, w: TW, h: TH, data: stage })
+			prevExits.forEach((pe, i) => edges.push({ id: `e-pre-t-${stage.id}-${i}`, x1: pe.x, y1: pe.y, x2: cx, y2: y }))
+			y += TH + VG
+			prevExits = [{ x: cx, y: y - VG }]
+		}
+	}
 
-  // End event
-  const ecy = y + ER
-  nodes.push({ id: '__end__', type: 'end', cx, cy: ecy, r: ER })
-  prevExits.forEach((pe, i) =>
-    edges.push({ id: `e-pre-end-${i}`, x1: pe.x, y1: pe.y, x2: cx, y2: ecy - ER }))
+	// End event
+	const ecy = y + ER
+	nodes.push({ id: '__end__', type: 'end', cx, cy: ecy, r: ER })
+	prevExits.forEach((pe, i) => edges.push({ id: `e-pre-end-${i}`, x1: pe.x, y1: pe.y, x2: cx, y2: ecy - ER }))
 
-  return { nodes, edges, width: totalW, height: ecy + ER + PY }
+	return { nodes, edges, width: totalW, height: ecy + ER + PY }
 })
 
 // ── Stage / Task / Link ───────────────────────────────────────────────────────
@@ -305,178 +336,195 @@ const taskForm = ref({ title: '', description: '', type: 'task', status: 'todo' 
 const showLinkForm = ref(false)
 const linkForm = ref({ label: '', url: '', platform: 'generic' })
 const showDocForm = ref(false)
-const showSelectTask = ref<ITask | null>(null);
+const showSelectTask = ref<ITask | null>(null)
 const docForm = ref({ name: '', content: '' })
 
 // Assignee state
 const stageUsers = ref<any[]>([])
 const loadingUsers = ref(false)
+const loadingStage = ref(false)
 // Document viewer modal
 const viewingDocumentId = ref<string | null>(null)
 
 function openStagePanel(stage: any) {
-  activeStage.value = activeStage.value?.id === stage.id ? null : stage
-  showTaskForm.value = false
-  showLinkForm.value = false
-  showDocForm.value = false
-  taskForm.value = { title: '', description: '', type: 'task', status: 'todo' }
-  linkForm.value = { label: '', url: '', platform: 'generic' }
-  docForm.value = { name: '', content: '' }
-  if (activeStage.value) loadUsersForStage(activeStage.value)
+	activeStage.value = activeStage.value?.id === stage.id ? null : stage
+	showTaskForm.value = false
+	showLinkForm.value = false
+	showDocForm.value = false
+	taskForm.value = { title: '', description: '', type: 'task', status: 'todo' }
+	linkForm.value = { label: '', url: '', platform: 'generic' }
+	docForm.value = { name: '', content: '' }
+	if (activeStage.value) {
+		loadUsersForStage(activeStage.value)
+		hydrateStage(activeStage.value)
+	}
 }
 
 // ── Assignee ─────────────────────────────────────────────────────────────────
 
 async function loadUsersForStage(stage: any) {
-  if (!stage.role) { stageUsers.value = []; return }
-  loadingUsers.value = true
-  try {
-    const res = await api.getUsersByRoleWithEffort(stage.role)
-    stageUsers.value = res.data ?? []
-  } catch {
-    stageUsers.value = []
-  } finally {
-    loadingUsers.value = false
-  }
+	if (!stage.role) {
+		stageUsers.value = []
+		return
+	}
+	loadingUsers.value = true
+	try {
+		const res = await api.getUsersByRoleWithEffort(stage.role)
+		stageUsers.value = res.data ?? []
+	} catch {
+		stageUsers.value = []
+	} finally {
+		loadingUsers.value = false
+	}
 }
 
 async function assignUser(userId: string | null) {
-  if (!activeStage.value) return
-  try {
-    await api.assignStageUser(activeStage.value.id, userId)
-    syncStageInTrac({ ...activeStage.value, assignedUserId: userId })
-    toast.success('Asignado actualizado')
-  } catch (e: any) {
-    toast.error(e.message)
-  }
+	if (!activeStage.value) return
+	try {
+		await api.assignStageUser(activeStage.value.id, userId)
+		syncStageInTrac({ ...activeStage.value, assignedUserId: userId })
+		toast.success('Asignado actualizado')
+	} catch (e: any) {
+		toast.error(e.message)
+	}
 }
 
 function userDisplayName(u: any) {
-  const name = [u.firstName, u.lastName].filter(Boolean).join(' ') || u.username
-  return `${name} (esfuerzo: ${u.effortScore})`
+	const name = [u.firstName, u.lastName].filter(Boolean).join(' ') || u.username
+	return `${name} (esfuerzo: ${u.effortScore})`
 }
 
 function syncStageInTrac(updatedStage: any) {
-  if (!activeTrac.value) return
-  const idx = activeTrac.value.stages.findIndex((s: any) => s.id === updatedStage.id)
-  if (idx >= 0) {
-    activeTrac.value.stages[idx] = { ...activeTrac.value.stages[idx], ...updatedStage }
-    activeStage.value = activeTrac.value.stages[idx]
-  }
+	if (!activeTrac.value) return
+	const idx = activeTrac.value.stages.findIndex((s: any) => s.id === updatedStage.id)
+	if (idx >= 0) {
+		activeTrac.value.stages[idx] = { ...activeTrac.value.stages[idx], ...updatedStage }
+		activeStage.value = activeTrac.value.stages[idx]
+	}
 }
 
 async function createTask() {
-  if (!taskForm.value.title) return
-  try {
-    const res = await api.createTraceabilityTask({ stageId: activeStage.value.id, ...taskForm.value })
-    syncStageInTrac(res.data.stage)
-    taskForm.value = { title: '', description: '', type: 'task', status: 'todo' }
-    showTaskForm.value = false
-    toast.success('Tarea creada')
-  } catch (e: any) {
-    toast.error(e.message)
-  }
+	if (!taskForm.value.title) return
+	try {
+		const res = await api.createTraceabilityTask({ stageId: activeStage.value.id, ...taskForm.value })
+		const idx = activeTrac.value.stages.findIndex((s: any) => s.id === activeStage.value.id)
+		if (idx >= 0) {
+			if (!activeTrac.value.stages[idx].tasks) activeTrac.value.stages[idx].tasks = []
+			activeTrac.value.stages[idx].tasks.push(res.data.task)
+		}
+		syncStageInTrac(res.data.stage)
+		taskForm.value = { title: '', description: '', type: 'task', status: 'todo' }
+		showTaskForm.value = false
+		toast.success('Tarea creada')
+	} catch (e: any) {
+		toast.error(e.message)
+	}
 }
 
 async function updateTask(task: any, patch: any) {
-  try {
-    const res = await api.updateTraceabilityTask(task.id, patch)
-    syncStageInTrac(res.data.stage)
-  } catch (e: any) {
-    toast.error(e.message)
-  }
+	try {
+		const res = await api.updateTraceabilityTask(task.id, patch)
+		Object.assign(task, res.data.task)
+		syncStageInTrac(res.data.stage)
+	} catch (e: any) {
+		toast.error(e.message)
+	}
 }
 
 async function deleteTask(task: any) {
-  try {
-    const res = await api.deleteTraceabilityTask(task.id, activeStage.value.id)
-    syncStageInTrac(res.data.stage)
-    toast.success('Tarea eliminada')
-  } catch (e: any) {
-    toast.error(e.message)
-  }
+	try {
+		const res = await api.deleteTraceabilityTask(task.id, activeStage.value.id)
+		const idx = activeTrac.value.stages.findIndex((s: any) => s.id === activeStage.value.id)
+		if (idx >= 0) {
+			activeTrac.value.stages[idx].tasks = (activeTrac.value.stages[idx].tasks ?? []).filter((t: any) => t.id !== task.id)
+		}
+		syncStageInTrac(res.data.stage)
+		toast.success('Tarea eliminada')
+	} catch (e: any) {
+		toast.error(e.message)
+	}
 }
 
 async function createLink() {
-  if (!linkForm.value.label || !linkForm.value.url) return
-  try {
-    const res = await api.createTraceabilityLink({ stageId: activeStage.value.id, ...linkForm.value })
-    const idx = activeTrac.value.stages.findIndex((s: any) => s.id === activeStage.value.id)
-    if (idx >= 0) {
-      activeTrac.value.stages[idx].links.push(res.data)
-      activeStage.value = activeTrac.value.stages[idx]
-    }
-    linkForm.value = { label: '', url: '', platform: 'generic' }
-    showLinkForm.value = false
-    toast.success('Link añadido')
-  } catch (e: any) {
-    toast.error(e.message)
-  }
+	if (!linkForm.value.label || !linkForm.value.url) return
+	try {
+		const res = await api.createTraceabilityLink({ stageId: activeStage.value.id, ...linkForm.value })
+		const idx = activeTrac.value.stages.findIndex((s: any) => s.id === activeStage.value.id)
+		if (idx >= 0) {
+			activeTrac.value.stages[idx].links.push(res.data)
+			activeStage.value = activeTrac.value.stages[idx]
+		}
+		linkForm.value = { label: '', url: '', platform: 'generic' }
+		showLinkForm.value = false
+		toast.success('Link añadido')
+	} catch (e: any) {
+		toast.error(e.message)
+	}
 }
 
 async function deleteLink(link: any) {
-  try {
-    await api.deleteTraceabilityLink(link.id)
-    const idx = activeTrac.value.stages.findIndex((s: any) => s.id === activeStage.value.id)
-    if (idx >= 0) {
-      activeTrac.value.stages[idx].links = activeTrac.value.stages[idx].links.filter((l: any) => l.id !== link.id)
-      activeStage.value = activeTrac.value.stages[idx]
-    }
-    toast.success('Link eliminado')
-  } catch (e: any) {
-    toast.error(e.message)
-  }
+	try {
+		await api.deleteTraceabilityLink(link.id)
+		const idx = activeTrac.value.stages.findIndex((s: any) => s.id === activeStage.value.id)
+		if (idx >= 0) {
+			activeTrac.value.stages[idx].links = activeTrac.value.stages[idx].links.filter((l: any) => l.id !== link.id)
+			activeStage.value = activeTrac.value.stages[idx]
+		}
+		toast.success('Link eliminado')
+	} catch (e: any) {
+		toast.error(e.message)
+	}
 }
 
 async function createDoc() {
-  if (!docForm.value.name) return
-  try {
-    const res = await api.createTraceabilityDocument({ stageId: activeStage.value.id, ...docForm.value })
-    const idx = activeTrac.value.stages.findIndex((s: any) => s.id === activeStage.value.id)
-    if (idx >= 0) {
-      if (!activeTrac.value.stages[idx].documents) activeTrac.value.stages[idx].documents = []
-      activeTrac.value.stages[idx].documents.push(res.data)
-      activeStage.value = activeTrac.value.stages[idx]
-    }
-    docForm.value = { name: '', content: '' }
-    showDocForm.value = false
-    toast.success('Documento creado')
-  } catch (e: any) {
-    toast.error(e.message)
-  }
+	if (!docForm.value.name) return
+	try {
+		const res = await api.createTraceabilityDocument({ stageId: activeStage.value.id, ...docForm.value })
+		const idx = activeTrac.value.stages.findIndex((s: any) => s.id === activeStage.value.id)
+		if (idx >= 0) {
+			if (!activeTrac.value.stages[idx].documents) activeTrac.value.stages[idx].documents = []
+			activeTrac.value.stages[idx].documents.push(res.data)
+			activeStage.value = activeTrac.value.stages[idx]
+		}
+		docForm.value = { name: '', content: '' }
+		showDocForm.value = false
+		toast.success('Documento creado')
+	} catch (e: any) {
+		toast.error(e.message)
+	}
 }
 
 function openDocument(doc: any) {
-  viewingDocumentId.value = doc.id
+	viewingDocumentId.value = doc.id
 }
 
 function onDocumentSaved(savedDoc: any) {
-  // Replace the entry in the stage's documents list (id may change on each version)
-  const idx = activeTrac.value?.stages?.findIndex((s: any) => s.id === activeStage.value?.id)
-  if (idx !== undefined && idx >= 0) {
-    const docs = activeTrac.value.stages[idx].documents ?? []
-    const dIdx = docs.findIndex((d: any) => d.id === viewingDocumentId.value || d.id === savedDoc.id)
-    if (dIdx >= 0) docs[dIdx] = savedDoc
-    else docs.push(savedDoc)
-    activeStage.value = activeTrac.value.stages[idx]
-  }
-  viewingDocumentId.value = savedDoc.id
-  toast.success('Documento actualizado')
+	// Replace the entry in the stage's documents list (id may change on each version)
+	const idx = activeTrac.value?.stages?.findIndex((s: any) => s.id === activeStage.value?.id)
+	if (idx !== undefined && idx >= 0) {
+		const docs = activeTrac.value.stages[idx].documents ?? []
+		const dIdx = docs.findIndex((d: any) => d.id === viewingDocumentId.value || d.id === savedDoc.id)
+		if (dIdx >= 0) docs[dIdx] = savedDoc
+		else docs.push(savedDoc)
+		activeStage.value = activeTrac.value.stages[idx]
+	}
+	viewingDocumentId.value = savedDoc.id
+	toast.success('Documento actualizado')
 }
 
 async function deleteDoc(doc: any) {
-  try {
-    await api.deleteTraceabilityDocument(doc.id)
-    const idx = activeTrac.value.stages.findIndex((s: any) => s.id === activeStage.value.id)
-    if (idx >= 0) {
-      activeTrac.value.stages[idx].documents = activeTrac.value.stages[idx].documents?.filter((d: any) => d.id !== doc.id) ?? []
-      activeStage.value = activeTrac.value.stages[idx]
-    }
-    if (viewingDocumentId.value === doc.id) viewingDocumentId.value = null
-    toast.success('Documento eliminado')
-  } catch (e: any) {
-    toast.error(e.message)
-  }
+	try {
+		await api.deleteTraceabilityDocument(doc.id)
+		const idx = activeTrac.value.stages.findIndex((s: any) => s.id === activeStage.value.id)
+		if (idx >= 0) {
+			activeTrac.value.stages[idx].documents = activeTrac.value.stages[idx].documents?.filter((d: any) => d.id !== doc.id) ?? []
+			activeStage.value = activeTrac.value.stages[idx]
+		}
+		if (viewingDocumentId.value === doc.id) viewingDocumentId.value = null
+		toast.success('Documento eliminado')
+	} catch (e: any) {
+		toast.error(e.message)
+	}
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -491,149 +539,169 @@ const templateForm = ref({ name: '', description: '' })
 const editTplForm = ref({ name: '', description: '' })
 
 function copyTemplateCode(code: string) {
-  navigator.clipboard?.writeText(code).then(() => toast.success('Código copiado'))
+	navigator.clipboard?.writeText(code).then(() => toast.success('Código copiado'))
 }
 
 function parseDocSchema(raw: string): Array<{ name: string; required: boolean }> | null {
-  if (!raw.trim()) return null
-  try { return JSON.parse(raw) } catch { return null }
+	if (!raw.trim()) return null
+	try {
+		return JSON.parse(raw)
+	} catch {
+		return null
+	}
 }
 
 function serializeDocSchema(schema: Array<{ name: string; required: boolean }> | null): string {
-  if (!schema) return ''
-  return JSON.stringify(schema, null, 2)
+	if (!schema) return ''
+	return JSON.stringify(schema, null, 2)
 }
 
 const showStageForm = ref(false)
 const editingStage = ref<any>(null)
 const stageForm = ref({
-  name: '', description: '', role: '', order: 0, parallelGroup: '',
-  type: 'manual' as 'manual' | 'agent', agentId: '' as string | null,
-  predecessors: [] as string[], documentSchemaRaw: '',
+	name: '',
+	description: '',
+	role: '',
+	order: 0,
+	parallelGroup: '',
+	type: 'manual' as 'manual' | 'agent',
+	agentId: '' as string | null,
+	predecessors: [] as string[],
+	documentSchemaRaw: ''
 })
 
 function openTemplate(t: any) {
-  activeTemplate.value = t
-  editingTemplate.value = false
-  editTplForm.value = { name: t.name, description: t.description ?? '' }
-  showStageForm.value = false
-  editingStage.value = null
+	activeTemplate.value = t
+	editingTemplate.value = false
+	editTplForm.value = { name: t.name, description: t.description ?? '' }
+	showStageForm.value = false
+	editingStage.value = null
 }
 
 async function createTemplate() {
-  if (!templateForm.value.name) return
-  try {
-    const res = await api.createTraceabilityTemplate(templateForm.value)
-    toast.success('Template creado')
-    showCreateTemplate.value = false
-    templateForm.value = { name: '', description: '' }
-    await fetchAll()
-    activeTemplate.value = templates.value.find(t => t.id === res.data.id) ?? null
-  } catch (e: any) {
-    toast.error(e.message)
-  }
+	if (!templateForm.value.name) return
+	try {
+		const res = await api.createTraceabilityTemplate(templateForm.value)
+		toast.success('Template creado')
+		showCreateTemplate.value = false
+		templateForm.value = { name: '', description: '' }
+		await fetchAll()
+		activeTemplate.value = templates.value.find((t) => t.id === res.data.id) ?? null
+	} catch (e: any) {
+		toast.error(e.message)
+	}
 }
 
 async function saveEditTemplate() {
-  if (!activeTemplate.value || !editTplForm.value.name) return
-  try {
-    await api.updateTraceabilityTemplate(activeTemplate.value.id, editTplForm.value)
-    toast.success('Template actualizado')
-    editingTemplate.value = false
-    const prevId = activeTemplate.value.id
-    await fetchAll()
-    activeTemplate.value = templates.value.find(t => t.id === prevId) ?? null
-  } catch (e: any) {
-    toast.error(e.message)
-  }
+	if (!activeTemplate.value || !editTplForm.value.name) return
+	try {
+		await api.updateTraceabilityTemplate(activeTemplate.value.id, editTplForm.value)
+		toast.success('Template actualizado')
+		editingTemplate.value = false
+		const prevId = activeTemplate.value.id
+		await fetchAll()
+		activeTemplate.value = templates.value.find((t) => t.id === prevId) ?? null
+	} catch (e: any) {
+		toast.error(e.message)
+	}
 }
 
 async function confirmDeleteTemplate() {
-  if (!deleteTplTarget.value) return
-  try {
-    await api.deleteTraceabilityTemplate(deleteTplTarget.value.id)
-    toast.success('Template eliminado')
-    if (activeTemplate.value?.id === deleteTplTarget.value.id) activeTemplate.value = null
-    deleteTplTarget.value = null
-    await fetchAll()
-  } catch (e: any) {
-    toast.error(e.message)
-  }
+	if (!deleteTplTarget.value) return
+	try {
+		await api.deleteTraceabilityTemplate(deleteTplTarget.value.id)
+		toast.success('Template eliminado')
+		if (activeTemplate.value?.id === deleteTplTarget.value.id) activeTemplate.value = null
+		deleteTplTarget.value = null
+		await fetchAll()
+	} catch (e: any) {
+		toast.error(e.message)
+	}
 }
 
 function openStageForm(stage?: any) {
-  if (stage) {
-    editingStage.value = stage
-    stageForm.value = {
-      name: stage.name, description: stage.description ?? '',
-      role: stage.role ?? '', order: stage.order, parallelGroup: stage.parallelGroup ?? '',
-      type: stage.type ?? 'manual', agentId: stage.agentId ?? null,
-      predecessors: Array.isArray(stage.predecessors) ? [...stage.predecessors] : [],
-      documentSchemaRaw: serializeDocSchema(stage.documentSchema ?? null),
-    }
-  } else {
-    editingStage.value = null
-    stageForm.value = {
-      name: '', description: '', role: '',
-      order: activeTemplate.value?.stages?.length ?? 0, parallelGroup: '',
-      type: 'manual', agentId: null, predecessors: [], documentSchemaRaw: '',
-    }
-  }
-  showStageForm.value = true
+	if (stage) {
+		editingStage.value = stage
+		stageForm.value = {
+			name: stage.name,
+			description: stage.description ?? '',
+			role: stage.role ?? '',
+			order: stage.order,
+			parallelGroup: stage.parallelGroup ?? '',
+			type: stage.type ?? 'manual',
+			agentId: stage.agentId ?? null,
+			predecessors: Array.isArray(stage.predecessors) ? [...stage.predecessors] : [],
+			documentSchemaRaw: serializeDocSchema(stage.documentSchema ?? null)
+		}
+	} else {
+		editingStage.value = null
+		stageForm.value = {
+			name: '',
+			description: '',
+			role: '',
+			order: activeTemplate.value?.stages?.length ?? 0,
+			parallelGroup: '',
+			type: 'manual',
+			agentId: null,
+			predecessors: [],
+			documentSchemaRaw: ''
+		}
+	}
+	showStageForm.value = true
 }
 
 async function saveStage() {
-  if (!stageForm.value.name) return
-  const documentSchema = parseDocSchema(stageForm.value.documentSchemaRaw)
-  if (stageForm.value.documentSchemaRaw.trim() && documentSchema === null) {
-    toast.error('El esquema de documento no es JSON válido')
-    return
-  }
-  const payload = {
-    name: stageForm.value.name,
-    description: stageForm.value.description || undefined,
-    role: stageForm.value.role || undefined,
-    order: stageForm.value.order,
-    parallelGroup: stageForm.value.parallelGroup || undefined,
-    type: stageForm.value.type,
-    agentId: stageForm.value.agentId || null,
-    predecessors: stageForm.value.predecessors,
-    documentSchema,
-  }
-  try {
-    if (editingStage.value) {
-      await api.updateTemplateStage(editingStage.value.id, payload)
-      toast.success('Etapa actualizada')
-    } else {
-      await api.createTemplateStage({ templateId: activeTemplate.value.id, ...payload })
-      toast.success('Etapa creada')
-    }
-    showStageForm.value = false
-    editingStage.value = null
-    const prevId = activeTemplate.value.id
-    await fetchAll()
-    activeTemplate.value = templates.value.find(t => t.id === prevId) ?? null
-  } catch (e: any) {
-    toast.error(e.message)
-  }
+	if (!stageForm.value.name) return
+	const documentSchema = parseDocSchema(stageForm.value.documentSchemaRaw)
+	if (stageForm.value.documentSchemaRaw.trim() && documentSchema === null) {
+		toast.error('El esquema de documento no es JSON válido')
+		return
+	}
+	const payload = {
+		name: stageForm.value.name,
+		description: stageForm.value.description || undefined,
+		role: stageForm.value.role || undefined,
+		order: stageForm.value.order,
+		parallelGroup: stageForm.value.parallelGroup || undefined,
+		type: stageForm.value.type,
+		agentId: stageForm.value.agentId || null,
+		predecessors: stageForm.value.predecessors,
+		documentSchema
+	}
+	try {
+		if (editingStage.value) {
+			await api.updateTemplateStage(editingStage.value.id, payload)
+			toast.success('Etapa actualizada')
+		} else {
+			await api.createTemplateStage({ templateId: activeTemplate.value.id, ...payload })
+			toast.success('Etapa creada')
+		}
+		showStageForm.value = false
+		editingStage.value = null
+		const prevId = activeTemplate.value.id
+		await fetchAll()
+		activeTemplate.value = templates.value.find((t) => t.id === prevId) ?? null
+	} catch (e: any) {
+		toast.error(e.message)
+	}
 }
 
 function togglePredecessor(stageId: string) {
-  const idx = stageForm.value.predecessors.indexOf(stageId)
-  if (idx >= 0) stageForm.value.predecessors.splice(idx, 1)
-  else stageForm.value.predecessors.push(stageId)
+	const idx = stageForm.value.predecessors.indexOf(stageId)
+	if (idx >= 0) stageForm.value.predecessors.splice(idx, 1)
+	else stageForm.value.predecessors.push(stageId)
 }
 
 async function deleteStage(stage: any) {
-  try {
-    await api.deleteTemplateStage(stage.id)
-    toast.success('Etapa eliminada')
-    const prevId = activeTemplate.value.id
-    await fetchAll()
-    activeTemplate.value = templates.value.find(t => t.id === prevId) ?? null
-  } catch (e: any) {
-    toast.error(e.message)
-  }
+	try {
+		await api.deleteTemplateStage(stage.id)
+		toast.success('Etapa eliminada')
+		const prevId = activeTemplate.value.id
+		await fetchAll()
+		activeTemplate.value = templates.value.find((t) => t.id === prevId) ?? null
+	} catch (e: any) {
+		toast.error(e.message)
+	}
 }
 
 onMounted(fetchAll)
@@ -952,6 +1020,12 @@ onMounted(fetchAll)
           </p>
         </div>
 
+        <!-- Loading stage content -->
+        <div v-if="loadingStage" class="flex justify-center py-8">
+          <div class="animate-spin w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full" />
+        </div>
+
+        <template v-else>
         <!-- ── Tasks ── -->
         <div class="mb-5">
           <div class="flex items-center justify-between mb-2">
@@ -1118,6 +1192,7 @@ onMounted(fetchAll)
           </div>
           <p v-else-if="!showDocForm" class="text-xs text-base-content/40 italic">Sin documentos</p>
         </div>
+        </template>
       </div>
 
       <div v-if="!loading && activeTab === 'templates'" class="flex gap-5 flex-1 min-h-0">

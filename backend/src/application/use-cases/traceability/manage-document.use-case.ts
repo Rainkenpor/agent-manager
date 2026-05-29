@@ -58,12 +58,16 @@ export class DeleteDocumentUseCase {
 export class GetDocumentUseCase {
 	constructor(private readonly repo: ITraceabilityRepository) {}
 
-	async execute(data: { id?: string; traceabilityId?: string }) {
+	async execute(data: { id?: string; traceabilityId?: string; stageId?: string }) {
 		try {
 			if (data.id) {
 				const doc = await this.repo.getDocument(data.id)
 				if (!doc) return { success: false as const, error: 'Document not found' }
 				return { success: true as const, data: doc }
+			}
+			if (data.stageId) {
+				const docs = await this.repo.getDocumentByStageId(data.stageId)
+				return { success: true as const, data: docs }
 			}
 			if (data.traceabilityId) {
 				const docs = await this.repo.getDocumentByTraceabilityId(data.traceabilityId)

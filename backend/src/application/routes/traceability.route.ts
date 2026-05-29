@@ -1,6 +1,6 @@
 import { registry } from '@applicationService/registry.service.js'
-import { container } from '../container.js'
 import { z } from 'zod'
+import { container } from '../container.js'
 
 const documentSectionSchema = z.object({
 	name: z.string().min(1).describe('Nombre de la sección requerida en el documento'),
@@ -68,9 +68,12 @@ const createTaskSchema = z.object({
 	description: z.string().optional(),
 	type: z.enum(['task', 'bug']).optional(),
 	status: z.enum(['todo', 'in-progress', 'done', 'blocked']).optional(),
-	jiraIssueId: z.string().optional().describe(
-		'ID del issue de Jira (e.g. "PROJ-123"). Si se indica, crea automáticamente un event listener que monitorea el issue y actualiza la tarea a "done" cuando el estado del issue sea "Finalizada".'
-	)
+	jiraIssueId: z
+		.string()
+		.optional()
+		.describe(
+			'ID del issue de Jira (e.g. "PROJ-123"). Si se indica, crea automáticamente un event listener que monitorea el issue y actualiza la tarea a "done" cuando el estado del issue sea "Finalizada".'
+		)
 })
 
 const updateTaskSchema = z.object({
@@ -365,6 +368,19 @@ export function registerTraceabilityRoutes(): void {
 
 	registry.register({
 		useBy: ['server', 'mcp'],
+		method: 'GET',
+		path: '/api/traceability/stages/:stageId/tasks',
+		toolName: 'get_traceability_tasks',
+		toolDescription:
+			'Obtiene todas las tareas (con su tipo y estado) de una etapa de trazabilidad por su stageId. Usa get_traceability para obtener el stageId de la etapa.',
+		inputSchema: z.object({ stageId: z.string().describe('ID de la etapa') }).shape,
+		requiresAuth: true,
+		requiredPermission: { resource: 'traceability', action: 'read' },
+		handler: async ({ input }) => container.getTasksByStageUseCase.execute(input.stageId)
+	})
+
+	registry.register({
+		useBy: ['server', 'mcp'],
 		method: 'DELETE',
 		path: '/api/traceability/tasks/:id',
 		toolName: 'delete_traceability_task',
@@ -396,6 +412,19 @@ export function registerTraceabilityRoutes(): void {
 
 	registry.register({
 		useBy: ['server', 'mcp'],
+		method: 'GET',
+		path: '/api/traceability/stages/:stageId/links',
+		toolName: 'get_traceability_links',
+		toolDescription:
+			'Obtiene todos los links de una etapa de trazabilidad por su stageId (tickets de Jira, páginas de Confluence, PRs, etc.). Usa get_traceability para obtener el stageId de la etapa.',
+		inputSchema: z.object({ stageId: z.string().describe('ID de la etapa') }).shape,
+		requiresAuth: true,
+		requiredPermission: { resource: 'traceability', action: 'read' },
+		handler: async ({ input }) => container.getLinksByStageUseCase.execute(input.stageId)
+	})
+
+	registry.register({
+		useBy: ['server', 'mcp'],
 		method: 'DELETE',
 		path: '/api/traceability/links/:id',
 		toolName: 'delete_traceability_link',
@@ -407,6 +436,16 @@ export function registerTraceabilityRoutes(): void {
 	})
 
 	// ─── Documents (HTTP + MCP) ──────────────────────────────────────────────────
+
+	registry.register({
+		useBy: ['server'],
+		method: 'GET',
+		path: '/api/traceability/stages/:stageId/documents',
+		inputSchema: z.object({ stageId: z.string() }).shape,
+		requiresAuth: true,
+		requiredPermission: { resource: 'traceability', action: 'read' },
+		handler: async ({ input }) => container.getDocumentUseCase.execute({ stageId: input.stageId })
+	})
 
 	registry.register({
 		useBy: ['server', 'mcp'],
@@ -430,13 +469,16 @@ export function registerTraceabilityRoutes(): void {
 		method: 'GET',
 		path: '/api/traceability/documents/:id',
 		toolName: 'get_traceability_document',
-		toolDescription: 'Obtiene el contenido completo de un documento de una etapa de trazabilidad por su ID.',
+		toolDescription:
+			'Obtiene documentos de una etapa de trazabilidad. Con id devuelve el contenido completo de un documento; ' +
+			'con stageId devuelve los documentos activos de esa etapa; con traceabilityId devuelve los documentos de toda la trazabilidad.',
 		inputSchema: z
 			.object({
 				id: z.string().optional().describe('ID del documento'),
+				stageId: z.string().optional().describe('ID de la etapa (alternativa a id)'),
 				traceabilityId: z.string().optional().describe('ID de la trazabilidad (alternativa a id)')
 			})
-			.refine((data) => data.id || data.traceabilityId, 'Se requiere id o traceabilityId').shape,
+			.refine((data) => data.id || data.stageId || data.traceabilityId, 'Se requiere id, stageId o traceabilityId').shape,
 		requiresAuth: true,
 		requiredPermission: { resource: 'traceability', action: 'read' },
 		handler: async ({ input }) => container.getDocumentUseCase.execute(input)
@@ -476,8 +518,7 @@ export function registerTraceabilityRoutes(): void {
 		method: 'GET',
 		path: '/api/traceability/documents/:id/history',
 		toolName: 'get_traceability_document_history',
-		toolDescription:
-			'Devuelve todas las versiones (activas e inactivas) de un documento, ordenadas de más reciente a más antigua.',
+		toolDescription: 'Devuelve todas las versiones (activas e inactivas) de un documento, ordenadas de más reciente a más antigua.',
 		inputSchema: z.object({ id: z.string().describe('ID de cualquier versión del documento') }).shape,
 		requiresAuth: true,
 		requiredPermission: { resource: 'traceability', action: 'read' },

@@ -1,27 +1,27 @@
 import type {
-	TraceabilityTemplate,
-	TemplateStage,
-	DocumentSection,
-	Traceability,
-	TraceabilitySummary,
-	TraceabilityStage,
-	TraceabilityTask,
-	TraceabilityLink,
-	TraceabilityDocument,
-	UserEffort,
-	MyStage,
-	CreateTemplateDTO,
-	UpdateTemplateDTO,
-	CreateTemplateStageDTO,
-	UpdateTemplateStageDTO,
-	CreateTraceabilityDTO,
-	UpdateTraceabilityDTO,
-	CreateTaskDTO,
-	UpdateTaskDTO,
-	CreateLinkDTO,
 	CreateDocumentDTO,
+	CreateLinkDTO,
+	CreateTaskDTO,
+	CreateTemplateDTO,
+	CreateTemplateStageDTO,
+	CreateTraceabilityDTO,
+	DocumentSection,
+	MyStage,
+	StageStatus,
+	TemplateStage,
+	Traceability,
+	TraceabilityDocument,
+	TraceabilityLink,
+	TraceabilityStage,
+	TraceabilitySummary,
+	TraceabilityTask,
+	TraceabilityTemplate,
 	UpdateDocumentDTO,
-	StageStatus
+	UpdateTaskDTO,
+	UpdateTemplateDTO,
+	UpdateTemplateStageDTO,
+	UpdateTraceabilityDTO,
+	UserEffort
 } from '../entities/traceability.entity.js'
 
 export interface ITraceabilityRepository {
@@ -64,10 +64,12 @@ export interface ITraceabilityRepository {
 	createTask(data: CreateTaskDTO): Promise<TraceabilityTask>
 	updateTask(data: UpdateTaskDTO): Promise<TraceabilityTask | null>
 	deleteTask(id: string): Promise<void>
+	getTasksByStageId(stageId: string): Promise<TraceabilityTask[]>
 
 	// ─── Links ───────────────────────────────────────────────────────────────────
 	createLink(data: CreateLinkDTO): Promise<TraceabilityLink>
 	deleteLink(id: string): Promise<void>
+	getLinksByStageId(stageId: string): Promise<TraceabilityLink[]>
 
 	// ─── Documents ───────────────────────────────────────────────────────────────
 	createDocument(data: CreateDocumentDTO): Promise<TraceabilityDocument>
@@ -76,4 +78,5 @@ export interface ITraceabilityRepository {
 	getDocument(id: string): Promise<TraceabilityDocument | null>
 	getDocumentHistory(id: string): Promise<TraceabilityDocument[]>
 	getDocumentByTraceabilityId(traceabilityId: string): Promise<TraceabilityDocument[]>
+	getDocumentByStageId(stageId: string): Promise<TraceabilityDocument[]>
 }

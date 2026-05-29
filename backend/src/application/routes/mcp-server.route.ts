@@ -233,11 +233,17 @@ export function registerMcpServerRoutes(): void {
 				if (!server) return res.status(404).json({ error: 'MCP server not found' })
 
 				if (server.type === 'local') {
-					// Para el MCP local, retornar las tools del registry
+					// Para el MCP local, retornar las tools del registry.
+					// El inputSchema registrado es un ZodRawShape; se convierte a JSON Schema para que el frontend pueda renderizar los parámetros.
 					const tools = registry
 						.getRoutes()
 						.filter((r) => r.useBy?.includes('mcp') && r.toolName && r.toolDescription)
-						.map((r) => ({ toolName: r.toolName!, description: r.toolDescription!, inputSchema: r.inputSchema ?? {} }))
+						.map((r) => {
+							const zodSchema = r.inputSchema instanceof z.ZodObject ? r.inputSchema : z.object((r.inputSchema ?? {}) as z.ZodRawShape)
+							const jsonSchema = z.toJSONSchema(zodSchema) as Record<string, unknown>
+							delete jsonSchema.$schema
+							return { toolName: r.toolName!, description: r.toolDescription!, inputSchema: jsonSchema }
+						})
 					return { success: true, data: tools }
 				}
 

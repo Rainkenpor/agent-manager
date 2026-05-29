@@ -1,49 +1,49 @@
 import { AppDataSource } from '@infra/db/database.js'
 import {
-	TraceabilityTemplateEntity,
+	AgentEntity,
 	TemplateStageEntity,
 	TemplateStagePredecessorEntity,
+	TraceabilityDocumentEntity,
 	TraceabilityEntity,
+	TraceabilityLinkEntity,
+	TraceabilityParticipantEntity,
+	TraceabilityParticipantStageChatEntity,
 	TraceabilityStageEntity,
 	TraceabilityStagePredecessorEntity,
 	TraceabilityTaskEntity,
-	TraceabilityLinkEntity,
-	TraceabilityDocumentEntity,
-	AgentEntity,
+	TraceabilityTemplateEntity,
 	UserEntity,
-	UserRoleEntity,
-	TraceabilityParticipantEntity,
-	TraceabilityParticipantStageChatEntity
+	UserRoleEntity
 } from '@infra/db/entities.js'
 import { In, Not } from 'typeorm'
 import { v4 as uuidv4 } from 'uuid'
-import type { ITraceabilityRepository } from '../../domain/repositories/traceability.repository.js'
 import type {
-	TraceabilityTemplate,
-	TemplateStage,
-	DocumentSection,
-	Traceability,
-	TraceabilitySummary,
-	TraceabilityStage,
-	TraceabilityTask,
-	TraceabilityLink,
-	TraceabilityDocument,
-	UserEffort,
-	MyStage,
-	TraceabilityStatus,
-	CreateTemplateDTO,
-	UpdateTemplateDTO,
-	CreateTemplateStageDTO,
-	UpdateTemplateStageDTO,
-	CreateTraceabilityDTO,
-	UpdateTraceabilityDTO,
-	CreateTaskDTO,
-	UpdateTaskDTO,
-	CreateLinkDTO,
 	CreateDocumentDTO,
+	CreateLinkDTO,
+	CreateTaskDTO,
+	CreateTemplateDTO,
+	CreateTemplateStageDTO,
+	CreateTraceabilityDTO,
+	DocumentSection,
+	MyStage,
+	StageStatus,
+	TemplateStage,
+	Traceability,
+	TraceabilityDocument,
+	TraceabilityLink,
+	TraceabilityStage,
+	TraceabilityStatus,
+	TraceabilitySummary,
+	TraceabilityTask,
+	TraceabilityTemplate,
 	UpdateDocumentDTO,
-	StageStatus
+	UpdateTaskDTO,
+	UpdateTemplateDTO,
+	UpdateTemplateStageDTO,
+	UpdateTraceabilityDTO,
+	UserEffort
 } from '../../domain/entities/traceability.entity.js'
+import type { ITraceabilityRepository } from '../../domain/repositories/traceability.repository.js'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -380,9 +380,6 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 	async findById(id: string): Promise<Traceability | null> {
 		const tracRepo = AppDataSource.getRepository(TraceabilityEntity)
 		const tsRepo = AppDataSource.getRepository(TraceabilityStageEntity)
-		const taskRepo = AppDataSource.getRepository(TraceabilityTaskEntity)
-		const linkRepo = AppDataSource.getRepository(TraceabilityLinkEntity)
-		const docRepo = AppDataSource.getRepository(TraceabilityDocumentEntity)
 		const predRepo = AppDataSource.getRepository(TraceabilityStagePredecessorEntity)
 
 		const t = await tracRepo.findOneBy({ id })
@@ -391,12 +388,7 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 		const stages = await tsRepo.findBy({ traceabilityId: id })
 		const stageIds = stages.map((s) => s.id)
 
-		const [allTasks, allLinks, allDocuments, allPredecessors] = await Promise.all([
-			stageIds.length ? taskRepo.findBy({ stageId: In(stageIds) }) : Promise.resolve([]),
-			stageIds.length ? linkRepo.findBy({ stageId: In(stageIds) }) : Promise.resolve([]),
-			stageIds.length ? docRepo.findBy({ stageId: In(stageIds), active: true }) : Promise.resolve([]),
-			stageIds.length ? predRepo.findBy({ stageId: In(stageIds) }) : Promise.resolve([])
-		])
+		const [allPredecessors] = await Promise.all([stageIds.length ? predRepo.findBy({ stageId: In(stageIds) }) : Promise.resolve([])])
 
 		const stageList: TraceabilityStage[] = stages
 			.sort((a, b) => a.order - b.order)
@@ -415,9 +407,6 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 				status: s.status as StageStatus,
 				effortScore: s.effortScore ?? 5,
 				assignedUserId: s.assignedUserId ?? null,
-				tasks: allTasks.filter((tk) => tk.stageId === s.id) as TraceabilityTask[],
-				links: allLinks.filter((lk) => lk.stageId === s.id) as TraceabilityLink[],
-				documents: allDocuments.filter((d) => d.stageId === s.id) as TraceabilityDocument[],
 				createdAt: s.createdAt,
 				updatedAt: s.updatedAt
 			}))
@@ -550,9 +539,6 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 				status: 'pending',
 				effortScore: ts.effortScore ?? 5,
 				assignedUserId,
-				tasks: [],
-				links: [],
-				documents: [],
 				createdAt: now,
 				updatedAt: now
 			})
@@ -646,9 +632,6 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 			status: newStatus,
 			effortScore: s.effortScore ?? 5,
 			assignedUserId: s.assignedUserId ?? null,
-			tasks: tasks as TraceabilityTask[],
-			links: links as TraceabilityLink[],
-			documents: documents as TraceabilityDocument[],
 			createdAt: s.createdAt,
 			updatedAt: now
 		}
@@ -657,8 +640,6 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 	async findReadyAgentStages(completedStageId: string): Promise<Array<TraceabilityStage & { agentSlug: string; agentContent: string }>> {
 		const tsRepo = AppDataSource.getRepository(TraceabilityStageEntity)
 		const tspRepo = AppDataSource.getRepository(TraceabilityStagePredecessorEntity)
-		const taskRepo = AppDataSource.getRepository(TraceabilityTaskEntity)
-		const linkRepo = AppDataSource.getRepository(TraceabilityLinkEntity)
 		const agentRepo = AppDataSource.getRepository(AgentEntity)
 		const userRepo = AppDataSource.getRepository(UserEntity)
 
@@ -697,8 +678,6 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 			const agentRow = await agentRepo.findOneBy({ id: stage.agentId })
 			if (!agentRow || !agentRow.isActive) continue
 
-			const [stageTasks, stageLinks] = await Promise.all([taskRepo.findBy({ stageId: stage.id }), linkRepo.findBy({ stageId: stage.id })])
-
 			result.push({
 				id: stage.id,
 				traceabilityId: stage.traceabilityId,
@@ -715,9 +694,6 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 				assignedUserId: stage.assignedUserId ?? null,
 				predecessors: predIds,
 				nextStages: nextStages as any,
-				tasks: stageTasks as TraceabilityTask[],
-				links: stageLinks as TraceabilityLink[],
-				documents: [],
 				createdAt: stage.createdAt,
 				updatedAt: stage.updatedAt,
 				agentSlug: agentRow.slug,
@@ -765,6 +741,12 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 		await taskRepo.delete(id)
 	}
 
+	async getTasksByStageId(stageId: string): Promise<TraceabilityTask[]> {
+		const taskRepo = AppDataSource.getRepository(TraceabilityTaskEntity)
+		const rows = await taskRepo.findBy({ stageId })
+		return rows as TraceabilityTask[]
+	}
+
 	// ─── Links ───────────────────────────────────────────────────────────────────
 
 	async createLink(data: CreateLinkDTO): Promise<TraceabilityLink> {
@@ -785,6 +767,12 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 	async deleteLink(id: string): Promise<void> {
 		const linkRepo = AppDataSource.getRepository(TraceabilityLinkEntity)
 		await linkRepo.delete(id)
+	}
+
+	async getLinksByStageId(stageId: string): Promise<TraceabilityLink[]> {
+		const linkRepo = AppDataSource.getRepository(TraceabilityLinkEntity)
+		const rows = await linkRepo.findBy({ stageId })
+		return rows as TraceabilityLink[]
 	}
 
 	// ─── Documents ───────────────────────────────────────────────────────────────
@@ -875,7 +863,20 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 		const stages = await tsRepo.findBy({ traceabilityId })
 		const stageIds = stages.map((s) => s.id)
 		if (!stageIds.length) return []
-		const rows = await docRepo.findBy({ stageId: In(stageIds), active: true })
+		const rows = await docRepo.find({ where: { stageId: In(stageIds), active: true }, order: { name: 'ASC' } })
+		//
+		return rows.map((m) => {
+			return {
+				...m,
+				active: undefined,
+				content: undefined
+			}
+		})
+	}
+
+	async getDocumentByStageId(stageId: string): Promise<TraceabilityDocument[]> {
+		const docRepo = AppDataSource.getRepository(TraceabilityDocumentEntity)
+		const rows = await docRepo.find({ where: { stageId, active: true }, order: { name: 'ASC' } })
 		return rows as TraceabilityDocument[]
 	}
 
@@ -915,9 +916,6 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 	async findStagesByUserId(userId: string): Promise<MyStage[]> {
 		const tsRepo = AppDataSource.getRepository(TraceabilityStageEntity)
 		const tracRepo = AppDataSource.getRepository(TraceabilityEntity)
-		const taskRepo = AppDataSource.getRepository(TraceabilityTaskEntity)
-		const linkRepo = AppDataSource.getRepository(TraceabilityLinkEntity)
-		const docRepo = AppDataSource.getRepository(TraceabilityDocumentEntity)
 		const predRepo = AppDataSource.getRepository(TraceabilityStagePredecessorEntity)
 
 		const stages = await tsRepo.findBy({ assignedUserId: userId })
@@ -932,12 +930,7 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 			const trac = tracMap.get(stage.traceabilityId)
 			if (!trac) continue
 
-			const [tasks, links, docs, preds] = await Promise.all([
-				taskRepo.findBy({ stageId: stage.id }),
-				linkRepo.findBy({ stageId: stage.id }),
-				docRepo.findBy({ stageId: stage.id, active: true }),
-				predRepo.findBy({ stageId: stage.id })
-			])
+			const [preds] = await Promise.all([predRepo.findBy({ stageId: stage.id })])
 
 			const predIds = preds.map((p) => p.predecessorStageId)
 			let predecessorsCompleted = true
@@ -961,9 +954,6 @@ export class TraceabilityRepository implements ITraceabilityRepository {
 				status: stage.status as StageStatus,
 				effortScore: stage.effortScore ?? 5,
 				assignedUserId: stage.assignedUserId ?? null,
-				tasks: tasks as TraceabilityTask[],
-				links: links as TraceabilityLink[],
-				documents: docs as TraceabilityDocument[],
 				createdAt: stage.createdAt,
 				updatedAt: stage.updatedAt,
 				traceabilityTitle: trac.title,

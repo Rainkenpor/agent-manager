@@ -4,50 +4,50 @@ import * as api from '@/api/api'
 import DocumentViewerModal from '@/components/DocumentViewerModal.vue'
 
 interface TraceabilityTask {
-  id: string
-  stageId: string
-  title: string
-  description?: string | null
-  type: 'task' | 'bug'
-  status: 'todo' | 'in-progress' | 'done' | 'blocked'
+	id: string
+	stageId: string
+	title: string
+	description?: string | null
+	type: 'task' | 'bug'
+	status: 'todo' | 'in-progress' | 'done' | 'blocked'
 }
 
 interface TraceabilityLink {
-  id: string
-  label: string
-  url: string
-  platform: string
+	id: string
+	label: string
+	url: string
+	platform: string
 }
 
 interface TraceabilityDocument {
-  id: string
-  name: string
+	id: string
+	name: string
 }
 
 interface TraceabilityStage {
-  id: string
-  name: string
-  status: 'pending' | 'active' | 'completed' | 'blocked' | 'in-review'
-  assignedUserId?: string | null
-  predecessors: string[]
-  tasks: TraceabilityTask[]
-  links: TraceabilityLink[]
-  documents: TraceabilityDocument[]
+	id: string
+	name: string
+	status: 'pending' | 'active' | 'completed' | 'blocked' | 'in-review'
+	assignedUserId?: string | null
+	predecessors: string[]
+	tasks: TraceabilityTask[]
+	links: TraceabilityLink[]
+	documents: TraceabilityDocument[]
 }
 
 interface LinkedTraceability {
-  id: string
-  title: string
-  status: 'active' | 'completed' | 'archived'
-  stages: TraceabilityStage[]
+	id: string
+	title: string
+	status: 'active' | 'completed' | 'archived'
+	stages: TraceabilityStage[]
 }
 
 const props = defineProps<{ conversationId: string; activeStageId?: string | null }>()
 
 const emit = defineEmits<{
-  close: []
-  loaded: [hasTraceability: boolean]
-  error: [message: string]
+	close: []
+	loaded: [hasTraceability: boolean]
+	error: [message: string]
 }>()
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -64,136 +64,165 @@ const viewingDocumentId = ref<string | null>(null)
 // ── Lookups ───────────────────────────────────────────────────────────────────
 
 const stageStatusLabel: Record<string, string> = {
-  pending: 'Pendiente',
-  active: 'Activa',
-  completed: 'Completada',
-  blocked: 'Bloqueada',
-  'in-review': 'En revisión',
+	pending: 'Pendiente',
+	active: 'Activa',
+	completed: 'Completada',
+	blocked: 'Bloqueada',
+	'in-review': 'En revisión'
 }
 
 const stageStatusClass: Record<string, string> = {
-  pending: 'bg-base-100 text-base-content',
-  active: 'bg-indigo-500/20 text-indigo-300',
-  completed: 'bg-green-500/20 text-green-300',
-  blocked: 'bg-red-500/20 text-red-300',
-  'in-review': 'bg-amber-500/20 text-amber-300',
+	pending: 'bg-base-100 text-base-content',
+	active: 'bg-indigo-500/20 text-indigo-300',
+	completed: 'bg-green-500/20 text-green-300',
+	blocked: 'bg-red-500/20 text-red-300',
+	'in-review': 'bg-amber-500/20 text-amber-300'
 }
 
 const platformIcon: Record<string, string> = {
-  jira: '🔷',
-  confluence: '📄',
-  github: '🐙',
-  gitlab: '🦊',
-  generic: '🔗',
+	jira: '🔷',
+	confluence: '📄',
+	github: '🐙',
+	gitlab: '🦊',
+	generic: '🔗'
 }
 
 // ── DAG topological sort ──────────────────────────────────────────────────────
 
 function topoSort(stages: TraceabilityStage[]): TraceabilityStage[] {
-  const result: TraceabilityStage[] = []
-  const visited = new Set<string>()
-  const map = new Map(stages.map((s) => [s.id, s]))
-  function visit(s: TraceabilityStage) {
-    if (visited.has(s.id)) return
-    visited.add(s.id)
-    for (const pid of s.predecessors) {
-      const pred = map.get(pid)
-      if (pred) visit(pred)
-    }
-    result.push(s)
-  }
-  for (const s of stages) visit(s)
-  return result
+	const result: TraceabilityStage[] = []
+	const visited = new Set<string>()
+	const map = new Map(stages.map((s) => [s.id, s]))
+	function visit(s: TraceabilityStage) {
+		if (visited.has(s.id)) return
+		visited.add(s.id)
+		for (const pid of s.predecessors) {
+			const pred = map.get(pid)
+			if (pred) visit(pred)
+		}
+		result.push(s)
+	}
+	for (const s of stages) visit(s)
+	return result
 }
 
 // ── Data loading ──────────────────────────────────────────────────────────────
 
-async function load(conversationId: string) {
-  loading.value = true
-  linkedTraceabilities.value = []
-  expandedTraceabilities.value = new Set()
-  expandedStages.value = new Set()
-  try {
-    const res = await api.getTraceabilityByConversation(conversationId)
-    linkedTraceabilities.value = Array.isArray(res.data) ? res.data : res.data ? [res.data] : []
-    if (linkedTraceabilities.value.length > 0) {
-      expandedTraceabilities.value = new Set([linkedTraceabilities.value[0].id])
-      if (props.activeStageId) expandedStages.value = new Set([props.activeStageId])
-    }
-    emit('loaded', linkedTraceabilities.value.length > 0)
-  } catch {
-    linkedTraceabilities.value = []
-    emit('loaded', false)
-  } finally {
-    loading.value = false
-  }
+async function hydrateStage(stage: TraceabilityStage) {
+	const [tasks, links, documents] = await Promise.all([
+		api.getStageTasks(stage.id),
+		api.getStageLinks(stage.id),
+		api.getStageDocuments(stage.id)
+	])
+	stage.tasks = tasks.data ?? []
+	stage.links = links.data ?? []
+	stage.documents = documents.data ?? []
 }
 
-watch(() => props.conversationId, (id) => { if (id) load(id) }, { immediate: true })
-watch(() => props.activeStageId, (id) => {
-  if (id) {
-    expandedStages.value = new Set([...expandedStages.value, id])
-  }
-})
+async function load(conversationId: string) {
+	loading.value = true
+	linkedTraceabilities.value = []
+	expandedTraceabilities.value = new Set()
+	expandedStages.value = new Set()
+	try {
+		const res = await api.getTraceabilityByConversation(conversationId)
+		const tracs: LinkedTraceability[] = Array.isArray(res.data) ? res.data : res.data ? [res.data] : []
+		for (const trac of tracs) {
+			for (const stage of trac.stages) {
+				stage.tasks = []
+				stage.links = []
+				stage.documents = []
+			}
+		}
+		linkedTraceabilities.value = tracs
+		if (linkedTraceabilities.value.length > 0) {
+			expandedTraceabilities.value = new Set([linkedTraceabilities.value[0].id])
+			if (props.activeStageId) expandedStages.value = new Set([props.activeStageId])
+		}
+		emit('loaded', linkedTraceabilities.value.length > 0)
+		await Promise.all(linkedTraceabilities.value.flatMap((trac) => trac.stages.map((stage) => hydrateStage(stage))))
+	} catch {
+		linkedTraceabilities.value = []
+		emit('loaded', false)
+	} finally {
+		loading.value = false
+	}
+}
+
+watch(
+	() => props.conversationId,
+	(id) => {
+		if (id) load(id)
+	},
+	{ immediate: true }
+)
+watch(
+	() => props.activeStageId,
+	(id) => {
+		if (id) {
+			expandedStages.value = new Set([...expandedStages.value, id])
+		}
+	}
+)
 
 // ── Tasks ─────────────────────────────────────────────────────────────────────
 
 async function toggleTask(task: TraceabilityTask) {
-  if (togglingTaskId.value) return
-  togglingTaskId.value = task.id
-  const newStatus: TraceabilityTask['status'] = task.status === 'done' ? 'todo' : 'done'
-  try {
-    await api.updateTraceabilityTask(task.id, { status: newStatus })
-    for (const trac of linkedTraceabilities.value) {
-      for (const stage of trac.stages) {
-        const idx = stage.tasks.findIndex((t) => t.id === task.id)
-        if (idx !== -1) {
-          stage.tasks[idx] = { ...stage.tasks[idx], status: newStatus }
-          break
-        }
-      }
-    }
-  } catch (e: any) {
-    emit('error', e.message)
-  } finally {
-    togglingTaskId.value = null
-  }
+	if (togglingTaskId.value) return
+	togglingTaskId.value = task.id
+	const newStatus: TraceabilityTask['status'] = task.status === 'done' ? 'todo' : 'done'
+	try {
+		await api.updateTraceabilityTask(task.id, { status: newStatus })
+		for (const trac of linkedTraceabilities.value) {
+			for (const stage of trac.stages) {
+				const idx = stage.tasks.findIndex((t) => t.id === task.id)
+				if (idx !== -1) {
+					stage.tasks[idx] = { ...stage.tasks[idx], status: newStatus }
+					break
+				}
+			}
+		}
+	} catch (e: any) {
+		emit('error', e.message)
+	} finally {
+		togglingTaskId.value = null
+	}
 }
 
 // ── Traceabilities ────────────────────────────────────────────────────────────
 
 function toggleTraceability(tracId: string) {
-  if (expandedTraceabilities.value.has(tracId)) expandedTraceabilities.value.delete(tracId)
-  else expandedTraceabilities.value.add(tracId)
-  expandedTraceabilities.value = new Set(expandedTraceabilities.value)
+	if (expandedTraceabilities.value.has(tracId)) expandedTraceabilities.value.delete(tracId)
+	else expandedTraceabilities.value.add(tracId)
+	expandedTraceabilities.value = new Set(expandedTraceabilities.value)
 }
 
 // ── Stages ────────────────────────────────────────────────────────────────────
 
 function toggleStage(stageId: string) {
-  if (expandedStages.value.has(stageId)) expandedStages.value.delete(stageId)
-  else expandedStages.value.add(stageId)
-  expandedStages.value = new Set(expandedStages.value)
+	if (expandedStages.value.has(stageId)) expandedStages.value.delete(stageId)
+	else expandedStages.value.add(stageId)
+	expandedStages.value = new Set(expandedStages.value)
 }
 
 // ── Documents ─────────────────────────────────────────────────────────────────
 
 function openDocument(doc: TraceabilityDocument) {
-  viewingDocumentId.value = doc.id
+	viewingDocumentId.value = doc.id
 }
 
 function onDocumentSaved(savedDoc: { id: string; name: string }) {
-  for (const trac of linkedTraceabilities.value) {
-    for (const stage of trac.stages) {
-      const idx = stage.documents.findIndex((d) => d.id === viewingDocumentId.value || d.id === savedDoc.id)
-      if (idx !== -1) {
-        stage.documents[idx] = { id: savedDoc.id, name: savedDoc.name }
-        viewingDocumentId.value = savedDoc.id
-        return
-      }
-    }
-  }
-  viewingDocumentId.value = savedDoc.id
+	for (const trac of linkedTraceabilities.value) {
+		for (const stage of trac.stages) {
+			const idx = stage.documents.findIndex((d) => d.id === viewingDocumentId.value || d.id === savedDoc.id)
+			if (idx !== -1) {
+				stage.documents[idx] = { id: savedDoc.id, name: savedDoc.name }
+				viewingDocumentId.value = savedDoc.id
+				return
+			}
+		}
+	}
+	viewingDocumentId.value = savedDoc.id
 }
 </script>
 

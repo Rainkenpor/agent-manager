@@ -147,9 +147,6 @@ export interface TraceabilityStage {
 	status: StageStatus
 	effortScore: number
 	assignedUserId?: string | null
-	tasks: TraceabilityTask[]
-	links: TraceabilityLink[]
-	documents: TraceabilityDocument[]
 	createdAt: string
 	updatedAt: string
 }

@@ -1,8 +1,8 @@
-import type { ITraceabilityRepository } from '@domain/repositories/traceability.repository.js'
-import type { IEventListenerRepository } from '@domain/repositories/event-listener.repository.js'
 import type { CreateTaskDTO, UpdateTaskDTO } from '@domain/entities/traceability.entity.js'
-import { TraceabilityAgentTriggerService } from '@infra/service/traceability-agent-trigger.service.js'
-import { EventListenerExecutorService } from '@infra/service/event-listener-executor.service.js'
+import type { IEventListenerRepository } from '@domain/repositories/event-listener.repository.js'
+import type { ITraceabilityRepository } from '@domain/repositories/traceability.repository.js'
+import type { EventListenerExecutorService } from '@infra/service/event-listener-executor.service.js'
+import type { TraceabilityAgentTriggerService } from '@infra/service/traceability-agent-trigger.service.js'
 
 export class CreateTaskUseCase {
 	constructor(
@@ -110,6 +110,19 @@ export class DeleteTaskUseCase {
 				this.triggerService.checkAndTrigger(stageId).catch(console.error)
 			}
 			return { success: true as const, data: { stage } }
+		} catch (error) {
+			return { success: false as const, error: error instanceof Error ? error.message : 'Unknown error' }
+		}
+	}
+}
+
+export class GetTasksByStageUseCase {
+	constructor(private readonly repo: ITraceabilityRepository) {}
+
+	async execute(stageId: string) {
+		try {
+			const tasks = await this.repo.getTasksByStageId(stageId)
+			return { success: true as const, data: tasks }
 		} catch (error) {
 			return { success: false as const, error: error instanceof Error ? error.message : 'Unknown error' }
 		}
