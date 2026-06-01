@@ -12,41 +12,39 @@ const themeStore = useThemeStore()
 const appVersion = __APP_VERSION__
 
 type NavLink = {
-	to: string
-	label: string
-	icon: string
-	resources: string[] | null
-	accessResource?: string
+  to: string
+  label: string
+  icon: string
+  resources: string[] | null
+  accessResource?: string
 }
 
 const allNavLinks: NavLink[] = [
-	{ to: '/', label: 'Home', icon: 'mdi-home', resources: null },
-	{ to: '/chat', label: 'Chat', icon: 'mdi-chat', resources: ['chat'] },
-	{ to: '/agentes', label: 'Agentes', icon: 'mdi-robot', resources: ['agents', 'governance'] },
-	{
-		to: '/gobernanza/sugerencias',
-		label: 'Sugerencias de gobernanza',
-		icon: 'mdi-lightbulb-on-outline',
-		resources: null,
-		accessResource: 'governance_suggestion'
-	},
-	{ to: '/mcps', label: 'MCPs', icon: 'mdi-server', resources: ['mcp_servers', 'mcp_credentials'] },
-	{ to: '/automatizacion', label: 'Automatización', icon: 'mdi-webhook', resources: ['hook_servers', 'event_listeners'] },
-	{ to: '/traceability', label: 'Trazabilidad', icon: 'mdi-sitemap', resources: ['traceability'] },
-	{ to: '/admin', label: 'Admin', icon: 'mdi-shield-account', resources: ['users', 'roles'] },
-	{ to: '/config', label: 'Configuración', icon: 'mdi-cog-transfer', resources: ['users'] }
+  { to: '/', label: 'Home', icon: 'mdi-home', resources: null },
+  { to: '/chat', label: 'Chat', icon: 'mdi-chat', resources: ['chat'] },
+  { to: '/agentes', label: 'Agentes', icon: 'mdi-robot', resources: ['agents', 'governance'] },
+  {
+    to: '/gobernanza',
+    label: 'Gobernanza',
+    icon: 'mdi-shield-check',
+    resources: ['governance', 'governance_suggestion']
+  },
+  { to: '/mcps', label: 'MCPs', icon: 'mdi-server', resources: ['mcp_servers', 'hook_servers', 'event_listeners'] },
+  { to: '/traceability', label: 'Trazabilidad', icon: 'mdi-sitemap', resources: ['traceability'] },
+  { to: '/admin', label: 'Admin', icon: 'mdi-shield-account', resources: ['users', 'roles', 'mcp_credentials'] },
+  { to: '/config', label: 'Configuración', icon: 'mdi-cog-transfer', resources: ['users'] }
 ]
 
 const navLinks = computed(() =>
-	allNavLinks.filter((l) => {
-		if (l.accessResource) return auth.hasResourceAccess(l.accessResource)
-		return l.resources === null || auth.hasAnyResourceManageAccess(l.resources)
-	})
+  allNavLinks.filter((l) => {
+    if (l.accessResource) return auth.hasResourceAccess(l.accessResource)
+    return l.resources === null || auth.hasAnyResourceManageAccess(l.resources)
+  })
 )
 
 function logout() {
-	auth.logout()
-	router.push('/login')
+  auth.logout()
+  router.push('/login')
 }
 </script>
 

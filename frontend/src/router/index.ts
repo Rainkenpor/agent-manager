@@ -40,22 +40,22 @@ const router = createRouter({
 					meta: { resources: ['agents', 'governance'] }
 				},
 				{
-					path: 'gobernanza/sugerencias',
-					name: 'governance-suggestions',
-					component: () => import('@/views/GovernanceSuggestionsView.vue'),
-					meta: { resourceAccess: 'governance_suggestion' }
+					path: 'gobernanza',
+					name: 'gobernanza',
+					component: () => import('@/views/GovernanceView.vue'),
+					meta: { resources: ['governance', 'governance_suggestion'] }
 				},
 				{
 					path: 'mcps',
 					name: 'mcps',
 					component: () => import('@/views/McpHubView.vue'),
-					meta: { resources: ['mcp_servers', 'mcp_credentials'] }
+					meta: { resources: ['mcp_servers', 'hook_servers', 'event_listeners'] }
 				},
 				{
 					path: 'automatizacion',
 					name: 'automatizacion',
 					component: () => import('@/views/AutomatizacionView.vue'),
-					meta: { resources: ['hook_servers', 'event_listeners'] }
+					meta: { resources: [] }
 				},
 				{
 					path: 'traceability',
@@ -67,13 +67,13 @@ const router = createRouter({
 					path: 'admin',
 					name: 'admin',
 					component: () => import('@/views/AdminView.vue'),
-					meta: { resources: ['users', 'roles', 'llm_tokens'] }
+					meta: { resources: ['users', 'roles', 'mcp_credentials'] }
 				},
 				{
 					path: 'config',
 					name: 'config',
 					component: () => import('@/views/ConfigView.vue'),
-					meta: { resource: 'users' }
+					meta: { resource: ['users', 'llm_tokens'] }
 				},
 				// Redirects for backward compatibility
 				{ path: 'agents', redirect: '/agentes' },

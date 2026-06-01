@@ -26,25 +26,25 @@ const statsLoading = ref(false)
 // ── Computed ──────────────────────────────────────────────────────────────────
 
 const greeting = computed(() => {
-	const h = new Date().getHours()
-	if (h < 6) return 'Buenas noches'
-	if (h < 12) return 'Buenos días'
-	if (h < 19) return 'Buenas tardes'
-	return 'Buenas noches'
+  const h = new Date().getHours()
+  if (h < 6) return 'Buenas noches'
+  if (h < 12) return 'Buenos días'
+  if (h < 19) return 'Buenas tardes'
+  return 'Buenas noches'
 })
 
 const userName = computed(() => {
-	const u: any = auth.user
-	return u?.fullName || u?.name || u?.username || 'usuario'
+  const u: any = auth.user
+  return u?.fullName || u?.name || u?.username || 'usuario'
 })
 
 const today = computed(() => {
-	return new Date().toLocaleDateString('es-ES', {
-		weekday: 'long',
-		day: 'numeric',
-		month: 'long',
-		year: 'numeric'
-	})
+  return new Date().toLocaleDateString('es-ES', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  })
 })
 
 const latestVersion = computed(() => releaseNotes.value[0]?.version ?? null)
@@ -54,109 +54,109 @@ const recentConversations = computed(() => conversations.value.slice(0, 5))
 // ── Data fetching ─────────────────────────────────────────────────────────────
 
 async function fetchReleaseNotes() {
-	releaseNotesLoading.value = true
-	try {
-		const res = await api.getReleaseNotes()
-		releaseNotes.value = res.data ?? []
-	} catch (e: any) {
-		toast.error(e.message)
-	} finally {
-		releaseNotesLoading.value = false
-	}
+  releaseNotesLoading.value = true
+  try {
+    const res = await api.getReleaseNotes()
+    releaseNotes.value = res.data ?? []
+  } catch (e: any) {
+    toast.error(e.message)
+  } finally {
+    releaseNotesLoading.value = false
+  }
 }
 
 async function fetchStats() {
-	statsLoading.value = true
-	const tasks: Array<Promise<unknown>> = []
+  statsLoading.value = true
+  const tasks: Array<Promise<unknown>> = []
 
-	if (auth.hasResourceAccess('agents')) {
-		tasks.push(
-			api
-				.getAgents()
-				.then((r) => {
-					agentsCount.value = r.data?.length ?? 0
-				})
-				.catch(() => {
-					agentsCount.value = 0
-				})
-		)
-	}
-	if (auth.hasResourceAccess('mcp_servers') || auth.hasResourceAccess('mcps')) {
-		tasks.push(
-			api
-				.getMcpServers()
-				.then((r) => {
-					mcpsCount.value = r.data?.length ?? 0
-				})
-				.catch(() => {
-					mcpsCount.value = 0
-				})
-		)
-	}
-	if (auth.hasResourceAccess('skills')) {
-		tasks.push(
-			api
-				.getSkills()
-				.then((r) => {
-					skillsCount.value = r.data?.length ?? 0
-				})
-				.catch(() => {
-					skillsCount.value = 0
-				})
-		)
-	}
-	if (auth.hasResourceAccess('governance_suggestion')) {
-		tasks.push(
-			api
-				.getGovernanceSuggestions()
-				.then((r) => {
-					suggestionsCount.value = r.data?.length ?? 0
-				})
-				.catch(() => {
-					suggestionsCount.value = 0
-				})
-		)
-	}
-	tasks.push(
-		api
-			.getConversations()
-			.then((r) => {
-				conversations.value = r.data ?? []
-			})
-			.catch(() => {
-				conversations.value = []
-			})
-	)
+  if (auth.hasResourceAccess('agents')) {
+    tasks.push(
+      api
+        .getAgents()
+        .then((r) => {
+          agentsCount.value = r.data?.length ?? 0
+        })
+        .catch(() => {
+          agentsCount.value = 0
+        })
+    )
+  }
+  if (auth.hasResourceAccess('mcp_servers') || auth.hasResourceAccess('mcps')) {
+    tasks.push(
+      api
+        .getMcpServers()
+        .then((r) => {
+          mcpsCount.value = r.data?.length ?? 0
+        })
+        .catch(() => {
+          mcpsCount.value = 0
+        })
+    )
+  }
+  if (auth.hasResourceAccess('skills')) {
+    tasks.push(
+      api
+        .getSkills()
+        .then((r) => {
+          skillsCount.value = r.data?.length ?? 0
+        })
+        .catch(() => {
+          skillsCount.value = 0
+        })
+    )
+  }
+  if (auth.hasResourceAccess('governance_suggestion')) {
+    tasks.push(
+      api
+        .getGovernanceSuggestions()
+        .then((r) => {
+          suggestionsCount.value = r.data?.length ?? 0
+        })
+        .catch(() => {
+          suggestionsCount.value = 0
+        })
+    )
+  }
+  tasks.push(
+    api
+      .getConversations()
+      .then((r) => {
+        conversations.value = r.data ?? []
+      })
+      .catch(() => {
+        conversations.value = []
+      })
+  )
 
-	await Promise.all(tasks)
-	statsLoading.value = false
+  await Promise.all(tasks)
+  statsLoading.value = false
 }
 
 function toggleNote(version: string) {
-	expandedNote.value = expandedNote.value === version ? null : version
+  expandedNote.value = expandedNote.value === version ? null : version
 }
 
 function go(path: string) {
-	router.push(path)
+  router.push(path)
 }
 
 function formatRelative(iso: string | undefined): string {
-	if (!iso) return ''
-	const d = new Date(iso)
-	const diff = Date.now() - d.getTime()
-	const min = Math.floor(diff / 60000)
-	if (min < 1) return 'ahora'
-	if (min < 60) return `hace ${min} min`
-	const hr = Math.floor(min / 60)
-	if (hr < 24) return `hace ${hr} h`
-	const day = Math.floor(hr / 24)
-	if (day < 30) return `hace ${day} d`
-	return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
+  if (!iso) return ''
+  const d = new Date(iso)
+  const diff = Date.now() - d.getTime()
+  const min = Math.floor(diff / 60000)
+  if (min < 1) return 'ahora'
+  if (min < 60) return `hace ${min} min`
+  const hr = Math.floor(min / 60)
+  if (hr < 24) return `hace ${hr} h`
+  const day = Math.floor(hr / 24)
+  if (day < 30) return `hace ${day} d`
+  return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
 }
 
 onMounted(() => {
-	fetchReleaseNotes()
-	fetchStats()
+  fetchReleaseNotes()
+  fetchStats()
 })
 </script>
 
@@ -192,40 +192,6 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- Agentes stat -->
-      <button @click="go('/agentes')"
-        class="rounded-2xl p-5 bg-base-300 border border-base-300 hover:border-emerald-500/40 transition-colors text-left group">
-        <div class="flex items-start justify-between">
-          <span class="text-2xl">🤖</span>
-          <svg class="w-4 h-4 text-base-content/40 group-hover:text-emerald-400 transition-colors" fill="none"
-            viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-          </svg>
-        </div>
-        <p class="text-3xl font-bold text-base-content mt-3 font-mono">
-          <span v-if="agentsCount === null" class="text-base-content/70">···</span>
-          <span v-else>{{ agentsCount }}</span>
-        </p>
-        <p class="text-xs text-base-content/60 mt-1">Agentes disponibles</p>
-      </button>
-
-      <!-- MCPs stat -->
-      <button @click="go('/mcps')"
-        class="rounded-2xl p-5 bg-base-300 border border-base-300 hover:border-sky-500/40 transition-colors text-left group">
-        <div class="flex items-start justify-between">
-          <span class="text-2xl">🔌</span>
-          <svg class="w-4 h-4 text-base-content/40 group-hover:text-sky-400 transition-colors" fill="none"
-            viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-          </svg>
-        </div>
-        <p class="text-3xl font-bold text-base-content mt-3 font-mono">
-          <span v-if="mcpsCount === null" class="text-base-content/70">···</span>
-          <span v-else>{{ mcpsCount }}</span>
-        </p>
-        <p class="text-xs text-base-content/60 mt-1">Servidores MCP</p>
-      </button>
-
       <!-- Release notes (2x2) -->
       <div class="md:col-span-2 md:row-span-2 rounded-2xl bg-base-300 border border-base-300 flex flex-col">
         <header class="flex items-center justify-between gap-3 px-5 py-4 border-b border-base-300">
@@ -233,12 +199,12 @@ onMounted(() => {
             <span class="text-base">🚀</span>
             <h3 class="text-sm font-semibold text-base-content">Últimos cambios</h3>
           </div>
-          <span class="text-xs text-base-content/50 font-mono">doc/&lt;version&gt;.md</span>
         </header>
         <div v-if="releaseNotesLoading" class="flex-1 flex justify-center items-center py-10">
           <div class="animate-spin w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full" />
         </div>
-        <div v-else-if="!releaseNotes.length" class="flex-1 flex items-center justify-center px-4 py-10 text-xs text-base-content/50 italic text-center">
+        <div v-else-if="!releaseNotes.length"
+          class="flex-1 flex items-center justify-center px-4 py-10 text-xs text-base-content/50 italic text-center">
           Aún no hay archivos en la carpeta <code class="text-base-content/60">doc/</code>.
         </div>
         <ul v-else class="flex-1 overflow-y-auto divide-y divide-base-300">
@@ -251,7 +217,9 @@ onMounted(() => {
               <span class="flex-1 min-w-0 text-sm text-base-content truncate">
                 {{ note.title ?? `Versión ${note.version}` }}
               </span>
-              <span v-if="note.date" class="text-xs text-base-content/50 font-mono shrink-0 hidden sm:inline">{{ note.date }}</span>
+              <span v-if="note.date" class="text-xs text-base-content/50 font-mono shrink-0 hidden sm:inline">{{
+                note.date
+              }}</span>
               <svg class="w-4 h-4 text-base-content/50 shrink-0 transition-transform"
                 :class="expandedNote === note.version ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor">
@@ -259,21 +227,23 @@ onMounted(() => {
               </svg>
             </button>
             <div v-if="expandedNote === note.version" class="px-5 pb-4">
-              <pre class="text-xs text-base-content whitespace-pre-wrap font-mono leading-relaxed bg-base-300 rounded-lg p-3 border border-base-300">{{ note.content }}</pre>
+              <pre
+                class="text-xs text-base-content whitespace-pre-wrap font-mono leading-relaxed bg-base-300 rounded-lg p-3 border border-base-300">
+            {{ note.content }}</pre>
             </div>
           </li>
         </ul>
       </div>
 
       <!-- Conversaciones recientes (1x2) -->
-      <div class="md:row-span-2 rounded-2xl bg-base-300 border border-base-300 flex flex-col">
+      <div class="md:col-span-2 rounded-xl bg-base-300 border border-base-300 flex flex-col">
         <header class="flex items-center justify-between gap-2 px-4 py-4 border-b border-base-300">
           <div class="flex items-center gap-2">
             <span class="text-base">💬</span>
             <h3 class="text-sm font-semibold text-base-content">Chats recientes</h3>
           </div>
-          <button @click="go('/chat')"
-            class="text-xs text-indigo-400 hover:text-indigo-300 transition-colors">Ver todos →</button>
+          <button @click="go('/chat')" class="text-xs text-indigo-400 hover:text-indigo-300 transition-colors">Ver todos
+            →</button>
         </header>
         <div v-if="!recentConversations.length"
           class="flex-1 flex flex-col items-center justify-center px-4 py-10 text-center text-xs text-base-content/50">
@@ -293,81 +263,6 @@ onMounted(() => {
             </button>
           </li>
         </ul>
-      </div>
-
-      <!-- Skills stat -->
-      <button @click="go('/agentes')"
-        class="rounded-2xl p-5 bg-base-300 border border-base-300 hover:border-amber-500/40 transition-colors text-left group">
-        <div class="flex items-start justify-between">
-          <span class="text-2xl">⚡</span>
-          <svg class="w-4 h-4 text-base-content/40 group-hover:text-amber-400 transition-colors" fill="none"
-            viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-          </svg>
-        </div>
-        <p class="text-3xl font-bold text-base-content mt-3 font-mono">
-          <span v-if="skillsCount === null" class="text-base-content/70">···</span>
-          <span v-else>{{ skillsCount }}</span>
-        </p>
-        <p class="text-xs text-base-content/60 mt-1">Skills configurados</p>
-      </button>
-
-      <!-- Sugerencias de gobernanza -->
-      <button @click="go('/gobernanza/sugerencias')"
-        class="rounded-2xl p-5 bg-base-300 border border-base-300 hover:border-fuchsia-500/40 transition-colors text-left group relative">
-        <div class="flex items-start justify-between">
-          <span class="text-2xl">📜</span>
-          <svg class="w-4 h-4 text-base-content/40 group-hover:text-fuchsia-400 transition-colors" fill="none"
-            viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-          </svg>
-        </div>
-        <p class="text-3xl font-bold text-base-content mt-3 font-mono">
-          <span v-if="suggestionsCount === null" class="text-base-content/70">···</span>
-          <span v-else>{{ suggestionsCount }}</span>
-        </p>
-        <p class="text-xs text-base-content/60 mt-1">Sugerencias de gobernanza</p>
-        <span v-if="suggestionsCount && suggestionsCount > 0"
-          class="absolute top-3 right-3 w-2 h-2 rounded-full bg-fuchsia-400 animate-pulse" />
-      </button>
-
-      <!-- Atajos rápidos (4x1) -->
-      <div class="md:col-span-4 rounded-2xl p-5 bg-base-300 border border-base-300">
-        <h3 class="text-xs font-semibold text-base-content/60 uppercase tracking-wider mb-3">Atajos rápidos</h3>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <button @click="go('/chat')"
-            class="flex items-center gap-3 p-3 rounded-xl bg-base-200/60 hover:bg-base-200 border border-base-300 hover:border-indigo-500/40 transition-colors text-left">
-            <span class="text-xl">💬</span>
-            <div class="min-w-0">
-              <p class="text-sm font-medium text-base-content">Nuevo chat</p>
-              <p class="text-xs text-base-content/50 truncate">Conversa con un agente</p>
-            </div>
-          </button>
-          <button @click="go('/agentes')"
-            class="flex items-center gap-3 p-3 rounded-xl bg-base-200/60 hover:bg-base-200 border border-base-300 hover:border-emerald-500/40 transition-colors text-left">
-            <span class="text-xl">🤖</span>
-            <div class="min-w-0">
-              <p class="text-sm font-medium text-base-content">Agentes</p>
-              <p class="text-xs text-base-content/50 truncate">Configura tus agentes</p>
-            </div>
-          </button>
-          <button @click="go('/mcps')"
-            class="flex items-center gap-3 p-3 rounded-xl bg-base-200/60 hover:bg-base-200 border border-base-300 hover:border-sky-500/40 transition-colors text-left">
-            <span class="text-xl">🔌</span>
-            <div class="min-w-0">
-              <p class="text-sm font-medium text-base-content">MCPs</p>
-              <p class="text-xs text-base-content/50 truncate">Conectores externos</p>
-            </div>
-          </button>
-          <button @click="go('/automatizacion')"
-            class="flex items-center gap-3 p-3 rounded-xl bg-base-200/60 hover:bg-base-200 border border-base-300 hover:border-amber-500/40 transition-colors text-left">
-            <span class="text-xl">⚙️</span>
-            <div class="min-w-0">
-              <p class="text-sm font-medium text-base-content">Automatización</p>
-              <p class="text-xs text-base-content/50 truncate">Hooks y listeners</p>
-            </div>
-          </button>
-        </div>
       </div>
 
     </div>
