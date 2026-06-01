@@ -52,12 +52,6 @@ const router = createRouter({
 					meta: { resources: ['mcp_servers', 'hook_servers', 'event_listeners'] }
 				},
 				{
-					path: 'automatizacion',
-					name: 'automatizacion',
-					component: () => import('@/views/AutomatizacionView.vue'),
-					meta: { resources: [] }
-				},
-				{
 					path: 'traceability',
 					name: 'traceability',
 					component: () => import('@/views/TraceabilityView.vue'),
@@ -73,7 +67,7 @@ const router = createRouter({
 					path: 'config',
 					name: 'config',
 					component: () => import('@/views/ConfigView.vue'),
-					meta: { resource: ['users', 'llm_tokens'] }
+					meta: { resources: ['users', 'llm_tokens'] }
 				},
 				// Redirects for backward compatibility
 				{ path: 'agents', redirect: '/agentes' },

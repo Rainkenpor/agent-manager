@@ -1,6 +1,7 @@
 import type { GovernanceData, IAgentServiceExecute, ToolCallbacks } from '@domain/entities/agent.entity.js'
 import { systemPrompt } from '../../const'
 import { AgentService } from './agent.service'
+import { agentLogger } from './logger.service.js'
 
 async function fetchActiveGovernance(): Promise<{ governance: GovernanceData[]; promptSection: string }> {
 	try {
@@ -135,10 +136,10 @@ export class MCPAgentService {
 			}
 
 			yield* agentService.initAgentStream(params)
-		} catch {
-			return {
-				content: [{ type: 'text' as const, text: `Agent ${agent.slug} unavailable` }]
-			}
+		} catch (error) {
+			const detail = error instanceof Error ? error.message : String(error)
+			agentLogger.error(`[MCPAgent] asyncCall failed for agent ${agent.slug}: ${detail}`)
+			throw error instanceof Error ? error : new Error(`Agent ${agent.slug} unavailable: ${detail}`)
 		}
 	}
 }
