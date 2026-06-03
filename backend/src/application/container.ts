@@ -94,6 +94,7 @@ import {
 	GetMcpCredentialsUseCase,
 	GetMyStagesUseCase,
 	GetSkillUseCase,
+	GetSystemMetricsUseCase,
 	GetTasksByStageUseCase,
 	GetTemplateByCodeUseCase,
 	GetTemplateUseCase,
@@ -292,6 +293,7 @@ export class Container {
 	readonly tokenAuditRepository: ITokenAuditRepository
 	private _getTokenMetricsUseCase?: GetTokenMetricsUseCase
 	private _getCodexUsageUseCase?: GetCodexUsageUseCase
+	private _getSystemMetricsUseCase?: GetSystemMetricsUseCase
 
 	constructor() {
 		// Initialize repositories with concrete implementations
@@ -1013,6 +1015,13 @@ export class Container {
 			this._getCodexUsageUseCase = new GetCodexUsageUseCase()
 		}
 		return this._getCodexUsageUseCase
+	}
+
+	get getSystemMetricsUseCase(): GetSystemMetricsUseCase {
+		if (!this._getSystemMetricsUseCase) {
+			this._getSystemMetricsUseCase = new GetSystemMetricsUseCase()
+		}
+		return this._getSystemMetricsUseCase
 	}
 }
 

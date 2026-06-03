@@ -481,3 +481,22 @@ export const markAllNotificationsRead = () => request<{ success: boolean }>(`/no
 export const getTokenMetrics = () => request<{ success: boolean; data: any }>('/token-audit/metrics')
 
 export const getCodexUsage = () => request<{ success: boolean; data: any }>('/token-audit/codex-usage')
+
+// System metrics (CPU / memory of the backend host)
+export interface SystemMetrics {
+	cpu: { usage: number; cores: number; model: string; loadAvg: [number, number, number] }
+	memory: {
+		total: number
+		free: number
+		used: number
+		usage: number
+		process: { rss: number; heapTotal: number; heapUsed: number }
+	}
+	uptime: number
+	processUptime: number
+	platform: string
+	hostname: string
+	timestamp: string
+}
+
+export const getSystemMetrics = () => request<{ success: boolean; data: SystemMetrics }>('/system/metrics')

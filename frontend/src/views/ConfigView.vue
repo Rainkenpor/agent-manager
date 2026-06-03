@@ -1,22 +1,22 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useAuthStore } from '@/store/useAuth'
-import TokensView from './TokensView.vue'
 import RefreshTokenView from './RefreshTokenView.vue'
+import SystemMetricsView from './SystemMetricsView.vue'
+import TokensView from './TokensView.vue'
 
 const auth = useAuthStore()
 
 const allTabs = [
-  { key: 'providers', label: 'Providers', icon: 'mdi-cog', resource: 'llm_tokens', accessMode: 'any', component: RefreshTokenView },
-  { key: 'tokens', label: 'Tokens LLM', icon: 'mdi-counter', resource: 'llm_tokens', accessMode: 'any', component: TokensView }
+	{ key: 'providers', label: 'Providers', icon: 'mdi-cog', resource: 'llm_tokens', accessMode: 'any', component: RefreshTokenView },
+	{ key: 'tokens', label: 'Tokens LLM', icon: 'mdi-counter', resource: 'llm_tokens', accessMode: 'any', component: TokensView },
+	{ key: 'system', label: 'Recursos', icon: 'mdi-chip', resource: 'system_metrics', accessMode: 'any', component: SystemMetricsView }
 ]
 const tabs = computed(() =>
-  allTabs.filter((t) => (t.accessMode === 'manage' ? auth.hasResourceManageAccess(t.resource) : auth.hasResourceAccess(t.resource)))
+	allTabs.filter((t) => (t.accessMode === 'manage' ? auth.hasResourceManageAccess(t.resource) : auth.hasResourceAccess(t.resource)))
 )
 const activeTab = ref(tabs.value[0]?.key ?? allTabs[0].key)
 const activeComponent = computed(() => allTabs.find((t) => t.key === activeTab.value)?.component)
-
-
 </script>
 
 <template>

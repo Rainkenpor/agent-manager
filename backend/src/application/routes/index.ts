@@ -16,6 +16,7 @@ import { registerOAuthRoutes } from './oauth.route.js'
 import { registerReleaseNotesRoutes } from './release-notes.route.js'
 import { registerRoleRoutes } from './role.route.js'
 import { registerSkillRoutes } from './skill.route.js'
+import { registerSystemRoutes } from './system.route.js'
 import { registerTokenAuditRoutes } from './token-audit.route.js'
 import { registerTraceabilityRoutes } from './traceability.route.js'
 import { registerTraceabilityParticipantRoutes } from './traceability-participant.route.js'
@@ -48,4 +49,5 @@ export function initializeRegistry(): void {
 	registerCredentialsRoutes()
 	registerReleaseNotesRoutes()
 	registerTokenAuditRoutes()
+	registerSystemRoutes()
 }

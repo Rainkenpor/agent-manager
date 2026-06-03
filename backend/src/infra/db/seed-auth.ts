@@ -73,7 +73,9 @@ async function seedDefaultPermissions() {
 		// log_streams
 		{ resource: 'log_streams', action: 'read', description: 'Permite ver la consola de logs' },
 		// LLM Tokens
-		{ resource: 'llm_tokens', action: 'read', description: 'Ver consumo de tokens LLM' }
+		{ resource: 'llm_tokens', action: 'read', description: 'Ver consumo de tokens LLM' },
+		// Métricas del sistema
+		{ resource: 'system_metrics', action: 'read', description: 'Ver uso de CPU y memoria del servidor' }
 	]
 
 	for (const perm of defaultPermissions) {
