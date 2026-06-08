@@ -3,25 +3,6 @@ import { systemPrompt } from '../../const'
 import { AgentService } from './agent.service'
 import { agentLogger } from './logger.service.js'
 
-async function fetchActiveGovernance(): Promise<{ governance: GovernanceData[]; promptSection: string }> {
-	try {
-		const { container } = await import('@application/container.js')
-		const result = await container.listGovernanceUseCase.execute()
-		if (!result.success) return { governance: [], promptSection: '' }
-		const active: GovernanceData[] = result.data.filter((g) => g.isActive)
-
-		if (active.length === 0) return { governance: [], promptSection: '' }
-
-		const types = [...new Set(active.map((g) => g.type))]
-		const lines = types.map((t) => `- \`${t}\``)
-		const promptSection = `\n\n## Gobernanza disponible\n\nUsa la herramienta \`get_governance\` con el tipo correspondiente para cargar las instrucciones de gobernanza antes de proceder. Tipos disponibles:\n\n${lines.join('\n')}`
-
-		return { governance: active, promptSection }
-	} catch {
-		return { governance: [], promptSection: '' }
-	}
-}
-
 export class MCPAgentService {
 	static async call(
 		agent: { id: string; name: string; slug: string },
@@ -36,10 +17,8 @@ export class MCPAgentService {
 				throw new Error(`Agent not found: ${agent.id}`)
 			}
 
-			const { governance, promptSection } = await fetchActiveGovernance()
-
 			const params: IAgentServiceExecute = {
-				systemPrompt: `${systemPrompt}\n${agentEntity.data.content}${promptSection}`,
+				systemPrompt: `${systemPrompt}\n${agentEntity.data.content}`,
 				agentSlug: agentEntity.data.slug,
 				query: args.instruction,
 				allowedTools: new Set(
@@ -59,10 +38,6 @@ export class MCPAgentService {
 						setCredential: async () => {},
 						deleteCredential: async () => {},
 						getListCredentials: async () => []
-					},
-					governanceCallbacks: {
-						getByType: async (type: string) => governance.filter((g) => g.type === type),
-						listTypes: async () => [...new Set(governance.map((g) => g.type))]
 					}
 				}
 			}

@@ -97,31 +97,9 @@ export class ProviderAuthService {
 	private readonly authStateCache = new NodeCache({ stdTTL: 600, useClones: false })
 	private readonly refreshLocks = new Map<ProviderName, Promise<ProviderConfig>>()
 
-	private async migrateLegacyFile(provider: ProviderName): Promise<ProviderConfig | null> {
-		const existing = await this.repo.findByProvider(provider)
-		if (existing) return existing
-
-		const tokenPath = nodePath.join(envs.SERVER_AUTH_PATH, `${provider}-token.json`)
-		if (!fs.existsSync(tokenPath)) return null
-
-		const raw = JSON.parse(fs.readFileSync(tokenPath, 'utf-8')) as Partial<ProviderTokenPayload> & Record<string, unknown>
-		const payload = normalizePayload(provider, raw)
-		const record = await this.repo.upsert({
-			provider,
-			payload,
-			expiresAt: computeExpiresAt(payload),
-			lastValidatedAt: null
-		})
-		this.tokenCache.set(provider, record)
-		return record
-	}
-
 	private async getRecord(provider: ProviderName): Promise<ProviderConfig | null> {
 		const cached = this.tokenCache.get<ProviderConfig>(provider)
 		if (cached) return cached
-
-		const migrated = await this.migrateLegacyFile(provider)
-		if (migrated) return migrated
 
 		const record = await this.repo.findByProvider(provider)
 		if (record) this.tokenCache.set(provider, record)
@@ -303,6 +281,9 @@ export class ProviderAuthService {
 	}
 
 	async refreshOpenAIIfNeeded(force = false): Promise<ProviderConfigSummary> {
+		// Limpieza de cache
+		if (force) this.tokenCache.del('openai')
+
 		const record = await this.getRecord('openai')
 		if (!record) {
 			return this.getProviderSummary('openai')
