@@ -3,6 +3,7 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import * as api from '@/api/api'
 import AppModal from '@/components/AppModal.vue'
 import DistiLoader from '@/components/DistiLoader.vue'
+import MermaidRenderer from '@/components/MermaidRenderer.vue'
 import NewCredential from '@/components/NewCredential.vue'
 import ShareTraceabilityModal from '@/components/ShareTraceabilityModal.vue'
 import TraceabilitySidebarPanel from '@/components/TraceabilitySidebarPanel.vue'
@@ -11,61 +12,66 @@ import type { McpServer } from '@/types/types'
 
 const auth = useAuthStore()
 
+const mermaidRenderer = ref<InstanceType<typeof MermaidRenderer> | null>(null)
+function renderMermaidDiagrams() {
+  void mermaidRenderer.value?.renderDiagrams()
+}
+
 interface Agent {
-	id: string
-	name: string
-	slug: string
-	mode: string
-	isActive: boolean
+  id: string
+  name: string
+  slug: string
+  mode: string
+  isActive: boolean
 }
 
 interface ChatImage {
-	serverId?: string
-	toolName: string
-	args: Record<string, unknown>
-	mimeType: string
-	thumb: string // dataURL de la miniatura (persistida)
-	full?: string // dataURL del original — solo durante la sesión en vivo
-	loading?: boolean // true mientras se re-invoca la tool para traer el original
+  serverId?: string
+  toolName: string
+  args: Record<string, unknown>
+  mimeType: string
+  thumb: string // dataURL de la miniatura (persistida)
+  full?: string // dataURL del original — solo durante la sesión en vivo
+  loading?: boolean // true mientras se re-invoca la tool para traer el original
 }
 
 interface DisplayMessage {
-	id: string
-	role: 'user' | 'assistant'
-	content: string
-	createdAt: string
-	responseTime?: number // ms — only set on assistant messages once streaming completes
-	streaming?: boolean // true while the stream is still open
-	toolCalls?: string[] // tool names invoked during this response
-	images?: ChatImage[] // imágenes generadas por tools MCP en esta respuesta
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  createdAt: string
+  responseTime?: number // ms — only set on assistant messages once streaming completes
+  streaming?: boolean // true while the stream is still open
+  toolCalls?: string[] // tool names invoked during this response
+  images?: ChatImage[] // imágenes generadas por tools MCP en esta respuesta
 }
 
 interface Conversation {
-	id: string
-	title: string
-	agentId: string
-	createdAt: string
-	updatedAt: string
-	messages?: DisplayMessage[]
+  id: string
+  title: string
+  agentId: string
+  createdAt: string
+  updatedAt: string
+  messages?: DisplayMessage[]
 }
 
 interface RequestQuestion {
-	id: string
-	type: 'text' | 'multi' | 'single' | 'list' | 'confirm' | 'setCredential'
-	label: string
-	description: string
-	options: Array<{ label: string; description: string }>
+  id: string
+  type: 'text' | 'multi' | 'single' | 'list' | 'confirm' | 'setCredential'
+  label: string
+  description: string
+  options: Array<{ label: string; description: string }>
 }
 
 const agents = ref<Agent[]>([])
 const chatAgents = ref<Array<{ id: string; name: string; slug: string; description: string | null }>>([])
 const conversations = ref<Conversation[]>([])
 const agentsMap = computed(() => {
-	const map = new Map<string, string>()
-	for (const agent of agents.value) {
-		map.set(agent.id, agent.name)
-	}
-	return map
+  const map = new Map<string, string>()
+  for (const agent of agents.value) {
+    map.set(agent.id, agent.name)
+  }
+  return map
 })
 const activeConversation = ref<Conversation | null>(null)
 const messages = ref<DisplayMessage[]>([])
@@ -76,64 +82,64 @@ const IMAGE_MARKER_RE = /\n?<!--am:images:([A-Za-z0-9+/=]+)-->\s*$/
 
 /** Separa el marcador de imágenes del texto visible de un mensaje persistido. */
 function parseImageMarker(content: string): { text: string; images: ChatImage[] } {
-	const match = content.match(IMAGE_MARKER_RE)
-	if (!match) return { text: content, images: [] }
-	try {
-		const json = decodeURIComponent(escape(atob(match[1])))
-		const images = JSON.parse(json) as ChatImage[]
-		return { text: content.slice(0, match.index).trimEnd(), images }
-	} catch {
-		return { text: content, images: [] }
-	}
+  const match = content.match(IMAGE_MARKER_RE)
+  if (!match) return { text: content, images: [] }
+  try {
+    const json = decodeURIComponent(escape(atob(match[1])))
+    const images = JSON.parse(json) as ChatImage[]
+    return { text: content.slice(0, match.index).trimEnd(), images }
+  } catch {
+    return { text: content, images: [] }
+  }
 }
 
 /** Genera una miniatura JPEG (ancho máx. 320px) a partir de un dataURL. */
 function makeThumbnail(dataUrl: string, maxWidth = 320): Promise<string> {
-	return new Promise((resolve) => {
-		const img = new Image()
-		img.onload = () => {
-			const scale = Math.min(1, maxWidth / img.width)
-			const canvas = document.createElement('canvas')
-			canvas.width = Math.round(img.width * scale)
-			canvas.height = Math.round(img.height * scale)
-			const ctx = canvas.getContext('2d')
-			if (!ctx) {
-				resolve(dataUrl)
-				return
-			}
-			ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-			resolve(canvas.toDataURL('image/jpeg', 0.7))
-		}
-		img.onerror = () => resolve(dataUrl)
-		img.src = dataUrl
-	})
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.onload = () => {
+      const scale = Math.min(1, maxWidth / img.width)
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.round(img.width * scale)
+      canvas.height = Math.round(img.height * scale)
+      const ctx = canvas.getContext('2d')
+      if (!ctx) {
+        resolve(dataUrl)
+        return
+      }
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+      resolve(canvas.toDataURL('image/jpeg', 0.7))
+    }
+    img.onerror = () => resolve(dataUrl)
+    img.src = dataUrl
+  })
 }
 
 /** Abre una imagen al hacer clic en su miniatura: usa el original en vivo o lo re-obtiene vía la tool. */
 async function openImage(img: ChatImage) {
-	if (img.full) {
-		lightboxImage.value = img.full
-		return
-	}
-	if (!img.serverId) {
-		lightboxImage.value = img.thumb
-		return
-	}
-	img.loading = true
-	try {
-		const res = await api.callMcpServerTool(img.serverId, img.toolName, img.args)
-		const original = res.images?.[0]
-		if (original) {
-			img.full = `data:${original.mimeType};base64,${original.data}`
-			lightboxImage.value = img.full
-		} else {
-			lightboxImage.value = img.thumb
-		}
-	} catch {
-		lightboxImage.value = img.thumb
-	} finally {
-		img.loading = false
-	}
+  if (img.full) {
+    lightboxImage.value = img.full
+    return
+  }
+  if (!img.serverId) {
+    lightboxImage.value = img.thumb
+    return
+  }
+  img.loading = true
+  try {
+    const res = await api.callMcpServerTool(img.serverId, img.toolName, img.args)
+    const original = res.images?.[0]
+    if (original) {
+      img.full = `data:${original.mimeType};base64,${original.data}`
+      lightboxImage.value = img.full
+    } else {
+      lightboxImage.value = img.thumb
+    }
+  } catch {
+    lightboxImage.value = img.thumb
+  } finally {
+    img.loading = false
+  }
 }
 const draft = ref<string | null>(null)
 
@@ -157,28 +163,28 @@ const showTraceabilitySidebar = ref(false)
 const hasLinkedTraceability = ref(false)
 
 interface LinkedTraceability {
-	id: string
-	title: string
-	createdBy: string | null
+  id: string
+  title: string
+  createdBy: string | null
 }
 interface Participant {
-	userId: string
-	chatId: string | null
-	hasRoleMatch?: boolean
+  userId: string
+  chatId: string | null
+  hasRoleMatch?: boolean
 }
 interface TraceabilityInvitation {
-	traceabilityId: string
-	title: string
-	description: string | null
-	chatId: string | null
-	agentId: string | null
-	remainingStagesCount?: number
+  traceabilityId: string
+  title: string
+  description: string | null
+  chatId: string | null
+  agentId: string | null
+  remainingStagesCount?: number
 }
 interface UserSummary {
-	id: string
-	username: string
-	firstName?: string | null
-	lastName?: string | null
+  id: string
+  username: string
+  firstName?: string | null
+  lastName?: string | null
 }
 
 const linkedTraceability = ref<LinkedTraceability | null>(null)
@@ -188,20 +194,20 @@ const allUsers = ref<UserSummary[]>([])
 const showShareModal = ref(false)
 
 interface ChatGroupInfo {
-	traceabilityId: string
-	title: string
-	ownerUserId: string | null
-	participants: Array<{ userId: string; chatId: string | null }>
-	stageId: string | null
-	stageName: string | null
-	myEligibleStages: Array<{ stageId: string; stageName: string; chatId: string | null }>
+  traceabilityId: string
+  title: string
+  ownerUserId: string | null
+  participants: Array<{ userId: string; chatId: string | null }>
+  stageId: string | null
+  stageName: string | null
+  myEligibleStages: Array<{ stageId: string; stageName: string; chatId: string | null }>
 }
 const chatGroups = ref<Record<string, ChatGroupInfo>>({})
 
 interface PendingStageSelection {
-	traceabilityId: string
-	title: string
-	stages: Array<{ id: string; name: string; role: string | null; hasChat?: boolean }>
+  traceabilityId: string
+  title: string
+  stages: Array<{ id: string; name: string; role: string | null; hasChat?: boolean }>
 }
 const pendingStageSelection = ref<PendingStageSelection | null>(null)
 const switchingStage = ref(false)
@@ -211,88 +217,88 @@ const switchingStage = ref(false)
 const lastOpenedChatByTraceability = ref<Record<string, string>>({})
 
 interface SidebarEntry {
-	kind: 'chat' | 'group'
-	id: string // conversationId for 'chat'; traceabilityId for 'group'
-	conversation: Conversation
-	groupChats?: Conversation[] // populated for 'group'
+  kind: 'chat' | 'group'
+  id: string // conversationId for 'chat'; traceabilityId for 'group'
+  conversation: Conversation
+  groupChats?: Conversation[] // populated for 'group'
 }
 
 const sidebarEntries = computed<SidebarEntry[]>(() => {
-	const entries: SidebarEntry[] = []
-	const groupBuckets = new Map<string, Conversation[]>()
-	const seenGroupOrder: string[] = []
-	for (const conv of conversations.value) {
-		const grp = chatGroups.value[conv.id]
-		if (grp) {
-			const tid = grp.traceabilityId
-			if (!groupBuckets.has(tid)) {
-				groupBuckets.set(tid, [])
-				seenGroupOrder.push(tid)
-			}
-			groupBuckets.get(tid)!.push(conv)
-		} else {
-			entries.push({ kind: 'chat', id: conv.id, conversation: conv })
-		}
-	}
-	// Insert group entries in the order they first appeared
-	for (const tid of seenGroupOrder) {
-		const chats = groupBuckets.get(tid)!
-		const preferredId = lastOpenedChatByTraceability.value[tid]
-		const active =
-			activeConversation.value && chatGroups.value[activeConversation.value.id]?.traceabilityId === tid ? activeConversation.value : null
-		const representative = active ?? chats.find((c) => c.id === preferredId) ?? chats[0]
-		entries.push({ kind: 'group', id: tid, conversation: representative, groupChats: chats })
-	}
-	return entries
+  const entries: SidebarEntry[] = []
+  const groupBuckets = new Map<string, Conversation[]>()
+  const seenGroupOrder: string[] = []
+  for (const conv of conversations.value) {
+    const grp = chatGroups.value[conv.id]
+    if (grp) {
+      const tid = grp.traceabilityId
+      if (!groupBuckets.has(tid)) {
+        groupBuckets.set(tid, [])
+        seenGroupOrder.push(tid)
+      }
+      groupBuckets.get(tid)!.push(conv)
+    } else {
+      entries.push({ kind: 'chat', id: conv.id, conversation: conv })
+    }
+  }
+  // Insert group entries in the order they first appeared
+  for (const tid of seenGroupOrder) {
+    const chats = groupBuckets.get(tid)!
+    const preferredId = lastOpenedChatByTraceability.value[tid]
+    const active =
+      activeConversation.value && chatGroups.value[activeConversation.value.id]?.traceabilityId === tid ? activeConversation.value : null
+    const representative = active ?? chats.find((c) => c.id === preferredId) ?? chats[0]
+    entries.push({ kind: 'group', id: tid, conversation: representative, groupChats: chats })
+  }
+  return entries
 })
 
 function entryGroupInfo(entry: SidebarEntry) {
-	return chatGroups.value[entry.conversation.id] ?? null
+  return chatGroups.value[entry.conversation.id] ?? null
 }
 
 function isEntryActive(entry: SidebarEntry): boolean {
-	if (!activeConversation.value) return false
-	if (entry.kind === 'chat') return activeConversation.value.id === entry.conversation.id
-	return entry.groupChats?.some((c) => c.id === activeConversation.value!.id) ?? false
+  if (!activeConversation.value) return false
+  if (entry.kind === 'chat') return activeConversation.value.id === entry.conversation.id
+  return entry.groupChats?.some((c) => c.id === activeConversation.value!.id) ?? false
 }
 
 async function openEntry(entry: SidebarEntry) {
-	if (entry.kind === 'chat') {
-		await openConversation(entry.conversation)
-		return
-	}
-	const tid = entry.id
-	const preferredId = lastOpenedChatByTraceability.value[tid]
-	const target = entry.groupChats?.find((c) => c.id === preferredId) ?? entry.conversation
-	await openConversation(target)
+  if (entry.kind === 'chat') {
+    await openConversation(entry.conversation)
+    return
+  }
+  const tid = entry.id
+  const preferredId = lastOpenedChatByTraceability.value[tid]
+  const target = entry.groupChats?.find((c) => c.id === preferredId) ?? entry.conversation
+  await openConversation(target)
 }
 
 const groupPalette = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#06b6d4', '#a855f7', '#ef4444', '#22c55e']
 function groupColor(traceabilityId: string): string {
-	let h = 0
-	for (let i = 0; i < traceabilityId.length; i++) h = (h * 31 + traceabilityId.charCodeAt(i)) >>> 0
-	return groupPalette[h % groupPalette.length]
+  let h = 0
+  for (let i = 0; i < traceabilityId.length; i++) h = (h * 31 + traceabilityId.charCodeAt(i)) >>> 0
+  return groupPalette[h % groupPalette.length]
 }
 
 const canShareTraceability = computed(() => {
-	if (!linkedTraceability.value) return false
-	if (auth.hasPermission('traceability', 'update')) return true
-	return auth.user?.id === linkedTraceability.value.createdBy
+  if (!linkedTraceability.value) return false
+  if (auth.hasPermission('traceability', 'update')) return true
+  return auth.user?.id === linkedTraceability.value.createdBy
 })
 
 function userInitials(userId: string): string {
-	const u = allUsers.value.find((x) => x.id === userId)
-	const name = u ? [u.firstName, u.lastName].filter(Boolean).join(' ') || u.username : userId
-	const parts = name.trim().split(/\s+/)
-	const a = parts[0]?.[0] ?? '?'
-	const b = parts[1]?.[0] ?? ''
-	return (a + b).toUpperCase()
+  const u = allUsers.value.find((x) => x.id === userId)
+  const name = u ? [u.firstName, u.lastName].filter(Boolean).join(' ') || u.username : userId
+  const parts = name.trim().split(/\s+/)
+  const a = parts[0]?.[0] ?? '?'
+  const b = parts[1]?.[0] ?? ''
+  return (a + b).toUpperCase()
 }
 
 function userDisplayName(userId: string): string {
-	const u = allUsers.value.find((x) => x.id === userId)
-	if (!u) return userId
-	return [u.firstName, u.lastName].filter(Boolean).join(' ') || u.username
+  const u = allUsers.value.find((x) => x.id === userId)
+  if (!u) return userId
+  return [u.firstName, u.lastName].filter(Boolean).join(' ') || u.username
 }
 
 // Form state keyed by message id
@@ -300,723 +306,757 @@ const formAnswers = ref<Record<string, Record<string, { textValue: string; selec
 const submittedForms = ref<string[]>([])
 
 const activeAgent = computed(() => agents.value.find((a) => a.id === activeConversation.value?.agentId))
-const lastAssistantMsg = computed(() => {
-	const assistantMsgs = messages.value.filter((m) => m.role === 'assistant')
-	return assistantMsgs.length > 0 ? assistantMsgs[assistantMsgs.length - 1] : null
-})
 
 async function fetchInitialData() {
-	try {
-		const [agentsRes, convRes, usersRes, invitationsRes] = await Promise.all([
-			api.getAgents(),
-			api.getConversations(),
-			api.getUsers().catch(() => ({ data: [] }) as any),
-			api.listTraceabilityInvitations().catch(() => ({ data: [] }) as any)
-		])
-		agents.value = (agentsRes.data ?? []).filter((a: Agent) => a.isActive)
-		conversations.value = convRes.data ?? []
-		const usersData: any = Array.isArray(usersRes) ? usersRes : (usersRes?.data ?? [])
-		allUsers.value = usersData as UserSummary[]
-		const invData: any = (invitationsRes as any)?.data ?? []
-		invitations.value = (invData as TraceabilityInvitation[]).filter((i) => (i.remainingStagesCount ?? (i.chatId ? 0 : 1)) > 0)
-		await refreshChatGroups()
-	} catch (e: any) {
-		error.value = e.message
-	}
+  try {
+    const [agentsRes, convRes, usersRes, invitationsRes] = await Promise.all([
+      api.getAgents(),
+      api.getConversations(),
+      api.getUsers().catch(() => ({ data: [] }) as any),
+      api.listTraceabilityInvitations().catch(() => ({ data: [] }) as any)
+    ])
+    agents.value = (agentsRes.data ?? []).filter((a: Agent) => a.isActive)
+    conversations.value = convRes.data ?? []
+    const usersData: any = Array.isArray(usersRes) ? usersRes : (usersRes?.data ?? [])
+    allUsers.value = usersData as UserSummary[]
+    const invData: any = (invitationsRes as any)?.data ?? []
+    invitations.value = (invData as TraceabilityInvitation[]).filter((i) => (i.remainingStagesCount ?? (i.chatId ? 0 : 1)) > 0)
+    await refreshChatGroups()
+  } catch (e: any) {
+    error.value = e.message
+  }
 }
 
 async function refreshChatGroups() {
-	try {
-		const res = await api.getTraceabilityGroupsForUser()
-		chatGroups.value = res?.data ?? {}
-	} catch {
-		chatGroups.value = {}
-	}
+  try {
+    const res = await api.getTraceabilityGroupsForUser()
+    chatGroups.value = res?.data ?? {}
+  } catch {
+    chatGroups.value = {}
+  }
 }
 
 async function openInvitation(inv: TraceabilityInvitation, stageId?: string | null) {
-	try {
-		const res: any = await api.openTraceabilityInvitation(inv.traceabilityId, stageId ?? null)
-		if (!res?.success) {
-			error.value = res?.error || 'No se pudo abrir la trazabilidad compartida'
-			return
-		}
-		if (res.requireStageSelection) {
-			pendingStageSelection.value = {
-				traceabilityId: inv.traceabilityId,
-				title: inv.title,
-				stages: res.stages ?? []
-			}
-			return
-		}
-		if (!res?.data?.id) {
-			error.value = 'Respuesta inválida del servidor'
-			return
-		}
-		const conv: any = res.data
-		if (!conversations.value.find((c) => c.id === conv.id)) {
-			conversations.value.unshift(conv)
-		}
-		// Only remove the invitation entry once the user no longer has remaining stages to open
-		if (stageId) {
-			const remaining = (res.stages ?? []).some((s: any) => !s.hasChat && s.id !== stageId)
-			if (!remaining) {
-				invitations.value = invitations.value.filter((i) => i.traceabilityId !== inv.traceabilityId)
-			}
-		} else {
-			invitations.value = invitations.value.filter((i) => i.traceabilityId !== inv.traceabilityId)
-		}
-		await openConversation(conv)
-		await refreshChatGroups()
-	} catch (e: any) {
-		error.value = e.message
-	}
+  try {
+    const res: any = await api.openTraceabilityInvitation(inv.traceabilityId, stageId ?? null)
+    if (!res?.success) {
+      error.value = res?.error || 'No se pudo abrir la trazabilidad compartida'
+      return
+    }
+    if (res.requireStageSelection) {
+      pendingStageSelection.value = {
+        traceabilityId: inv.traceabilityId,
+        title: inv.title,
+        stages: res.stages ?? []
+      }
+      return
+    }
+    if (!res?.data?.id) {
+      error.value = 'Respuesta inválida del servidor'
+      return
+    }
+    const conv: any = res.data
+    if (!conversations.value.find((c) => c.id === conv.id)) {
+      conversations.value.unshift(conv)
+    }
+    // Only remove the invitation entry once the user no longer has remaining stages to open
+    if (stageId) {
+      const remaining = (res.stages ?? []).some((s: any) => !s.hasChat && s.id !== stageId)
+      if (!remaining) {
+        invitations.value = invitations.value.filter((i) => i.traceabilityId !== inv.traceabilityId)
+      }
+    } else {
+      invitations.value = invitations.value.filter((i) => i.traceabilityId !== inv.traceabilityId)
+    }
+    await openConversation(conv)
+    await refreshChatGroups()
+  } catch (e: any) {
+    error.value = e.message
+  }
 }
 
 async function pickStageFromModal(stageId: string) {
-	if (!pendingStageSelection.value) return
-	const pending = pendingStageSelection.value
-	try {
-		const res: any = await api.openTraceabilityInvitation(pending.traceabilityId, stageId)
-		if (!res?.success || !res?.data?.id) {
-			error.value = res?.error || 'No se pudo abrir el chat del stage'
-			return
-		}
-		const conv: any = res.data
-		if (!conversations.value.find((c) => c.id === conv.id)) {
-			conversations.value.unshift(conv)
-		}
-		// Mark this stage as having a chat in the modal so the user can keep opening others
-		pendingStageSelection.value = {
-			...pending,
-			stages: pending.stages.map((s) => (s.id === stageId ? { ...s, hasChat: true } : s))
-		}
-		await openConversation(conv)
-		await refreshChatGroups()
-		// If no remaining stages to open, close the modal and remove invitation
-		const remaining = pendingStageSelection.value.stages.some((s) => !s.hasChat)
-		if (!remaining) {
-			invitations.value = invitations.value.filter((i) => i.traceabilityId !== pending.traceabilityId)
-			pendingStageSelection.value = null
-		}
-	} catch (e: any) {
-		error.value = e.message
-	}
+  if (!pendingStageSelection.value) return
+  const pending = pendingStageSelection.value
+  try {
+    const res: any = await api.openTraceabilityInvitation(pending.traceabilityId, stageId)
+    if (!res?.success || !res?.data?.id) {
+      error.value = res?.error || 'No se pudo abrir el chat del stage'
+      return
+    }
+    const conv: any = res.data
+    if (!conversations.value.find((c) => c.id === conv.id)) {
+      conversations.value.unshift(conv)
+    }
+    // Mark this stage as having a chat in the modal so the user can keep opening others
+    pendingStageSelection.value = {
+      ...pending,
+      stages: pending.stages.map((s) => (s.id === stageId ? { ...s, hasChat: true } : s))
+    }
+    await openConversation(conv)
+    await refreshChatGroups()
+    // If no remaining stages to open, close the modal and remove invitation
+    const remaining = pendingStageSelection.value.stages.some((s) => !s.hasChat)
+    if (!remaining) {
+      invitations.value = invitations.value.filter((i) => i.traceabilityId !== pending.traceabilityId)
+      pendingStageSelection.value = null
+    }
+  } catch (e: any) {
+    error.value = e.message
+  }
 }
 
 async function switchStage(targetStageId: string) {
-	if (!activeConversation.value) return
-	const group = chatGroups.value[activeConversation.value.id]
-	if (!group) return
-	if (targetStageId === group.stageId) return
-	const target = group.myEligibleStages.find((s) => s.stageId === targetStageId)
-	if (!target) return
-	switchingStage.value = true
-	try {
-		if (target.chatId) {
-			const conv = conversations.value.find((c) => c.id === target.chatId)
-			if (conv) await openConversation(conv)
-			else {
-				// chat exists in DB but not in our local list — refresh and retry
-				const res = await api.getConversations()
-				conversations.value = res.data ?? []
-				const fresh = conversations.value.find((c) => c.id === target.chatId)
-				if (fresh) await openConversation(fresh)
-			}
-		} else {
-			const res: any = await api.openTraceabilityInvitation(group.traceabilityId, targetStageId)
-			if (!res?.success || !res?.data?.id) {
-				error.value = res?.error || 'No se pudo abrir el chat del stage'
-				return
-			}
-			const conv: any = res.data
-			if (!conversations.value.find((c) => c.id === conv.id)) {
-				conversations.value.unshift(conv)
-			}
-			await openConversation(conv)
-		}
-		await refreshChatGroups()
-	} catch (e: any) {
-		error.value = e.message
-	} finally {
-		switchingStage.value = false
-	}
+  if (!activeConversation.value) return
+  const group = chatGroups.value[activeConversation.value.id]
+  if (!group) return
+  if (targetStageId === group.stageId) return
+  const target = group.myEligibleStages.find((s) => s.stageId === targetStageId)
+  if (!target) return
+  switchingStage.value = true
+  try {
+    if (target.chatId) {
+      const conv = conversations.value.find((c) => c.id === target.chatId)
+      if (conv) await openConversation(conv)
+      else {
+        // chat exists in DB but not in our local list — refresh and retry
+        const res = await api.getConversations()
+        conversations.value = res.data ?? []
+        const fresh = conversations.value.find((c) => c.id === target.chatId)
+        if (fresh) await openConversation(fresh)
+      }
+    } else {
+      const res: any = await api.openTraceabilityInvitation(group.traceabilityId, targetStageId)
+      if (!res?.success || !res?.data?.id) {
+        error.value = res?.error || 'No se pudo abrir el chat del stage'
+        return
+      }
+      const conv: any = res.data
+      if (!conversations.value.find((c) => c.id === conv.id)) {
+        conversations.value.unshift(conv)
+      }
+      await openConversation(conv)
+    }
+    await refreshChatGroups()
+  } catch (e: any) {
+    error.value = e.message
+  } finally {
+    switchingStage.value = false
+  }
 }
 
 async function fetchParticipants(traceabilityId: string) {
-	try {
-		const res = await api.listTraceabilityParticipants(traceabilityId)
-		participants.value = (res.data ?? []) as Participant[]
-	} catch {
-		participants.value = []
-	}
+  try {
+    const res = await api.listTraceabilityParticipants(traceabilityId)
+    participants.value = (res.data ?? []) as Participant[]
+  } catch {
+    participants.value = []
+  }
 }
 
 async function onShareSaved() {
-	if (linkedTraceability.value) await fetchParticipants(linkedTraceability.value.id)
-	await refreshChatGroups()
+  if (linkedTraceability.value) await fetchParticipants(linkedTraceability.value.id)
+  await refreshChatGroups()
 }
 
 async function removeParticipant(userId: string) {
-	if (!linkedTraceability.value) return
-	try {
-		await api.removeTraceabilityParticipant(linkedTraceability.value.id, userId)
-		participants.value = participants.value.filter((p) => p.userId !== userId)
-		await refreshChatGroups()
-	} catch (e: any) {
-		error.value = e.message
-	}
+  if (!linkedTraceability.value) return
+  try {
+    await api.removeTraceabilityParticipant(linkedTraceability.value.id, userId)
+    participants.value = participants.value.filter((p) => p.userId !== userId)
+    await refreshChatGroups()
+  } catch (e: any) {
+    error.value = e.message
+  }
 }
 
 async function openNewChatModal() {
-	showNewChatModal.value = true
-	selectedAgentId.value = ''
-	newChatTitle.value = ''
-	loadingChatAgents.value = true
-	try {
-		const res = await api.getAgentsForChat()
-		chatAgents.value = res.data ?? []
-	} catch (e: any) {
-		error.value = e.message
-	} finally {
-		loadingChatAgents.value = false
-	}
+  showNewChatModal.value = true
+  selectedAgentId.value = ''
+  newChatTitle.value = ''
+  loadingChatAgents.value = true
+  try {
+    const res = await api.getAgentsForChat()
+    chatAgents.value = res.data ?? []
+  } catch (e: any) {
+    error.value = e.message
+  } finally {
+    loadingChatAgents.value = false
+  }
 }
 
 async function openConversation(conv: Conversation) {
-	loadingConversation.value = true
-	try {
-		const res = await api.getConversation(conv.id)
-		activeConversation.value = res.data
-		messages.value = (res.data.messages ?? []).map((m: DisplayMessage) => {
-			if (m.role !== 'assistant' || !m.content.includes('<!--am:images:')) return m
-			const { text, images } = parseImageMarker(m.content)
-			return { ...m, content: text, images }
-		})
-		draft.value = res.data.draft ?? null
-		initFormAnswersFromMessages()
-		await scrollToBottom()
-		fetchHasLinkedTraceability(conv.id)
-		const grp = chatGroups.value[conv.id]
-		if (grp) lastOpenedChatByTraceability.value[grp.traceabilityId] = conv.id
-	} catch (e: any) {
-		error.value = e.message
-	} finally {
-		loadingConversation.value = false
-	}
+  loadingConversation.value = true
+  try {
+    const res = await api.getConversation(conv.id)
+    activeConversation.value = res.data
+    messages.value = (res.data.messages ?? []).map((m: DisplayMessage) => {
+      if (m.role !== 'assistant' || !m.content.includes('<!--am:images:')) return m
+      const { text, images } = parseImageMarker(m.content)
+      return { ...m, content: text, images }
+    })
+    draft.value = res.data.draft ?? null
+    initFormAnswersFromMessages()
+    // Ocultar el loader antes de renderizar: la lista de mensajes (y los diagramas) solo
+    // existe en el DOM cuando loadingConversation es false.
+    loadingConversation.value = false
+    await scrollToBottom()
+    fetchHasLinkedTraceability(conv.id)
+    const grp = chatGroups.value[conv.id]
+    if (grp) lastOpenedChatByTraceability.value[grp.traceabilityId] = conv.id
+  } catch (e: any) {
+    error.value = e.message
+  } finally {
+    loadingConversation.value = false
+  }
 }
 
 async function createConversation() {
-	if (!selectedAgentId.value || !newChatTitle.value.trim()) return
-	try {
-		const res = await api.createConversation({ title: newChatTitle.value.trim(), agentId: selectedAgentId.value })
-		conversations.value.unshift(res.data)
-		showNewChatModal.value = false
-		newChatTitle.value = ''
-		selectedAgentId.value = ''
-		await openConversation(res.data)
-	} catch (e: any) {
-		error.value = e.message
-	}
+  if (!selectedAgentId.value || !newChatTitle.value.trim()) return
+  try {
+    const res = await api.createConversation({ title: newChatTitle.value.trim(), agentId: selectedAgentId.value })
+    conversations.value.unshift(res.data)
+    showNewChatModal.value = false
+    newChatTitle.value = ''
+    selectedAgentId.value = ''
+    await openConversation(res.data)
+  } catch (e: any) {
+    error.value = e.message
+  }
 }
 
 async function sendMessage() {
-	if (!messageInput.value.trim() || !activeConversation.value || sending.value) return
-	const content = messageInput.value.trim()
-	messageInput.value = ''
-	sending.value = true
-	error.value = ''
+  if (!messageInput.value.trim() || !activeConversation.value || sending.value) return
+  const content = messageInput.value.trim()
+  messageInput.value = ''
+  sending.value = true
+  error.value = ''
 
-	// Add user message immediately
-	const userMsg: DisplayMessage = {
-		id: `user-${Date.now()}`,
-		role: 'user',
-		content,
-		createdAt: new Date().toISOString()
-	}
-	messages.value.push(userMsg)
+  // Add user message immediately
+  const userMsg: DisplayMessage = {
+    id: `user-${Date.now()}`,
+    role: 'user',
+    content,
+    createdAt: new Date().toISOString()
+  }
+  messages.value.push(userMsg)
 
-	// Add empty streaming assistant message
-	const streamingId = `stream-${Date.now()}`
-	const assistantMsg: DisplayMessage = {
-		id: streamingId,
-		role: 'assistant',
-		content: '',
-		createdAt: new Date().toISOString(),
-		streaming: true
-	}
-	messages.value.push(assistantMsg)
-	await scrollToBottom()
+  // Add empty streaming assistant message
+  const streamingId = `stream-${Date.now()}`
+  const assistantMsg: DisplayMessage = {
+    id: streamingId,
+    role: 'assistant',
+    content: '',
+    createdAt: new Date().toISOString(),
+    streaming: true
+  }
+  messages.value.push(assistantMsg)
+  await scrollToBottom()
 
-	abortController = new AbortController()
-	distiState.value = 'loading'
+  abortController = new AbortController()
+  distiState.value = 'loading'
 
-	try {
-		let response: Response
-		try {
-			response = await api.streamMessage(activeConversation.value.id, content, abortController.signal)
-		} catch (fetchErr: any) {
-			if (fetchErr.name === 'AbortError') throw fetchErr
-			throw new Error('No se pudo conectar con el servidor. Verifica tu conexión e intenta de nuevo.')
-		}
+  try {
+    let response: Response
+    try {
+      response = await api.streamMessage(activeConversation.value.id, content, abortController.signal)
+    } catch (fetchErr: any) {
+      if (fetchErr.name === 'AbortError') throw fetchErr
+      throw new Error('No se pudo conectar con el servidor. Verifica tu conexión e intenta de nuevo.')
+    }
 
-		if (!response.ok) {
-			let errMsg = `Error del servidor (${response.status})`
-			try {
-				const body = await response.json()
-				if (body?.error) errMsg = body.error
-				else if (body?.message) errMsg = body.message
-			} catch {
-				if (response.statusText) errMsg = `${errMsg}: ${response.statusText}`
-			}
-			throw new Error(errMsg)
-		}
+    if (!response.ok) {
+      let errMsg = `Error del servidor (${response.status})`
+      try {
+        const body = await response.json()
+        if (body?.error) errMsg = body.error
+        else if (body?.message) errMsg = body.message
+      } catch {
+        if (response.statusText) errMsg = `${errMsg}: ${response.statusText}`
+      }
+      throw new Error(errMsg)
+    }
 
-		if (!response.body) throw new Error('El servidor no devolvió contenido.')
+    if (!response.body) throw new Error('El servidor no devolvió contenido.')
 
-		const reader = response.body.getReader()
-		const decoder = new TextDecoder()
-		let buffer = ''
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
 
-		while (true) {
-			let done: boolean
-			let value: Uint8Array | undefined
-			try {
-				;({ done, value } = await reader.read())
-			} catch (readErr: any) {
-				if (readErr.name === 'AbortError') throw readErr
-				throw new Error('La conexión con el servidor se interrumpió inesperadamente.')
-			}
-			if (done) break
+    while (true) {
+      let done: boolean
+      let value: Uint8Array | undefined
+      try {
+        ; ({ done, value } = await reader.read())
+      } catch (readErr: any) {
+        if (readErr.name === 'AbortError') throw readErr
+        throw new Error('La conexión con el servidor se interrumpió inesperadamente.')
+      }
+      if (done) break
 
-			buffer += decoder.decode(value, { stream: true })
-			const parts = buffer.split('\n\n')
-			buffer = parts.pop() ?? ''
+      buffer += decoder.decode(value, { stream: true })
+      const parts = buffer.split('\n\n')
+      buffer = parts.pop() ?? ''
 
-			for (const part of parts) {
-				const line = part.trim()
-				if (!line.startsWith('data: ')) continue
-				let event: any
-				try {
-					event = JSON.parse(line.slice(6))
-				} catch {
-					continue
-				}
+      for (const part of parts) {
+        const line = part.trim()
+        if (!line.startsWith('data: ')) continue
+        let event: any
+        try {
+          event = JSON.parse(line.slice(6))
+        } catch {
+          continue
+        }
 
-				if (event.type === 'chunk') {
-					distiState.value = 'loading'
-					const idx = messages.value.findIndex((m) => m.id === streamingId)
-					if (idx !== -1) {
-						messages.value[idx] = { ...messages.value[idx], content: messages.value[idx].content + event.content }
-						await scrollToBottom()
-					}
-				} else if (event.type === 'tool') {
-					distiState.value = 'thinking'
-					const idx = messages.value.findIndex((m) => m.id === streamingId)
-					if (idx !== -1) {
-						const existing = messages.value[idx].toolCalls ?? []
-						if (!existing.includes(event.name)) {
-							messages.value[idx] = { ...messages.value[idx], toolCalls: [...existing, event.name] }
-						}
-					}
-				} else if (event.type === 'tool_image') {
-					distiState.value = 'thinking'
-					const idx = messages.value.findIndex((m) => m.id === streamingId)
-					if (idx !== -1) {
-						const full = `data:${event.mimeType};base64,${event.data}`
-						const thumb = await makeThumbnail(full)
-						const image: ChatImage = {
-							serverId: event.serverId,
-							toolName: event.toolName,
-							args: event.args ?? {},
-							mimeType: event.mimeType,
-							thumb,
-							full
-						}
-						const existing = messages.value[idx].images ?? []
-						messages.value[idx] = { ...messages.value[idx], images: [...existing, image] }
-						await scrollToBottom()
-					}
-				} else if (event.type === 'done') {
-					distiState.value = 'happy'
-					const idx = messages.value.findIndex((m) => m.id === streamingId)
-					if (idx !== -1) {
-						const liveImages = messages.value[idx].images
-						messages.value[idx] = {
-							...event.message,
-							streaming: false,
-							responseTime: event.responseTime,
-							toolCalls: messages.value[idx].toolCalls,
-							images: liveImages
-						}
-						// Persiste las miniaturas en el mensaje recién creado para que sobrevivan a recargas.
-						if (liveImages?.length) {
-							const payload = liveImages.map((im) => ({
-								serverId: im.serverId,
-								toolName: im.toolName,
-								args: im.args,
-								mimeType: im.mimeType,
-								thumb: im.thumb
-							}))
-							api.attachMessageImages(event.message.id, payload).catch(() => {})
-						}
-					}
-					setTimeout(() => {
-						distiState.value = 'idle'
-					}, 1200)
-				} else if (event.type === 'draft_updated') {
-					draft.value = event.draft
-				} else if (event.type === 'error') {
-					throw new Error(event.error || 'El agente reportó un error inesperado.')
-				}
-			}
-		}
-	} catch (e: any) {
-		messages.value = messages.value.filter((m) => m.id !== streamingId)
-		if (e.name !== 'AbortError') {
-			error.value = e.message
-			distiState.value = 'sad'
-			setTimeout(() => {
-				distiState.value = 'idle'
-			}, 2500)
-		} else {
-			distiState.value = 'idle'
-		}
-	} finally {
-		abortController = null
-		sending.value = false
-		await scrollToBottom()
-	}
+        if (event.type === 'chunk') {
+          distiState.value = 'loading'
+          const idx = messages.value.findIndex((m) => m.id === streamingId)
+          if (idx !== -1) {
+            messages.value[idx] = { ...messages.value[idx], content: messages.value[idx].content + event.content }
+            await followIfPinned()
+          }
+        } else if (event.type === 'tool') {
+          distiState.value = 'thinking'
+          const idx = messages.value.findIndex((m) => m.id === streamingId)
+          if (idx !== -1) {
+            const existing = messages.value[idx].toolCalls ?? []
+            if (!existing.includes(event.name)) {
+              messages.value[idx] = { ...messages.value[idx], toolCalls: [...existing, event.name] }
+            }
+          }
+        } else if (event.type === 'tool_image') {
+          distiState.value = 'thinking'
+          const idx = messages.value.findIndex((m) => m.id === streamingId)
+          if (idx !== -1) {
+            const full = `data:${event.mimeType};base64,${event.data}`
+            const thumb = await makeThumbnail(full)
+            const image: ChatImage = {
+              serverId: event.serverId,
+              toolName: event.toolName,
+              args: event.args ?? {},
+              mimeType: event.mimeType,
+              thumb,
+              full
+            }
+            const existing = messages.value[idx].images ?? []
+            messages.value[idx] = { ...messages.value[idx], images: [...existing, image] }
+            await followIfPinned()
+          }
+        } else if (event.type === 'done') {
+          distiState.value = 'happy'
+          const idx = messages.value.findIndex((m) => m.id === streamingId)
+          if (idx !== -1) {
+            const liveImages = messages.value[idx].images
+            messages.value[idx] = {
+              ...event.message,
+              streaming: false,
+              responseTime: event.responseTime,
+              toolCalls: messages.value[idx].toolCalls,
+              images: liveImages
+            }
+            // Persiste las miniaturas en el mensaje recién creado para que sobrevivan a recargas.
+            if (liveImages?.length) {
+              const payload = liveImages.map((im) => ({
+                serverId: im.serverId,
+                toolName: im.toolName,
+                args: im.args,
+                mimeType: im.mimeType,
+                thumb: im.thumb
+              }))
+              api.attachMessageImages(event.message.id, payload).catch(() => { })
+            }
+          }
+          setTimeout(() => {
+            distiState.value = 'idle'
+          }, 1200)
+        } else if (event.type === 'draft_updated') {
+          draft.value = event.draft
+        } else if (event.type === 'error') {
+          throw new Error(event.error || 'El agente reportó un error inesperado.')
+        }
+      }
+    }
+  } catch (e: any) {
+    messages.value = messages.value.filter((m) => m.id !== streamingId)
+    if (e.name !== 'AbortError') {
+      error.value = e.message
+      distiState.value = 'sad'
+      setTimeout(() => {
+        distiState.value = 'idle'
+      }, 2500)
+    } else {
+      distiState.value = 'idle'
+    }
+  } finally {
+    abortController = null
+    sending.value = false
+    await followIfPinned()
+  }
 }
 
 function cancelRequest() {
-	abortController?.abort()
+  abortController?.abort()
 }
 
 async function deleteConversation(conv: Conversation) {
-	try {
-		await api.deleteConversation(conv.id)
-		conversations.value = conversations.value.filter((c) => c.id !== conv.id)
-		if (activeConversation.value?.id === conv.id) {
-			activeConversation.value = null
-			messages.value = []
-		}
-	} catch (e: any) {
-		error.value = e.message
-	}
+  try {
+    await api.deleteConversation(conv.id)
+    conversations.value = conversations.value.filter((c) => c.id !== conv.id)
+    if (activeConversation.value?.id === conv.id) {
+      activeConversation.value = null
+      messages.value = []
+    }
+  } catch (e: any) {
+    error.value = e.message
+  }
 }
 
 function handleKeydown(e: KeyboardEvent) {
-	if (e.key === 'Enter' && !e.shiftKey) {
-		e.preventDefault()
-		sendMessage()
-	}
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault()
+    sendMessage()
+  }
 }
 
+/** true mientras el scroll esté pegado al fondo: rige el auto-seguimiento durante el streaming. */
+const isAtBottom = ref(true)
+
+function updateIsAtBottom() {
+  const el = messagesContainer.value
+  if (!el) return
+  isAtBottom.value = el.scrollHeight - el.scrollTop - el.clientHeight < 80
+}
+
+/** Fuerza el scroll al fondo y reactiva el auto-seguimiento. */
 async function scrollToBottom() {
-	await nextTick()
-	if (messagesContainer.value) {
-		messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
-	}
+  await nextTick()
+  if (messagesContainer.value) {
+    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+  }
+  isAtBottom.value = true
+  void renderMermaidDiagrams()
+}
+
+/** Renderiza diagramas y solo sigue el texto al fondo si el usuario no se ha desplazado hacia arriba. */
+async function followIfPinned() {
+  await nextTick()
+  void renderMermaidDiagrams()
+  if (isAtBottom.value && messagesContainer.value) {
+    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+  }
 }
 
 function formatTime(iso: string) {
-	return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
 function formatResponseTime(ms: number): string {
-	return ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`
+  return ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`
 }
 
 // ── Request form helpers ──────────────────────────────────────────────────────
 
 function parseRequestBlock(content: string): RequestQuestion[] | null {
-	const match = content.match(/```request\n([\s\S]*?)```/)
-	if (!match) return null
+  const match = content.match(/```request\n([\s\S]*?)```/)
+  if (!match) return null
 
-	const questions: RequestQuestion[] = []
-	const parts = match[1].split(/(?=\[Q\d+\|)/)
+  const questions: RequestQuestion[] = []
+  const parts = match[1].split(/(?=\[Q\d+\|)/)
 
-	for (const part of parts) {
-		const header = part.match(/^\[Q(\d+)\|(text|multi|list|single|confirm|setCredential)\]\s*(.+?)(?:\n|$)/)
-		if (!header) continue
+  for (const part of parts) {
+    const header = part.match(/^\[Q(\d+)\|(text|multi|list|single|confirm|setCredential)\]\s*(.+?)(?:\n|$)/)
+    if (!header) continue
 
-		const rest = part.slice(header[0].length).trim()
-		const lines = rest.split('\n')
-		const options: Array<{ label: string; description: string }> = []
-		const descLines: string[] = []
+    const rest = part.slice(header[0].length).trim()
+    const lines = rest.split('\n')
+    const options: Array<{ label: string; description: string }> = []
+    const descLines: string[] = []
 
-		for (const line of lines) {
-			// La linea puede estar separada por titulo | descripcion o solo tener texto (descripcion)
-			const opt = line.match(/^-\s*(.+?)\s*\|\s*(.+)$/)
-			if (opt) {
-				options.push({ label: opt[1].trim(), description: opt[2].trim() })
-			} else if (line.startsWith('-') && line.trim() !== '-') {
-				const label = line.replace(/^-\s*/, '').trim()
-				options.push({ label, description: '' })
-			} else if (line.trim()) descLines.push(line.trim())
-		}
+    for (const line of lines) {
+      // La linea puede estar separada por titulo | descripcion o solo tener texto (descripcion)
+      const opt = line.match(/^-\s*(.+?)\s*\|\s*(.+)$/)
+      if (opt) {
+        options.push({ label: opt[1].trim(), description: opt[2].trim() })
+      } else if (line.startsWith('-') && line.trim() !== '-') {
+        const label = line.replace(/^-\s*/, '').trim()
+        options.push({ label, description: '' })
+      } else if (line.trim()) descLines.push(line.trim())
+    }
 
-		questions.push({
-			id: `Q${header[1]}`,
-			type: header[2] as 'text' | 'multi' | 'list' | 'single' | 'confirm' | 'setCredential',
-			label: header[3].trim(),
-			description: descLines.join('\n'),
-			options
-		})
-	}
+    questions.push({
+      id: `Q${header[1]}`,
+      type: header[2] as 'text' | 'multi' | 'list' | 'single' | 'confirm' | 'setCredential',
+      label: header[3].trim(),
+      description: descLines.join('\n'),
+      options
+    })
+  }
 
-	return questions.length > 0 ? questions : null
+  return questions.length > 0 ? questions : null
 }
 
 function getContentBeforeRequest(content: string): string {
-	const idx = content.indexOf('```request')
-	return idx > 0 ? content.slice(0, idx).trim() : ''
+  const idx = content.indexOf('```request')
+  return idx > 0 ? content.slice(0, idx).trim() : ''
 }
 
 function getContentAfterRequest(content: string): string {
-	const match = content.match(/```request[\s\S]*?```/)
-	if (!match || match.index === undefined) return ''
-	const endIdx = match.index + match[0].length
-	return content.slice(endIdx).trim()
+  const match = content.match(/```request[\s\S]*?```/)
+  if (!match || match.index === undefined) return ''
+  const endIdx = match.index + match[0].length
+  return content.slice(endIdx).trim()
 }
 
 function getRequestQuestions(msg: DisplayMessage): RequestQuestion[] | null {
-	if (msg.role !== 'assistant' || msg.streaming) return null
-	return parseRequestBlock(msg.content)
+  if (msg.role !== 'assistant' || msg.streaming) return null
+  return parseRequestBlock(msg.content)
 }
 
 function maskTokens(text: string): string {
-	// JWT: eyJ...header.payload.signature
-	text = text.replace(/eyJ[a-zA-Z0-9+/_-]+=*\.[a-zA-Z0-9+/_-]+=*\.[a-zA-Z0-9+/_-]+=*/g, (m) => m.slice(0, 5) + '*****')
-	// Known prefixes: sk-, ghp_, Bearer, etc.
-	text = text.replace(/\b(sk-|ghp_|ghs_|github_pat_|xoxb-|xoxp-|Bearer\s+)[a-zA-Z0-9+/_.-]{8,}/gi, (m) => m.slice(0, 5) + '*****')
-	// Generic: 25+ char alphanum string with upper+lower+digit mix (high entropy)
-	text = text.replace(/[a-zA-Z0-9+/_-]{25,}/g, (m) => {
-		if (/[A-Z]/.test(m) && /[a-z]/.test(m) && /[0-9]/.test(m)) return m.slice(0, 5) + '*****'
-		return m
-	})
-	return text
+  // JWT: eyJ...header.payload.signature
+  text = text.replace(/eyJ[a-zA-Z0-9+/_-]+=*\.[a-zA-Z0-9+/_-]+=*\.[a-zA-Z0-9+/_-]+=*/g, (m) => m.slice(0, 5) + '*****')
+  // Known prefixes: sk-, ghp_, Bearer, etc.
+  text = text.replace(/\b(sk-|ghp_|ghs_|github_pat_|xoxb-|xoxp-|Bearer\s+)[a-zA-Z0-9+/_.-]{8,}/gi, (m) => m.slice(0, 5) + '*****')
+  // Generic: 25+ char alphanum string with upper+lower+digit mix (high entropy)
+  text = text.replace(/[a-zA-Z0-9+/_-]{25,}/g, (m) => {
+    if (/[A-Z]/.test(m) && /[a-z]/.test(m) && /[0-9]/.test(m)) return m.slice(0, 5) + '*****'
+    return m
+  })
+  return text
 }
 
 function renderInlineMarkdown(text: string): string {
-	return text
-		.replace(/&/g, '&amp;')
-		.replace(/</g, '&lt;')
-		.replace(/>/g, '&gt;')
-		.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-		.replace(/`(.+?)`/g, '<code class="bg-base-100/80 px-1 rounded text-xs font-mono">$1</code>')
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/`(.+?)`/g, '<code class="bg-base-100/80 px-1 rounded text-xs font-mono">$1</code>')
 }
 
 function renderMarkdown(text: string): string {
-	text = maskTokens(text)
-	const isTableRow = (line: string) => /^\|.+\|$/.test(line.trim())
-	const isSeparator = (line: string) => /^\|[\s\-:|]+\|$/.test(line.trim())
+  text = maskTokens(text)
+  const isTableRow = (line: string) => /^\|.+\|$/.test(line.trim())
+  const isSeparator = (line: string) => /^\|[\s\-:|]+\|$/.test(line.trim())
 
-	function parseRow(line: string): string[] {
-		return line
-			.trim()
-			.slice(1, -1)
-			.split('|')
-			.map((c) => c.trim())
-	}
+  function parseRow(line: string): string[] {
+    return line
+      .trim()
+      .slice(1, -1)
+      .split('|')
+      .map((c) => c.trim())
+  }
 
-	function renderTable(lines: string[]): string {
-		const headers = parseRow(lines[0])
-		const body = lines.slice(2)
-		const th = headers
-			.map(
-				(h) =>
-					`<th style="text-align:left;padding:6px 12px;border-bottom:1px solid #475569;color:#cbd5e1;font-weight:600;white-space:nowrap">${renderInlineMarkdown(h)}</th>`
-			)
-			.join('')
-		const trs = body
-			.map(
-				(row) =>
-					'<tr style="border-bottom:1px solid #1e293b">' +
-					parseRow(row)
-						.map((cell) => `<td style="padding:5px 12px;color:#e2e8f0">${renderInlineMarkdown(cell)}</td>`)
-						.join('') +
-					'</tr>'
-			)
-			.join('')
-		return `<div class="overflow-auto"><table style="border-collapse:collapse;width:100%;font-size:0.8rem;margin:8px 0;background:#0f172a;border-radius:8px;overflow:hidden"><thead><tr>${th}</tr></thead><tbody>${trs}</tbody></table></div>`
-	}
+  function renderTable(lines: string[]): string {
+    const headers = parseRow(lines[0])
+    const body = lines.slice(2)
+    const th = headers
+      .map(
+        (h) =>
+          `<th style="text-align:left;padding:6px 12px;border-bottom:1px solid #475569;color:#cbd5e1;font-weight:600;white-space:nowrap">${renderInlineMarkdown(h)}</th>`
+      )
+      .join('')
+    const trs = body
+      .map(
+        (row) =>
+          '<tr style="border-bottom:1px solid #1e293b">' +
+          parseRow(row)
+            .map((cell) => `<td style="padding:5px 12px;color:#e2e8f0">${renderInlineMarkdown(cell)}</td>`)
+            .join('') +
+          '</tr>'
+      )
+      .join('')
+    return `<div class="overflow-auto"><table style="border-collapse:collapse;width:100%;font-size:0.8rem;margin:8px 0;background:#0f172a;border-radius:8px;overflow:hidden"><thead><tr>${th}</tr></thead><tbody>${trs}</tbody></table></div>`
+  }
 
-	const lines = text.split('\n')
-	const out: string[] = []
-	let i = 0
-	while (i < lines.length) {
-		if (isTableRow(lines[i]) && i + 1 < lines.length && isSeparator(lines[i + 1])) {
-			const tableLines = [lines[i], lines[i + 1]]
-			i += 2
-			while (i < lines.length && isTableRow(lines[i])) {
-				tableLines.push(lines[i++])
-			}
-			out.push(renderTable(tableLines))
-		} else {
-			out.push(renderInlineMarkdown(lines[i]))
-			i++
-		}
-	}
-	return out.join('\n')
+  const lines = text.split('\n')
+  const out: string[] = []
+  let i = 0
+  while (i < lines.length) {
+    if (/^```mermaid\s*$/.test(lines[i].trim())) {
+      const diagram: string[] = []
+      let j = i + 1
+      while (j < lines.length && lines[j].trim() !== '```') {
+        diagram.push(lines[j++])
+      }
+      if (j < lines.length) {
+        // Bloque mermaid completo (con cierre ```): emitir placeholder a renderizar tras el montaje
+        out.push(`<div class="mermaid-block" data-mermaid="${encodeURIComponent(diagram.join('\n'))}"></div>`)
+        i = j + 1
+        continue
+      }
+      // Bloque aún sin cerrar (streaming): se renderiza como texto hasta que llegue el cierre
+    }
+    if (isTableRow(lines[i]) && i + 1 < lines.length && isSeparator(lines[i + 1])) {
+      const tableLines = [lines[i], lines[i + 1]]
+      i += 2
+      while (i < lines.length && isTableRow(lines[i])) {
+        tableLines.push(lines[i++])
+      }
+      out.push(renderTable(tableLines))
+    } else {
+      out.push(renderInlineMarkdown(lines[i]))
+      i++
+    }
+  }
+  return out.join('\n')
 }
 
 function stripMarkdown(text: string): string {
-	return text.replace(/\*\*(.+?)\*\*/g, '$1').replace(/`(.+?)`/g, '$1')
+  return text.replace(/\*\*(.+?)\*\*/g, '$1').replace(/`(.+?)`/g, '$1')
 }
 
 function toggleOption(msgId: string, questionId: string, option: string) {
-	const q = formAnswers.value[msgId]?.[questionId]
-	if (!q) return
-	const idx = q.selectedOptions.indexOf(option)
-	if (idx === -1) q.selectedOptions.push(option)
-	else q.selectedOptions.splice(idx, 1)
+  const q = formAnswers.value[msgId]?.[questionId]
+  if (!q) return
+  const idx = q.selectedOptions.indexOf(option)
+  if (idx === -1) q.selectedOptions.push(option)
+  else q.selectedOptions.splice(idx, 1)
 }
 
 function selectOption(msgId: string, questionId: string, option: string) {
-	const q = formAnswers.value[msgId]?.[questionId]
-	if (!q) return
-	q.selectedOptions = [option]
+  const q = formAnswers.value[msgId]?.[questionId]
+  if (!q) return
+  q.selectedOptions = [option]
 }
 
 function listItemChanged(opt: { label: string; description: string }, e: Event, msgId: string, questionId: string, key: string) {
-	opt.description = (e.target as HTMLInputElement).value
-	if (Number(key) === formAnswers.value[msgId]?.[questionId].selectedOptions.length - 1) {
-		formAnswers.value[msgId][questionId].selectedOptions.push({ label: '', description: '' })
-	}
+  opt.description = (e.target as HTMLInputElement).value
+  if (Number(key) === formAnswers.value[msgId]?.[questionId].selectedOptions.length - 1) {
+    formAnswers.value[msgId][questionId].selectedOptions.push({ label: '', description: '' })
+  }
 }
 
 function removeOption(msgId: string, questionId: string, key: string) {
-	const q = formAnswers.value[msgId]?.[questionId]
-	if (!q) return
-	q.selectedOptions.splice(Number(key), 1)
+  const q = formAnswers.value[msgId]?.[questionId]
+  if (!q) return
+  q.selectedOptions.splice(Number(key), 1)
 }
 
 function initFormAnswersFromMessages() {
-	for (let i = 0; i < messages.value.length; i++) {
-		const msg = messages.value[i]
-		if (msg.role !== 'assistant' || msg.streaming) continue
-		const questions = parseRequestBlock(msg.content)
-		if (!questions) continue
+  for (let i = 0; i < messages.value.length; i++) {
+    const msg = messages.value[i]
+    if (msg.role !== 'assistant' || msg.streaming) continue
+    const questions = parseRequestBlock(msg.content)
+    if (!questions) continue
 
-		if (!formAnswers.value[msg.id]) {
-			const answers: Record<string, { textValue: string; selectedOptions: string[] }> = {}
-			for (const q of questions) {
-				const data = []
-				if (q.type === 'list') data.push({ label: '(sin selección)', description: '' })
-				answers[q.id] = { textValue: '', selectedOptions: data }
-			}
-			formAnswers.value[msg.id] = answers
-		}
+    if (!formAnswers.value[msg.id]) {
+      const answers: Record<string, { textValue: string; selectedOptions: string[] }> = {}
+      for (const q of questions) {
+        const data = []
+        if (q.type === 'list') data.push({ label: '(sin selección)', description: '' })
+        answers[q.id] = { textValue: '', selectedOptions: data }
+      }
+      formAnswers.value[msg.id] = answers
+    }
 
-		// Auto-mark as submitted if any subsequent message exists (user already replied)
-		const hasSubsequentMessage = messages.value.slice(i + 1).some((m) => !m.streaming)
-		if (hasSubsequentMessage && !submittedForms.value.includes(msg.id)) {
-			submittedForms.value.push(msg.id)
-		}
-	}
+    // Auto-mark as submitted if any subsequent message exists (user already replied)
+    const hasSubsequentMessage = messages.value.slice(i + 1).some((m) => !m.streaming)
+    if (hasSubsequentMessage && !submittedForms.value.includes(msg.id)) {
+      submittedForms.value.push(msg.id)
+    }
+  }
 }
 
 async function submitRequestForm(msgId: string, questions: RequestQuestion[]) {
-	const answers = formAnswers.value[msgId]
-	if (!answers) return
+  const answers = formAnswers.value[msgId]
+  if (!answers) return
 
-	const lines: string[] = []
-	for (const q of questions) {
-		const a = answers[q.id]
-		let answerText: string
+  const lines: string[] = []
+  for (const q of questions) {
+    const a = answers[q.id]
+    let answerText: string
 
-		if (q.type === 'text') {
-			answerText = a.textValue.trim() || '(sin respuesta)'
-		} else if (q.type === 'multi') {
-			const parts = [...a.selectedOptions]
-			if (a.textValue.trim()) parts.push(a.textValue.trim())
-			answerText = parts.length > 0 ? parts.join(', ') : '(sin selección)'
-		} else if (q.type === 'list') {
-			const parts = [...a.selectedOptions.map((o) => `- ${o.description}`)]
-			if (a.textValue.trim()) parts.push(a.textValue.trim())
-			answerText = parts.length > 0 ? parts.join('\n ') : '(sin selección)'
-		} else if (q.type === 'confirm') {
-			answerText = a.selectedOptions[0] ?? (a.textValue.trim() || '(sin selección)')
-			if (a.textValue.trim() && a.textValue.trim() !== answerText) answerText += ` (${a.textValue.trim()})`
-		} else if (q.type === 'setCredential') {
-			answerText = 'Se establecieron las credenciales'
-		} else {
-			// select
-			answerText = a.selectedOptions[0] ?? (a.textValue.trim() || '(sin selección)')
-			if (a.textValue.trim() && a.textValue.trim() !== answerText) answerText += ` (${a.textValue.trim()})`
-		}
+    if (q.type === 'text') {
+      answerText = a.textValue.trim() || '(sin respuesta)'
+    } else if (q.type === 'multi') {
+      const parts = [...a.selectedOptions]
+      if (a.textValue.trim()) parts.push(a.textValue.trim())
+      answerText = parts.length > 0 ? parts.join(', ') : '(sin selección)'
+    } else if (q.type === 'list') {
+      const parts = [...a.selectedOptions.map((o) => `- ${o.description}`)]
+      if (a.textValue.trim()) parts.push(a.textValue.trim())
+      answerText = parts.length > 0 ? parts.join('\n ') : '(sin selección)'
+    } else if (q.type === 'confirm') {
+      answerText = a.selectedOptions[0] ?? (a.textValue.trim() || '(sin selección)')
+      if (a.textValue.trim() && a.textValue.trim() !== answerText) answerText += ` (${a.textValue.trim()})`
+    } else if (q.type === 'setCredential') {
+      answerText = 'Se establecieron las credenciales'
+    } else {
+      // select
+      answerText = a.selectedOptions[0] ?? (a.textValue.trim() || '(sin selección)')
+      if (a.textValue.trim() && a.textValue.trim() !== answerText) answerText += ` (${a.textValue.trim()})`
+    }
 
-		lines.push(`${stripMarkdown(q.label)}: ${answerText}`)
-	}
+    lines.push(`${stripMarkdown(q.label)}: ${answerText}`)
+  }
 
-	submittedForms.value.push(msgId)
-	messageInput.value = lines.join('\n')
-	await sendMessage()
+  submittedForms.value.push(msgId)
+  messageInput.value = lines.join('\n')
+  await sendMessage()
 }
 
 async function retryMessage(msg: DisplayMessage) {
-	if (!activeConversation.value || sending.value) return
-	const idx = messages.value.findIndex((m) => m.id === msg.id)
-	if (idx === -1) return
+  if (!activeConversation.value || sending.value) return
+  const idx = messages.value.findIndex((m) => m.id === msg.id)
+  if (idx === -1) return
 
-	// Find the preceding user message to delete from there (inclusive)
-	let userIdx = -1
-	let userContent = ''
-	for (let i = idx - 1; i >= 0; i--) {
-		if (messages.value[i].role === 'user') {
-			userIdx = i
-			userContent = messages.value[i].content
-			break
-		}
-	}
-	if (userIdx === -1) return
+  // Find the preceding user message to delete from there (inclusive)
+  let userIdx = -1
+  let userContent = ''
+  for (let i = idx - 1; i >= 0; i--) {
+    if (messages.value[i].role === 'user') {
+      userIdx = i
+      userContent = messages.value[i].content
+      break
+    }
+  }
+  if (userIdx === -1) return
 
-	// Delete from the user message onwards so sendMessage can re-add it without duplicar
-	try {
-		await api.deleteMessagesFrom(activeConversation.value.id, messages.value[userIdx].id)
-	} catch (e: any) {
-		error.value = e.message
-		return
-	}
+  // Delete from the user message onwards so sendMessage can re-add it without duplicar
+  try {
+    await api.deleteMessagesFrom(activeConversation.value.id, messages.value[userIdx].id)
+  } catch (e: any) {
+    error.value = e.message
+    return
+  }
 
-	messages.value = messages.value.slice(0, userIdx)
-	messageInput.value = userContent
-	await sendMessage()
+  messages.value = messages.value.slice(0, userIdx)
+  messageInput.value = userContent
+  await sendMessage()
 }
 
 function editMessage(msg: DisplayMessage) {
-	if (sending.value) return
-	editingMessageId.value = msg.id
-	editingContent.value = msg.content
+  if (sending.value) return
+  editingMessageId.value = msg.id
+  editingContent.value = msg.content
 }
 
 function cancelEdit() {
-	editingMessageId.value = null
-	editingContent.value = ''
+  editingMessageId.value = null
+  editingContent.value = ''
 }
 
 async function confirmEdit(msg: DisplayMessage) {
-	if (!activeConversation.value || sending.value) return
-	const content = editingContent.value.trim()
-	if (!content) return
+  if (!activeConversation.value || sending.value) return
+  const content = editingContent.value.trim()
+  if (!content) return
 
-	const idx = messages.value.findIndex((m) => m.id === msg.id)
-	if (idx === -1) return
+  const idx = messages.value.findIndex((m) => m.id === msg.id)
+  if (idx === -1) return
 
-	try {
-		await api.deleteMessagesFrom(activeConversation.value.id, msg.id)
-	} catch (e: any) {
-		error.value = e.message
-		return
-	}
+  try {
+    await api.deleteMessagesFrom(activeConversation.value.id, msg.id)
+  } catch (e: any) {
+    error.value = e.message
+    return
+  }
 
-	editingMessageId.value = null
-	editingContent.value = ''
-	messages.value = messages.value.slice(0, idx)
-	messageInput.value = content
-	await sendMessage()
+  editingMessageId.value = null
+  editingContent.value = ''
+  messages.value = messages.value.slice(0, idx)
+  messageInput.value = content
+  await sendMessage()
 }
 
 // ── Credential modal ─────────────────────────────────────────────────────────
@@ -1025,35 +1065,42 @@ const showCredentialModal = ref(false)
 const credentialServers = ref<McpServer[]>([])
 
 async function openCredentialModal() {
-	try {
-		const res = await api.getMcpServers()
-		credentialServers.value = (res.data ?? []).filter((s: McpServer) => s.active)
-	} catch {
-		credentialServers.value = []
-	}
-	showCredentialModal.value = true
+  try {
+    const res = await api.getMcpServers()
+    credentialServers.value = (res.data ?? []).filter((s: McpServer) => s.active)
+  } catch {
+    credentialServers.value = []
+  }
+  showCredentialModal.value = true
 }
 
 watch(messages, initFormAnswersFromMessages, { deep: true })
+watch(
+  messages,
+  () => {
+    void renderMermaidDiagrams()
+  },
+  { deep: true }
+)
 
 async function fetchHasLinkedTraceability(conversationId: string) {
-	hasLinkedTraceability.value = false
-	showTraceabilitySidebar.value = false
-	linkedTraceability.value = null
-	participants.value = []
-	try {
-		const res = await api.getTraceabilityByConversation(conversationId)
-		const list: any[] = Array.isArray(res.data) ? res.data : []
-		hasLinkedTraceability.value = list.length > 0
-		if (hasLinkedTraceability.value) {
-			showTraceabilitySidebar.value = true
-			const t = list[0]
-			linkedTraceability.value = { id: t.id, title: t.title, createdBy: t.createdBy ?? null }
-			await fetchParticipants(t.id)
-		}
-	} catch {
-		hasLinkedTraceability.value = false
-	}
+  hasLinkedTraceability.value = false
+  showTraceabilitySidebar.value = false
+  linkedTraceability.value = null
+  participants.value = []
+  try {
+    const res = await api.getTraceabilityByConversation(conversationId)
+    const list: any[] = Array.isArray(res.data) ? res.data : []
+    hasLinkedTraceability.value = list.length > 0
+    if (hasLinkedTraceability.value) {
+      showTraceabilitySidebar.value = true
+      const t = list[0]
+      linkedTraceability.value = { id: t.id, title: t.title, createdBy: t.createdBy ?? null }
+      await fetchParticipants(t.id)
+    }
+  } catch {
+    hasLinkedTraceability.value = false
+  }
 }
 
 onMounted(fetchInitialData)
@@ -1241,7 +1288,8 @@ onMounted(fetchInitialData)
       </div>
 
       <!-- Messages -->
-      <div ref="messagesContainer" class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+      <div ref="messagesContainer" @scroll="updateIsAtBottom"
+        class="flex-1 overflow-y-auto px-6 py-4 space-y-4 relative">
 
         <!-- Empty state -->
         <div v-if="!activeConversation" class="h-full flex flex-col items-center justify-center text-center">
@@ -1285,7 +1333,7 @@ onMounted(fetchInitialData)
                 editingMessageId === msg.id ? 'p-0 w-120' : 'px-4 py-2.5',
                 msg.role === 'user'
                   ? 'bg-indigo-600 text-white rounded-tr-sm'
-                  : 'bg-base-200 text-base-content rounded-tl-sm border border-base-300/50'
+                  : 'bg-base-100 text-base-content rounded-tl-sm border border-base-300'
               ]">
 
                 <!-- Tool calls — shown before the text content -->
@@ -1366,7 +1414,8 @@ onMounted(fetchInitialData)
                           @click="selectOption(msg.id, q.id, opt.label)" :title="opt.description || undefined"
                           :class="formAnswers[msg.id][q.id].selectedOptions[0] === opt.label
                             ? 'bg-indigo-600 border-indigo-500 text-white'
-                            : 'bg-base-200 border-base-content/20 text-base-content hover:border-indigo-500/60 hover:text-base-content'" class="px-4 py-1.5 rounded-lg border text-sm font-medium transition-colors">
+                            : 'bg-base-200 border-base-content/20 text-base-content hover:border-indigo-500/60 hover:text-base-content'"
+                          class="px-4 py-1.5 rounded-lg border text-sm font-medium transition-colors">
                           {{ opt.label }}
                         </button>
                       </div>
@@ -1446,36 +1495,20 @@ onMounted(fetchInitialData)
 
                   <!-- Imágenes generadas por tools MCP -->
                   <div v-if="msg.images?.length" class="flex flex-wrap gap-2 mt-2">
-                    <button
-                      v-for="(img, i) in msg.images"
-                      :key="i"
-                      type="button"
-                      @click="openImage(img)"
+                    <button v-for="(img, i) in msg.images" :key="i" type="button" @click="openImage(img)"
                       class="group relative rounded-lg overflow-hidden border border-base-content/15 hover:border-indigo-400 transition-colors"
                       :title="`Ver original (${img.toolName})`">
                       <img :src="img.thumb" alt="Imagen generada" class="block max-h-48 w-auto object-contain" />
-                      <span
-                        v-if="img.loading"
+                      <span v-if="img.loading"
                         class="absolute inset-0 flex items-center justify-center bg-black/40 text-white text-xs">
                         Cargando original…
                       </span>
-                      <span
-                        v-else
+                      <span v-else
                         class="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/60 text-white text-[10px] opacity-0 group-hover:opacity-100 transition-opacity">
                         Ver original
                       </span>
                     </button>
                   </div>
-
-                  <transition name="disti-fade">
-                    <DistiLoader
-                      v-if="msg === lastAssistantMsg && distiState !== 'idle'"
-                      :state="distiState"
-                      size="xs"
-                      theme="dark"
-                      class="block mt-2"
-                    />
-                  </transition>
                 </template>
               </div>
 
@@ -1521,6 +1554,24 @@ onMounted(fetchInitialData)
         class="mx-6 mb-2 px-4 py-2 rounded-lg bg-red-900/40 border border-red-700/50 text-red-400 text-sm flex items-center justify-between">
         {{ error }}
         <button class="text-red-500 hover:text-red-300 ml-3" @click="error = ''">✕</button>
+      </div>
+
+      <!-- Indicador flotante: loader del agente y/o botón "ir al final" -->
+      <div v-if="activeConversation && (distiState !== 'idle' || !isAtBottom)" class="relative">
+        <transition name="disti-fade">
+          <button type="button" @click="scrollToBottom"
+            class="absolute -top-12 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shadow-lg transition-colors"
+            :class="distiState !== 'idle' ? 'bg-white hover:bg-white text-base-content' : 'bg-indigo-600 hover:bg-indigo-500 text-white'"
+            :title="distiState !== 'idle' ? 'El agente está trabajando' : (sending ? 'Hay texto nuevo abajo' : 'Ir al final')">
+            <template v-if="distiState !== 'idle'">
+              <DistiLoader :state="distiState" size="xs" theme="light" />
+            </template>
+            <template v-else>
+              <span class="mdi mdi-arrow-down" :class="{ 'animate-bounce': sending }"></span>
+              {{ sending ? 'Texto nuevo abajo' : 'Ir al final' }}
+            </template>
+          </button>
+        </transition>
       </div>
 
       <!-- Input area -->
@@ -1640,7 +1691,8 @@ onMounted(fetchInitialData)
               <input type="radio" :value="agent.id" v-model="selectedAgentId" class="mt-0.5 accent-indigo-500" />
               <div class="min-w-0">
                 <p class="text-sm font-medium text-base-content">{{ agent.name }}</p>
-                <p v-if="agent.description" class="text-xs text-base-content/60 mt-0.5 truncate">{{ agent.description }}</p>
+                <p v-if="agent.description" class="text-xs text-base-content/60 mt-0.5 truncate">{{ agent.description }}
+                </p>
               </div>
             </label>
           </div>
@@ -1661,18 +1713,18 @@ onMounted(fetchInitialData)
   </div>
 
   <!-- Lightbox de imagen original -->
-  <div
-    v-if="lightboxImage"
-    @click="lightboxImage = null"
+  <div v-if="lightboxImage" @click="lightboxImage = null"
     class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-6 cursor-zoom-out">
-    <img :src="lightboxImage" alt="Imagen original" class="max-h-full max-w-full object-contain rounded-lg shadow-2xl" />
-    <button
-      type="button"
-      @click.stop="lightboxImage = null"
+    <img :src="lightboxImage" alt="Imagen original"
+      class="max-h-full max-w-full object-contain rounded-lg shadow-2xl" />
+    <button type="button" @click.stop="lightboxImage = null"
       class="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-full bg-white/15 hover:bg-white/30 text-white text-xl leading-none">
       ✕
     </button>
   </div>
+
+  <!-- Diagramas Mermaid: renderizado dentro del contenedor de mensajes + modal de zoom/descarga -->
+  <MermaidRenderer ref="mermaidRenderer" :container="messagesContainer" />
 
 </template>
 
@@ -1699,6 +1751,7 @@ onMounted(fetchInitialData)
 .disti-fade-leave-active {
   transition: opacity 0.3s ease, transform 0.3s ease;
 }
+
 .disti-fade-enter-from,
 .disti-fade-leave-to {
   opacity: 0;

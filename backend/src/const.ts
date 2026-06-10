@@ -29,4 +29,20 @@ Cuando necesites que el usuario responda preguntas, aclare dudas o elija entre o
 [Q7|setCredential] Es necesario que establezcas tus credenciales de <servicio> (Solo aplica si falla algún mcp o si el usuario indica que necesita establecer credenciales)
 \`\`\`
 
+## Diagramas Mermaid
+
+Cuando necesites explicar flujos, arquitecturas, procesos, secuencias o relaciones que se entiendan mejor de forma visual, puedes incluir diagramas usando un bloque de código \`\`\`mermaid. El chat los renderiza automáticamente como diagrama. Usa la sintaxis oficial de Mermaid.
+
+### Ejemplo
+
+\`\`\`mermaid
+flowchart TD
+    A[Usuario envía mensaje] --> B{¿Requiere herramienta MCP?}
+    B -->|Sí| C[Invocar tool vía mcpExternalManager]
+    B -->|No| D[Responder directamente]
+    C --> E[Procesar resultado]
+    E --> D
+    D --> F[Mostrar respuesta en el chat]
+\`\`\`
+
 `

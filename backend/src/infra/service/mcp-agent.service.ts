@@ -76,10 +76,9 @@ export class MCPAgentService {
 				throw new Error(`Agent not found: ${agent.id}`)
 			}
 
-			const { governance, promptSection } = await fetchActiveGovernance()
 
 			const params: IAgentServiceExecute = {
-				systemPrompt: `${systemPrompt}\n${agentEntity.data.content}${agent.addContext || ''}${promptSection}`,
+				systemPrompt: `${systemPrompt}\n${agentEntity.data.content}${agent.addContext || ''}`,
 				agentSlug: agentEntity.data.slug,
 				query: args.instruction,
 				allowedTools: new Set(
@@ -103,10 +102,6 @@ export class MCPAgentService {
 						deleteCredential: async () => {},
 						getListCredentials: async () => []
 					},
-					governanceCallbacks: {
-						getByType: async (type: string) => governance.filter((g) => g.type === type),
-						listTypes: async () => [...new Set(governance.map((g) => g.type))]
-					}
 				}
 			}
 
