@@ -75,7 +75,10 @@ async function seedDefaultPermissions() {
 		// LLM Tokens
 		{ resource: 'llm_tokens', action: 'read', description: 'Ver consumo de tokens LLM' },
 		// Métricas del sistema
-		{ resource: 'system_metrics', action: 'read', description: 'Ver uso de CPU y memoria del servidor' }
+		{ resource: 'system_metrics', action: 'read', description: 'Ver uso de CPU y memoria del servidor' },
+		// Clarify (proyectos y documentos)
+		{ resource: 'clarify', action: 'read', description: 'Ver proyectos y documentos de Clarify' },
+		{ resource: 'clarify', action: 'create', description: 'Subir documentos a Clarify' }
 	]
 
 	for (const perm of defaultPermissions) {

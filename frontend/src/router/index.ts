@@ -52,6 +52,12 @@ const router = createRouter({
 					meta: { resources: ['mcp_servers', 'hook_servers', 'event_listeners'] }
 				},
 				{
+					path: 'clarify',
+					name: 'clarify',
+					component: () => import('@/views/ClarifyView.vue'),
+					meta: { resourceAccess: 'clarify' }
+				},
+				{
 					path: 'traceability',
 					name: 'traceability',
 					component: () => import('@/views/TraceabilityView.vue'),
