@@ -28,6 +28,11 @@ declare global {
 }
 globalThis.__mcpSessionContexts = sessionContexts
 
+/** Conteo de sesiones MCP vivas en memoria — expuesto en /api/system/metrics para vigilar fugas. */
+export function getMcpSessionStats(): { sessions: number; contexts: number } {
+	return { sessions: Object.keys(transports).length, contexts: Object.keys(sessionContexts).length }
+}
+
 // ── JSON Schema → ZodRawShape converter ──────────────────────────────────────
 
 function jsonSchemaPropertyToZod(prop: Record<string, unknown>, required: boolean): ZodTypeAny {

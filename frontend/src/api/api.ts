@@ -492,6 +492,7 @@ export interface SystemMetrics {
 		usage: number
 		process: { rss: number; heapTotal: number; heapUsed: number }
 	}
+	mcp: { sessions: number; contexts: number }
 	uptime: number
 	processUptime: number
 	platform: string

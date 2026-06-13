@@ -250,6 +250,11 @@ onBeforeUnmount(stopTimer)
             <p class="text-xs text-base-content/50 mb-1">Tiempo activo</p>
             <p class="text-lg font-mono font-semibold">{{ fmtUptime(metrics.processUptime) }}</p>
           </div>
+          <div class="rounded-xl p-4 bg-base-200 border border-base-300">
+            <p class="text-xs text-base-content/50 mb-1">Sesiones MCP</p>
+            <p class="text-lg font-mono font-semibold">{{ metrics.mcp?.sessions ?? 0 }}</p>
+            <p class="text-[10px] text-base-content/40 mt-1">contextos retenidos: {{ metrics.mcp?.contexts ?? 0 }}</p>
+          </div>
         </div>
       </div>
 

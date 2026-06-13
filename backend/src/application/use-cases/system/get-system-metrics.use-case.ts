@@ -1,4 +1,5 @@
 import os from 'node:os'
+import { getMcpSessionStats } from '../../routes/mcp.route.js'
 
 export interface SystemMetrics {
 	cpu: {
@@ -17,6 +18,10 @@ export interface SystemMetrics {
 			heapTotal: number
 			heapUsed: number
 		}
+	}
+	mcp: {
+		sessions: number
+		contexts: number
 	}
 	uptime: number
 	processUptime: number
@@ -79,6 +84,7 @@ export class GetSystemMetricsUseCase {
 						heapUsed: mem.heapUsed
 					}
 				},
+				mcp: getMcpSessionStats(),
 				uptime: os.uptime(),
 				processUptime: process.uptime(),
 				platform: `${os.type()} ${os.release()}`,
