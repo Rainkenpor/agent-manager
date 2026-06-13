@@ -362,6 +362,14 @@ export const createHookAssignment = (hookServerId: string, data: any) =>
 export const deleteHookAssignment = (hookServerId: string, assignmentId: string) =>
 	request<{ success: boolean }>(`/hook-servers/${hookServerId}/assignments/${assignmentId}`, { method: 'DELETE' })
 
+// Webhooks
+export const getWebhooks = () => request<{ success: boolean; data: any[] }>('/webhooks')
+export const createWebhook = (data: any) =>
+	request<{ success: boolean; data: any }>('/webhooks', { method: 'POST', body: JSON.stringify(data) })
+export const updateWebhook = (id: string, data: any) =>
+	request<{ success: boolean; data: any }>(`/webhooks/${id}`, { method: 'PUT', body: JSON.stringify(data) })
+export const deleteWebhook = (id: string) => request<{ success: boolean }>(`/webhooks/${id}`, { method: 'DELETE' })
+
 // Event Listeners
 export const getEventListeners = () => request<{ success: boolean; data: any[] }>('/event-listeners')
 export const getEventListenerById = (id: string) => request<{ success: boolean; data: any }>(`/event-listeners/${id}`)

@@ -42,7 +42,8 @@ import {
 	TraceabilityTaskEntity,
 	TraceabilityTemplateEntity,
 	UserEntity,
-	UserRoleEntity
+	UserRoleEntity,
+	WebhookEntity
 } from './entities.js'
 
 const entities = [
@@ -84,7 +85,8 @@ const entities = [
 	HookServerEntity,
 	HookAssignmentEntity,
 	EventListenerEntity,
-	TokenAuditEntity
+	TokenAuditEntity,
+	WebhookEntity
 ]
 
 let AppDataSource: DataSource

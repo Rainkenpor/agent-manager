@@ -15,7 +15,8 @@ import type {
 	ITokenAuditRepository,
 	ITraceabilityParticipantRepository,
 	ITraceabilityRepository,
-	IUserRepository
+	IUserRepository,
+	IWebhookRepository
 } from '@domain/repositories/index.js'
 import {
 	AgentGroupRepository,
@@ -33,12 +34,14 @@ import {
 	TokenAuditRepository,
 	TraceabilityParticipantRepository,
 	TraceabilityRepository,
-	UserRepository
+	UserRepository,
+	WebhookRepository
 } from '@infra/repository/index.js'
 import { EventListenerExecutorService } from '@infra/service/event-listener-executor.service.js'
 import { HookDispatcherService } from '@infra/service/hook-dispatcher.service.js'
 import { mcpExternalManager } from '@infra/service/mcp-external.js'
 import { TraceabilityAgentTriggerService } from '@infra/service/traceability-agent-trigger.service.js'
+import { WebhookExecutorService } from '@infra/service/webhook-executor.service.js'
 import {
 	AppendMessageImagesUseCase,
 	AssignPermissionUseCase,
@@ -232,6 +235,10 @@ export class Container {
 	private readonly _hookServerRepository: IHookServerRepository
 	private _hookDispatcher?: HookDispatcherService
 
+	// Webhook Repository & Executor
+	private readonly _webhookRepository: IWebhookRepository
+	private _webhookExecutor?: WebhookExecutorService
+
 	// Event Listener Repository, Use Cases & Executor
 	private readonly _eventListenerRepository: IEventListenerRepository
 	private _createEventListenerUseCase?: CreateEventListenerUseCase
@@ -311,6 +318,7 @@ export class Container {
 		this._traceabilityRepository = new TraceabilityRepository()
 		this._traceabilityParticipantRepository = new TraceabilityParticipantRepository()
 		this._hookServerRepository = new HookServerRepository()
+		this._webhookRepository = new WebhookRepository()
 		this._eventListenerRepository = new EventListenerRepository()
 		this.tokenAuditRepository = new TokenAuditRepository()
 
@@ -856,6 +864,21 @@ export class Container {
 			this._hookDispatcher = new HookDispatcherService(this._hookServerRepository)
 		}
 		return this._hookDispatcher
+	}
+
+	// ==========================================
+	// WEBHOOKS
+	// ==========================================
+
+	get webhookRepository(): IWebhookRepository {
+		return this._webhookRepository
+	}
+
+	get webhookExecutor(): WebhookExecutorService {
+		if (!this._webhookExecutor) {
+			this._webhookExecutor = new WebhookExecutorService()
+		}
+		return this._webhookExecutor
 	}
 
 	// ==========================================

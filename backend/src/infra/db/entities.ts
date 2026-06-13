@@ -921,6 +921,48 @@ export class HookAssignmentEntity {
 	createdAt!: string
 }
 
+@Entity('webhooks')
+export class WebhookEntity {
+	@PrimaryColumn({ type: 'text' })
+	id!: string
+
+	@Column({ type: 'text', unique: true })
+	name!: string
+
+	@Column({ type: 'text', nullable: true })
+	description!: string | null
+
+	@Column({ type: 'text', default: 'POST' })
+	method!: string
+
+	@Column({ name: 'target_type', type: 'text' })
+	targetType!: string
+
+	@Column({ name: 'target_id', type: 'text' })
+	targetId!: string
+
+	@Column({ name: 'target_name', type: 'text' })
+	targetName!: string
+
+	@Column({ name: 'extra_data', type: 'simple-json', nullable: true })
+	extraData!: Record<string, string> | null
+
+	@Column({ name: 'auth_enabled', type: 'boolean', default: true })
+	authEnabled!: boolean
+
+	@Column({ type: 'text', nullable: true })
+	secret!: string | null
+
+	@Column({ type: 'boolean', default: true })
+	active!: boolean
+
+	@Column({ name: 'created_at', type: 'text' })
+	createdAt!: string
+
+	@Column({ name: 'updated_at', type: 'text' })
+	updatedAt!: string
+}
+
 @Entity('event_listeners')
 export class EventListenerEntity {
 	@PrimaryColumn({ type: 'text' })

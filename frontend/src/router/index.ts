@@ -67,7 +67,7 @@ const router = createRouter({
 					path: 'config',
 					name: 'config',
 					component: () => import('@/views/ConfigView.vue'),
-					meta: { resources: ['users', 'llm_tokens'] }
+					meta: { resources: ['users', 'llm_tokens', 'webhooks'] }
 				},
 				// Redirects for backward compatibility
 				{ path: 'agents', redirect: '/agentes' },

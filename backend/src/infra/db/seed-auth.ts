@@ -60,6 +60,11 @@ async function seedDefaultPermissions() {
 		{ resource: 'hook_servers', action: 'read', description: 'Ver servidores de hooks' },
 		{ resource: 'hook_servers', action: 'update', description: 'Actualizar servidores de hooks y asignaciones' },
 		{ resource: 'hook_servers', action: 'delete', description: 'Eliminar servidores de hooks' },
+		// Webhooks
+		{ resource: 'webhooks', action: 'create', description: 'Crear webhooks' },
+		{ resource: 'webhooks', action: 'read', description: 'Ver webhooks' },
+		{ resource: 'webhooks', action: 'update', description: 'Actualizar webhooks' },
+		{ resource: 'webhooks', action: 'delete', description: 'Eliminar webhooks' },
 		// Traceability
 		{ resource: 'traceability', action: 'create', description: 'Crear trazabilidades y templates' },
 		{ resource: 'traceability', action: 'read', description: 'Ver trazabilidades y templates' },

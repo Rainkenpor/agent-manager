@@ -21,6 +21,7 @@ import { registerTokenAuditRoutes } from './token-audit.route.js'
 import { registerTraceabilityRoutes } from './traceability.route.js'
 import { registerTraceabilityParticipantRoutes } from './traceability-participant.route.js'
 import { registerUserRoutes } from './user.route.js'
+import { registerWebhookRoutes } from './webhook.route.js'
 
 /**
  * Initializes the registry by calling all registration functions.
@@ -41,6 +42,7 @@ export function initializeRegistry(): void {
 	registerTraceabilityParticipantRoutes()
 	registerLogsRoutes()
 	registerHookServerRoutes()
+	registerWebhookRoutes()
 	registerEventListenerRoutes()
 	registerConfigRoutes()
 	registerAiAssistRoutes()
