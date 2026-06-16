@@ -30,6 +30,7 @@ const allNavLinks: NavLink[] = [
     resources: ['governance', 'governance_suggestion']
   },
   { to: '/mcps', label: 'MCPs', icon: 'mdi-server', resources: ['mcp_servers', 'hook_servers', 'event_listeners'] },
+  { to: '/clarify', label: 'Clarify', icon: 'mdi-book-open-page-variant-outline', resources: ['clarify'], accessResource: 'clarify' },
   { to: '/traceability', label: 'Trazabilidad', icon: 'mdi-sitemap', resources: ['traceability'] },
   { to: '/admin', label: 'Admin', icon: 'mdi-shield-account', resources: ['users', 'roles', 'mcp_credentials'] },
   { to: '/config', label: 'Configuración', icon: 'mdi-cog-transfer', resources: ['users'] }

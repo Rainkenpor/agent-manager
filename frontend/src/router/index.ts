@@ -18,6 +18,12 @@ const router = createRouter({
 			meta: { requiresAuth: false }
 		},
 		{
+			path: '/conocimiento-distelsa',
+			name: 'public-chat',
+			component: () => import('@/views/PublicChatView.vue'),
+			meta: { requiresAuth: false }
+		},
+		{
 			path: '/',
 			component: AppLayout,
 			meta: { requiresAuth: true },
@@ -50,6 +56,12 @@ const router = createRouter({
 					name: 'mcps',
 					component: () => import('@/views/McpHubView.vue'),
 					meta: { resources: ['mcp_servers', 'hook_servers', 'event_listeners'] }
+				},
+				{
+					path: 'clarify',
+					name: 'clarify',
+					component: () => import('@/views/ClarifyView.vue'),
+					meta: { resourceAccess: 'clarify' }
 				},
 				{
 					path: 'traceability',

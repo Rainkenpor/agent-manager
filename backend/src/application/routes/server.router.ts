@@ -50,8 +50,13 @@ export function registerServerRoutes(oauthService?: McpOAuthService): express.Ro
 
 				const abortController = new AbortController()
 				const { signal } = abortController
-				req.on('close', () => {
-					abortController.abort()
+				// Abort only when the client truly disconnects mid-response. Listening on
+				// `req` 'close' fires as soon as the request body is fully read (immediately
+				// for buffered JSON bodies), which would abort long-running SSE handlers
+				// before they even start. `res` 'close' with an unfinished response is the
+				// reliable client-disconnect signal.
+				res.on('close', () => {
+					if (!res.writableFinished) abortController.abort()
 				})
 
 				console.log(`➡️  ${req.method} ${req.url} - Handler: ${route.handler.name || 'anonymous'}`)

@@ -450,6 +450,29 @@ export function streamMessage(conversationId: string, content: string, signal?: 
 	})
 }
 
+// ── Public chat (no auth) ──────────────────────────────────────────────────
+export async function createPublicConversation(title?: string): Promise<{ success: boolean; data?: any; error?: string }> {
+	const res = await fetch(`${__API_BASE__}/public/chat/conversations`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ title })
+	})
+	if (!res.ok) {
+		const err = await res.json().catch(() => ({ error: res.statusText }))
+		throw new Error(err.error || res.statusText)
+	}
+	return res.json()
+}
+
+export function streamPublicMessage(conversationId: string, content: string, signal?: AbortSignal): Promise<Response> {
+	return fetch(`${__API_BASE__}/public/chat/conversations/${conversationId}/messages`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ content }),
+		signal
+	})
+}
+
 export interface MessageImage {
 	serverId?: string
 	toolName: string
@@ -509,3 +532,71 @@ export interface SystemMetrics {
 }
 
 export const getSystemMetrics = () => request<{ success: boolean; data: SystemMetrics }>('/system/metrics')
+
+// Clarify (proyectos y documentos de documentación)
+export interface ClarifyProject {
+	id: string
+	slug: string
+	title: string
+	description: string | null
+	icon: string | null
+	active: boolean
+	group: string | null
+}
+
+export interface ClarifyDocument {
+	id: string
+	title: string
+	sourceType: 'pdf' | 'html' | 'link'
+	sourceUrl: string | null
+	filePath: string | null
+	originalFilename: string | null
+	mimeType: string | null
+	markdownContent: string | null
+	status: 'pending' | 'converting' | 'embedding' | 'ready' | 'error'
+	error: string | null
+	chunkConfigOverride: { chunkSize?: number; chunkOverlap?: number } | null
+	categoryIds: string[]
+	createdAt: string
+	updatedAt: string
+}
+
+export const getClarifyProjects = () => request<{ success: boolean; data: ClarifyProject[] }>('/clarify/projects')
+export const getClarifyDocuments = () => request<{ success: boolean; data: ClarifyDocument[] }>('/clarify/documents')
+export const getClarifyDocumentCategories = () => request<{ success: boolean; data: any[] }>('/clarify/document-categories')
+export const createClarifyDocument = (data: {
+	title: string
+	filename: string
+	mimeType?: string
+	fileBase64: string
+	categoryIds: string[]
+}) => request<{ success: boolean; data: ClarifyDocument }>('/clarify/documents', { method: 'POST', body: JSON.stringify(data) })
+
+// Preguntas/respuestas preestablecidas (FAQ del chat público)
+export interface PresetQnaGroup {
+	id: string
+	canonicalQuestion: string
+	questions: string[]
+	answer: string
+	agentSlug: string
+	isActive: boolean
+	createdAt: string
+	updatedAt: string
+}
+
+export const getPresetQna = () => request<{ success: boolean; data: PresetQnaGroup[] }>('/preset-qna')
+export const refreshPresetQna = (id: string) =>
+	request<{ success: boolean; data?: PresetQnaGroup; error?: string }>(`/preset-qna/${id}/refresh`, { method: 'POST' })
+export const deletePresetQna = (id: string) => request<{ success: boolean; error?: string }>(`/preset-qna/${id}`, { method: 'DELETE' })
+
+// Sugerencias públicas (sin auth) para el typeahead del chat público
+export async function suggestPublicQna(q: string): Promise<{ id: string; question: string }[]> {
+	const res = await fetch(`${__API_BASE__}/public/qna/suggest`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ q })
+	})
+	if (!res.ok) return []
+	const body = await res.json().catch(() => ({ data: [] }))
+	return body?.data ?? []
+}

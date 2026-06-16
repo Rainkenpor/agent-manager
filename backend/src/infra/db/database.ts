@@ -21,6 +21,7 @@ import {
 	OAuthCodeEntity,
 	OAuthRefreshTokenEntity,
 	PermissionEntity,
+	PresetQnaEntity,
 	ProviderConfigEntity,
 	RoleAgentEntity,
 	RoleEntity,
@@ -86,7 +87,8 @@ const entities = [
 	HookAssignmentEntity,
 	EventListenerEntity,
 	TokenAuditEntity,
-	WebhookEntity
+	WebhookEntity,
+	PresetQnaEntity
 ]
 
 let AppDataSource: DataSource

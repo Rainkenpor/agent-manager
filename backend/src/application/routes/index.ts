@@ -3,6 +3,7 @@ import { registerAgentGroupRoutes } from './agent-group.route.js'
 import { registerAiAssistRoutes } from './ai-assist.route.js'
 import { registerAuthRoutes } from './auth.route.js'
 import { registerChatRoutes } from './chat.route.js'
+import { registerClarifyRoutes } from './clarify.route.js'
 import { registerConfigRoutes } from './config.route.js'
 import { registerCredentialsRoutes } from './credential.route.js'
 import { registerEventListenerRoutes } from './event-listener.route.js'
@@ -13,6 +14,8 @@ import { registerLogsRoutes } from './logs.route.js'
 import { registerMcpCredentialRoutes } from './mcp-credential.route.js'
 import { registerMcpServerRoutes } from './mcp-server.route.js'
 import { registerOAuthRoutes } from './oauth.route.js'
+import { registerPresetQnaRoutes } from './preset-qna.route.js'
+import { registerPublicChatRoutes } from './public-chat.route.js'
 import { registerReleaseNotesRoutes } from './release-notes.route.js'
 import { registerRoleRoutes } from './role.route.js'
 import { registerSkillRoutes } from './skill.route.js'
@@ -36,6 +39,8 @@ export function initializeRegistry(): void {
 	registerMcpServerRoutes()
 	registerOAuthRoutes()
 	registerChatRoutes()
+	registerPublicChatRoutes()
+	registerPresetQnaRoutes()
 	registerMcpCredentialRoutes()
 	registerSkillRoutes()
 	registerTraceabilityRoutes()
@@ -52,4 +57,5 @@ export function initializeRegistry(): void {
 	registerReleaseNotesRoutes()
 	registerTokenAuditRoutes()
 	registerSystemRoutes()
+	registerClarifyRoutes()
 }

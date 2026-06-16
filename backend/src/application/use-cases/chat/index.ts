@@ -1,5 +1,6 @@
 export * from './append-message-images.use-case.js'
 export * from './create-conversation.use-case.js'
+export * from './create-public-conversation.use-case.js'
 export * from './delete-conversation.use-case.js'
 export * from './get-conversation.use-case.js'
 export * from './list-conversations.use-case.js'
