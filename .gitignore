@@ -3,6 +3,9 @@ dist
 build
 data
 *.log
+*.mjs
+*.ps1
+*.txt
 .env
 settings.local.json
 backend/drizzle

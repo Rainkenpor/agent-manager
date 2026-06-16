@@ -12,6 +12,10 @@ const sendPublicMessageSchema = z.object({
 	content: z.string().min(1)
 })
 
+const suggestSchema = z.object({
+	q: z.string().min(1)
+})
+
 export function registerPublicChatRoutes(): void {
 	// Create a public conversation locked to the conocimiento-distelsa agent
 	registry.register({
@@ -49,7 +53,7 @@ export function registerPublicChatRoutes(): void {
 			}
 
 			try {
-				await container.streamMessageUseCase.execute(input.id, input.content, sendEvent, signal)
+				await container.publicChatAnswerUseCase.execute(input.id, input.content, sendEvent, signal)
 			} catch (error) {
 				if ((error as any)?.name !== 'AbortError') {
 					sendEvent({ type: 'error', error: error instanceof Error ? error.message : 'Error desconocido' })
@@ -58,6 +62,19 @@ export function registerPublicChatRoutes(): void {
 
 			res.end()
 			return null
+		}
+	})
+
+	// Sugerencias de preguntas preestablecidas mientras el usuario escribe (público)
+	registry.register({
+		useBy: ['server'],
+		method: 'POST',
+		path: '/api/public/qna/suggest',
+		inputSchema: suggestSchema.shape,
+		requiresAuth: false,
+		handler: async ({ input }) => {
+			const data = await container.suggestPresetQnaUseCase.execute(input.q)
+			return { success: true, data }
 		}
 	})
 }

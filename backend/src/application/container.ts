@@ -10,6 +10,7 @@ import type {
 	IMcpServerRepository,
 	IMcpUserCredentialRepository,
 	IPermissionRepository,
+	IPresetQnaRepository,
 	IRoleRepository,
 	ISkillRepository,
 	ITokenAuditRepository,
@@ -28,6 +29,7 @@ import {
 	McpServerRepository,
 	McpUserCredentialRepository,
 	PermissionRepository,
+	PresetQnaRepository,
 	RoleRepository,
 	SkillRepository,
 	TokenAuditRepository,
@@ -53,6 +55,14 @@ import {
 	CreateConversationUseCase,
 	CreatePublicConversationUseCase,
 	CreateDocumentUseCase,
+	// Preset Q&A Use Cases
+	DeletePresetQnaUseCase,
+	GeneratePresetQnaUseCase,
+	ListPresetQnaUseCase,
+	MatchPresetQnaUseCase,
+	PublicChatAnswerUseCase,
+	RefreshPresetQnaUseCase,
+	SuggestPresetQnaUseCase,
 	// Event Listener Use Cases
 	CreateEventListenerUseCase,
 	CreateGovernanceSuggestionUseCase,
@@ -168,6 +178,8 @@ export class Container {
 	private readonly _mcpServerRepository: IMcpServerRepository
 	// Chat Repository
 	private readonly _chatRepository: IChatRepository
+	// Preset Q&A Repository
+	private readonly _presetQnaRepository: IPresetQnaRepository
 
 	// Auth Use Cases
 	private _createUserUseCase?: CreateUserUseCase
@@ -199,6 +211,15 @@ export class Container {
 	private _streamMessageUseCase?: StreamMessageUseCase
 	private _truncateMessagesUseCase?: TruncateMessagesUseCase
 	private _appendMessageImagesUseCase?: AppendMessageImagesUseCase
+
+	// Preset Q&A Use Cases
+	private _matchPresetQnaUseCase?: MatchPresetQnaUseCase
+	private _suggestPresetQnaUseCase?: SuggestPresetQnaUseCase
+	private _generatePresetQnaUseCase?: GeneratePresetQnaUseCase
+	private _listPresetQnaUseCase?: ListPresetQnaUseCase
+	private _deletePresetQnaUseCase?: DeletePresetQnaUseCase
+	private _refreshPresetQnaUseCase?: RefreshPresetQnaUseCase
+	private _publicChatAnswerUseCase?: PublicChatAnswerUseCase
 
 	// MCP User Credential Repository & Use Cases
 	private readonly _mcpUserCredentialRepository: IMcpUserCredentialRepository
@@ -306,6 +327,7 @@ export class Container {
 		this._agentGroupRepository = new AgentGroupRepository()
 		this._mcpServerRepository = new McpServerRepository()
 		this._chatRepository = new ChatRepository()
+		this._presetQnaRepository = new PresetQnaRepository()
 		this._mcpUserCredentialRepository = new McpUserCredentialRepository()
 		this._skillRepository = new SkillRepository()
 		this._governanceRepository = new GovernanceRepository()
@@ -520,6 +542,68 @@ export class Container {
 			this._appendMessageImagesUseCase = new AppendMessageImagesUseCase(this._chatRepository)
 		}
 		return this._appendMessageImagesUseCase
+	}
+
+	// ==========================================
+	// PRESET Q&A USE CASES
+	// ==========================================
+
+	get presetQnaRepository(): IPresetQnaRepository {
+		return this._presetQnaRepository
+	}
+
+	get matchPresetQnaUseCase(): MatchPresetQnaUseCase {
+		if (!this._matchPresetQnaUseCase) {
+			this._matchPresetQnaUseCase = new MatchPresetQnaUseCase(this._presetQnaRepository)
+		}
+		return this._matchPresetQnaUseCase
+	}
+
+	get suggestPresetQnaUseCase(): SuggestPresetQnaUseCase {
+		if (!this._suggestPresetQnaUseCase) {
+			this._suggestPresetQnaUseCase = new SuggestPresetQnaUseCase(this._presetQnaRepository)
+		}
+		return this._suggestPresetQnaUseCase
+	}
+
+	get generatePresetQnaUseCase(): GeneratePresetQnaUseCase {
+		if (!this._generatePresetQnaUseCase) {
+			this._generatePresetQnaUseCase = new GeneratePresetQnaUseCase(this._presetQnaRepository, this._agentRepository)
+		}
+		return this._generatePresetQnaUseCase
+	}
+
+	get listPresetQnaUseCase(): ListPresetQnaUseCase {
+		if (!this._listPresetQnaUseCase) {
+			this._listPresetQnaUseCase = new ListPresetQnaUseCase(this._presetQnaRepository)
+		}
+		return this._listPresetQnaUseCase
+	}
+
+	get deletePresetQnaUseCase(): DeletePresetQnaUseCase {
+		if (!this._deletePresetQnaUseCase) {
+			this._deletePresetQnaUseCase = new DeletePresetQnaUseCase(this._presetQnaRepository)
+		}
+		return this._deletePresetQnaUseCase
+	}
+
+	get refreshPresetQnaUseCase(): RefreshPresetQnaUseCase {
+		if (!this._refreshPresetQnaUseCase) {
+			this._refreshPresetQnaUseCase = new RefreshPresetQnaUseCase(this._presetQnaRepository, this._agentRepository)
+		}
+		return this._refreshPresetQnaUseCase
+	}
+
+	get publicChatAnswerUseCase(): PublicChatAnswerUseCase {
+		if (!this._publicChatAnswerUseCase) {
+			this._publicChatAnswerUseCase = new PublicChatAnswerUseCase(
+				this._chatRepository,
+				this.matchPresetQnaUseCase,
+				this.streamMessageUseCase,
+				this.generatePresetQnaUseCase
+			)
+		}
+		return this._publicChatAnswerUseCase
 	}
 
 	// ==========================================

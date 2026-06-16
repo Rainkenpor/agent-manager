@@ -562,3 +562,32 @@ export const createClarifyDocument = (data: {
 	fileBase64: string
 	categoryIds: string[]
 }) => request<{ success: boolean; data: ClarifyDocument }>('/clarify/documents', { method: 'POST', body: JSON.stringify(data) })
+
+// Preguntas/respuestas preestablecidas (FAQ del chat público)
+export interface PresetQnaGroup {
+	id: string
+	canonicalQuestion: string
+	questions: string[]
+	answer: string
+	agentSlug: string
+	isActive: boolean
+	createdAt: string
+	updatedAt: string
+}
+
+export const getPresetQna = () => request<{ success: boolean; data: PresetQnaGroup[] }>('/preset-qna')
+export const refreshPresetQna = (id: string) =>
+	request<{ success: boolean; data?: PresetQnaGroup; error?: string }>(`/preset-qna/${id}/refresh`, { method: 'POST' })
+export const deletePresetQna = (id: string) => request<{ success: boolean; error?: string }>(`/preset-qna/${id}`, { method: 'DELETE' })
+
+// Sugerencias públicas (sin auth) para el typeahead del chat público
+export async function suggestPublicQna(q: string): Promise<{ id: string; question: string }[]> {
+	const res = await fetch(`${__API_BASE__}/public/qna/suggest`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ q })
+	})
+	if (!res.ok) return []
+	const body = await res.json().catch(() => ({ data: [] }))
+	return body?.data ?? []
+}

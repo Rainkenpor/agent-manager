@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import * as api from '@/api/api'
-import type { ClarifyDocument, ClarifyProject } from '@/api/api'
+import type { ClarifyDocument, ClarifyProject, PresetQnaGroup } from '@/api/api'
 import AppModal from '@/components/AppModal.vue'
 import PageLayout from '@/components/PageLayout.vue'
 import { useAuthStore } from '@/store/useAuth'
@@ -10,7 +10,8 @@ import { useToastStore } from '@/store/useToast'
 const auth = useAuthStore()
 const toast = useToastStore()
 
-const activeTab = ref<'projects' | 'documents'>('projects')
+const canManageQna = computed(() => auth.hasResourceAccess('preset_qna'))
+const activeTab = ref<'projects' | 'documents' | 'qna'>('projects')
 
 // ── Proyectos ─────────────────────────────────────────────────────────────────
 
@@ -185,10 +186,73 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
+// ── Respuestas preestablecidas (FAQ del chat público) ──────────────────────────
+
+const qnaGroups = ref<PresetQnaGroup[]>([])
+const qnaLoading = ref(false)
+const qnaSearch = ref('')
+const refreshingId = ref<string | null>(null)
+const deleteTarget = ref<PresetQnaGroup | null>(null)
+const deletingQna = ref(false)
+
+const filteredQna = computed(() => {
+  const q = qnaSearch.value.trim().toLowerCase()
+  if (!q) return qnaGroups.value
+  return qnaGroups.value.filter(
+    (g) => g.canonicalQuestion.toLowerCase().includes(q) || g.answer.toLowerCase().includes(q) || g.questions.some((x) => x.toLowerCase().includes(q))
+  )
+})
+
+async function fetchQna() {
+  if (!canManageQna.value) return
+  qnaLoading.value = true
+  try {
+    const res = await api.getPresetQna()
+    qnaGroups.value = res.data ?? []
+  } catch (e: any) {
+    toast.error(e.message ?? 'No se pudieron cargar las respuestas')
+  } finally {
+    qnaLoading.value = false
+  }
+}
+
+async function refreshQna(group: PresetQnaGroup) {
+  refreshingId.value = group.id
+  try {
+    const res = await api.refreshPresetQna(group.id)
+    if (!res.success) throw new Error(res.error ?? 'No se pudo actualizar')
+    if (res.data) {
+      const idx = qnaGroups.value.findIndex((g) => g.id === group.id)
+      if (idx !== -1) qnaGroups.value[idx] = res.data
+    }
+    toast.success('Respuesta actualizada por el agente')
+  } catch (e: any) {
+    toast.error(e.message ?? 'No se pudo actualizar la respuesta')
+  } finally {
+    refreshingId.value = null
+  }
+}
+
+async function confirmDeleteQna() {
+  if (!deleteTarget.value) return
+  deletingQna.value = true
+  try {
+    await api.deletePresetQna(deleteTarget.value.id)
+    qnaGroups.value = qnaGroups.value.filter((g) => g.id !== deleteTarget.value!.id)
+    toast.success('Grupo eliminado')
+    deleteTarget.value = null
+  } catch (e: any) {
+    toast.error(e.message ?? 'No se pudo eliminar')
+  } finally {
+    deletingQna.value = false
+  }
+}
+
 onMounted(() => {
   fetchProjects()
   fetchDocuments()
   fetchCategories()
+  fetchQna()
 })
 </script>
 
@@ -218,6 +282,13 @@ onMounted(() => {
           : 'border-transparent text-base-content/50 hover:text-base-content'">
         <i class="mdi" :class="tab.icon"></i>
         {{ tab.label }}
+      </button>
+      <button v-if="canManageQna" @click="activeTab = 'qna'"
+        class="flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px" :class="activeTab === 'qna'
+          ? 'border-indigo-500 text-base-content'
+          : 'border-transparent text-base-content/50 hover:text-base-content'">
+        <i class="mdi mdi-comment-question-outline"></i>
+        Respuestas ({{ qnaGroups.length }})
       </button>
     </div>
 
@@ -260,7 +331,7 @@ onMounted(() => {
     </template>
 
     <!-- ── Documentos ─────────────────────────────────────────────────────── -->
-    <template v-else>
+    <template v-else-if="activeTab === 'documents'">
       <input v-model="documentSearch" type="text" placeholder="Buscar documento..."
         class="w-full sm:w-72 mb-4 px-3 py-2 text-sm rounded-lg bg-base-200 border border-base-300 text-base-content placeholder:text-base-content/40 focus:outline-none focus:border-indigo-500" />
 
@@ -310,6 +381,61 @@ onMounted(() => {
         </table>
       </div>
     </template>
+
+    <!-- ── Respuestas preestablecidas ─────────────────────────────────────── -->
+    <template v-else-if="activeTab === 'qna'">
+      <input v-model="qnaSearch" type="text" placeholder="Buscar pregunta o respuesta..."
+        class="w-full sm:w-72 mb-4 px-3 py-2 text-sm rounded-lg bg-base-200 border border-base-300 text-base-content placeholder:text-base-content/40 focus:outline-none focus:border-indigo-500" />
+
+      <div v-if="qnaLoading" class="flex justify-center py-16">
+        <div class="animate-spin w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full" />
+      </div>
+      <p v-else-if="!filteredQna.length" class="text-sm text-base-content/50 italic text-center py-16">
+        Aún no hay respuestas preestablecidas. Se generan automáticamente cuando el chat público responde preguntas nuevas.
+      </p>
+      <div v-else class="overflow-x-auto rounded-xl border border-base-300">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="bg-base-300 text-left text-xs uppercase tracking-wider text-base-content/50">
+              <th class="px-4 py-3 font-semibold">Pregunta</th>
+              <th class="px-4 py-3 font-semibold">Respuesta</th>
+              <th class="px-4 py-3 font-semibold">Variantes</th>
+              <th class="px-4 py-3 font-semibold">Actualizado</th>
+              <th class="px-4 py-3 font-semibold text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-base-300">
+            <tr v-for="g in filteredQna" :key="g.id" class="hover:bg-base-300/40 transition-colors align-top">
+              <td class="px-4 py-3 max-w-xs">
+                <p class="text-base-content font-medium" :title="g.canonicalQuestion">{{ g.canonicalQuestion }}</p>
+              </td>
+              <td class="px-4 py-3 text-xs text-base-content/70 max-w-md">
+                <p class="line-clamp-3" :title="g.answer">{{ g.answer }}</p>
+              </td>
+              <td class="px-4 py-3 text-xs text-base-content/60 whitespace-nowrap"
+                :title="g.questions.join('\n')">
+                {{ g.questions.length }} variantes
+              </td>
+              <td class="px-4 py-3 text-xs text-base-content/50 whitespace-nowrap">{{ formatDate(g.updatedAt) }}</td>
+              <td class="px-4 py-3 whitespace-nowrap text-right">
+                <div class="inline-flex items-center gap-1">
+                  <button v-if="auth.hasPermission('preset_qna', 'update')" @click="refreshQna(g)" :disabled="refreshingId === g.id"
+                    class="p-1.5 rounded-lg hover:bg-base-200 text-base-content/70 hover:text-indigo-400 transition-colors disabled:opacity-50"
+                    title="Actualizar con el agente">
+                    <i class="mdi mdi-robot-outline" :class="refreshingId === g.id ? 'animate-spin' : ''"></i>
+                  </button>
+                  <button v-if="auth.hasPermission('preset_qna', 'delete')" @click="deleteTarget = g"
+                    class="p-1.5 rounded-lg hover:bg-base-200 text-base-content/70 hover:text-rose-400 transition-colors"
+                    title="Eliminar">
+                    <i class="mdi mdi-trash-can-outline"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </template>
   </PageLayout>
 
   <!-- ── Modal subir documento ────────────────────────────────────────────── -->
@@ -354,6 +480,27 @@ onMounted(() => {
           class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
           <span v-if="uploading" class="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
           {{ uploading ? 'Subiendo...' : 'Subir' }}
+        </button>
+      </div>
+    </template>
+  </AppModal>
+
+  <!-- ── Confirmar eliminación de grupo Q&A ───────────────────────────────── -->
+  <AppModal v-if="deleteTarget" title="Eliminar respuesta preestablecida" @close="deleteTarget = null">
+    <p class="text-sm text-base-content/80">
+      ¿Eliminar este grupo de preguntas y su respuesta? El chat público dejará de responderlas de forma instantánea.
+    </p>
+    <p class="mt-2 text-sm font-medium text-base-content">{{ deleteTarget.canonicalQuestion }}</p>
+    <template #footer>
+      <div class="flex justify-end gap-2">
+        <button @click="deleteTarget = null"
+          class="px-4 py-2 text-sm rounded-lg bg-base-300 hover:bg-base-100 text-base-content transition-colors">
+          Cancelar
+        </button>
+        <button :disabled="deletingQna" @click="confirmDeleteQna"
+          class="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-rose-600 hover:bg-rose-500 text-white transition-colors disabled:opacity-50">
+          <span v-if="deletingQna" class="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+          {{ deletingQna ? 'Eliminando...' : 'Eliminar' }}
         </button>
       </div>
     </template>

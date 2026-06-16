@@ -989,3 +989,30 @@ export class TokenAuditEntity {
 	@Column({ name: 'updated_at', type: 'text' })
 	updatedAt!: string
 }
+
+@Entity('preset_qna')
+export class PresetQnaEntity {
+	@PrimaryColumn({ type: 'text' })
+	id!: string
+
+	@Column({ name: 'canonical_question', type: 'text' })
+	canonicalQuestion!: string
+
+	@Column({ type: 'simple-json' })
+	questions!: string[]
+
+	@Column({ type: 'text' })
+	answer!: string
+
+	@Column({ name: 'agent_slug', type: 'text' })
+	agentSlug!: string
+
+	@Column({ name: 'is_active', type: 'boolean', default: true })
+	isActive!: boolean
+
+	@Column({ name: 'created_at', type: 'text' })
+	createdAt!: string
+
+	@Column({ name: 'updated_at', type: 'text' })
+	updatedAt!: string
+}

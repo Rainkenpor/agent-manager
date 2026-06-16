@@ -14,6 +14,7 @@ import { registerLogsRoutes } from './logs.route.js'
 import { registerMcpCredentialRoutes } from './mcp-credential.route.js'
 import { registerMcpServerRoutes } from './mcp-server.route.js'
 import { registerOAuthRoutes } from './oauth.route.js'
+import { registerPresetQnaRoutes } from './preset-qna.route.js'
 import { registerPublicChatRoutes } from './public-chat.route.js'
 import { registerReleaseNotesRoutes } from './release-notes.route.js'
 import { registerRoleRoutes } from './role.route.js'
@@ -38,6 +39,7 @@ export function initializeRegistry(): void {
 	registerOAuthRoutes()
 	registerChatRoutes()
 	registerPublicChatRoutes()
+	registerPresetQnaRoutes()
 	registerMcpCredentialRoutes()
 	registerSkillRoutes()
 	registerTraceabilityRoutes()

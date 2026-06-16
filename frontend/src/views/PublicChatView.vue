@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onMounted, ref } from 'vue'
+import { nextTick, onMounted, ref, watch } from 'vue'
 import * as api from '@/api/api'
 import DistiLoader from '@/components/DistiLoader.vue'
 import MermaidRenderer from '@/components/MermaidRenderer.vue'
@@ -30,6 +30,32 @@ const distiState = ref<'loading' | 'thinking' | 'happy' | 'sad' | 'idle'>('idle'
 const messagesContainer = ref<HTMLElement | null>(null)
 let abortController: AbortController | null = null
 
+// ── Sugerencias mientras se escribe ───────────────────────────────────────
+const suggestions = ref<Array<{ id: string; question: string }>>([])
+let suggestTimer: ReturnType<typeof setTimeout> | null = null
+
+watch(messageInput, (value) => {
+	if (suggestTimer) clearTimeout(suggestTimer)
+	const text = value.trim()
+	if (sending.value || text.length < 3) {
+		suggestions.value = []
+		return
+	}
+	suggestTimer = setTimeout(async () => {
+		try {
+			suggestions.value = await api.suggestPublicQna(text)
+		} catch {
+			suggestions.value = []
+		}
+	}, 250)
+})
+
+function pickSuggestion(question: string) {
+	suggestions.value = []
+	messageInput.value = question
+	sendMessage()
+}
+
 async function startConversation() {
 	starting.value = true
 	error.value = ''
@@ -52,6 +78,7 @@ async function sendMessage() {
 	if (!messageInput.value.trim() || !conversationId.value || sending.value) return
 	const content = messageInput.value.trim()
 	messageInput.value = ''
+	suggestions.value = []
 	sending.value = true
 	error.value = ''
 
@@ -400,6 +427,18 @@ onMounted(startConversation)
 					</template>
 				</button>
 			</transition>
+		</div>
+
+		<!-- Suggestions while typing -->
+		<div v-if="suggestions.length && !sending" class="px-6 max-w-3xl mx-auto w-full">
+			<div class="rounded-xl border border-base-300 bg-base-100 overflow-hidden">
+				<p class="px-3 pt-2 text-[11px] uppercase tracking-wider text-base-content/40">Preguntas frecuentes</p>
+				<button v-for="s in suggestions" :key="s.id" type="button" @click="pickSuggestion(s.question)"
+					class="w-full text-left px-3 py-2 text-sm text-base-content hover:bg-base-200 transition-colors flex items-center gap-2">
+					<span class="mdi mdi-lightning-bolt-outline text-indigo-400 shrink-0"></span>
+					<span class="truncate">{{ s.question }}</span>
+				</button>
+			</div>
 		</div>
 
 		<!-- Input area -->
