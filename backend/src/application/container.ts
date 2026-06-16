@@ -51,6 +51,7 @@ import {
 	CreateAgentUseCase,
 	// Chat Use Cases
 	CreateConversationUseCase,
+	CreatePublicConversationUseCase,
 	CreateDocumentUseCase,
 	// Event Listener Use Cases
 	CreateEventListenerUseCase,
@@ -191,6 +192,7 @@ export class Container {
 
 	// Chat Use Cases
 	private _createConversationUseCase?: CreateConversationUseCase
+	private _createPublicConversationUseCase?: CreatePublicConversationUseCase
 	private _listConversationsUseCase?: ListConversationsUseCase
 	private _getConversationUseCase?: GetConversationUseCase
 	private _deleteConversationUseCase?: DeleteConversationUseCase
@@ -464,6 +466,13 @@ export class Container {
 			this._createConversationUseCase = new CreateConversationUseCase(this._chatRepository)
 		}
 		return this._createConversationUseCase
+	}
+
+	get createPublicConversationUseCase(): CreatePublicConversationUseCase {
+		if (!this._createPublicConversationUseCase) {
+			this._createPublicConversationUseCase = new CreatePublicConversationUseCase(this._chatRepository, this._agentRepository)
+		}
+		return this._createPublicConversationUseCase
 	}
 
 	get listConversationsUseCase(): ListConversationsUseCase {

@@ -18,6 +18,12 @@ const router = createRouter({
 			meta: { requiresAuth: false }
 		},
 		{
+			path: '/conocimiento-distelsa',
+			name: 'public-chat',
+			component: () => import('@/views/PublicChatView.vue'),
+			meta: { requiresAuth: false }
+		},
+		{
 			path: '/',
 			component: AppLayout,
 			meta: { requiresAuth: true },

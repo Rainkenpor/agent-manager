@@ -442,6 +442,29 @@ export function streamMessage(conversationId: string, content: string, signal?: 
 	})
 }
 
+// ── Public chat (no auth) ──────────────────────────────────────────────────
+export async function createPublicConversation(title?: string): Promise<{ success: boolean; data?: any; error?: string }> {
+	const res = await fetch(`${__API_BASE__}/public/chat/conversations`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ title })
+	})
+	if (!res.ok) {
+		const err = await res.json().catch(() => ({ error: res.statusText }))
+		throw new Error(err.error || res.statusText)
+	}
+	return res.json()
+}
+
+export function streamPublicMessage(conversationId: string, content: string, signal?: AbortSignal): Promise<Response> {
+	return fetch(`${__API_BASE__}/public/chat/conversations/${conversationId}/messages`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ content }),
+		signal
+	})
+}
+
 export interface MessageImage {
 	serverId?: string
 	toolName: string
