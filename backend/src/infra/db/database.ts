@@ -14,6 +14,7 @@ import {
 	GovernanceSuggestionEntity,
 	HookAssignmentEntity,
 	HookServerEntity,
+	IntegrationEntity,
 	McpServerEntity,
 	McpUserCredentialEntity,
 	MessageEntity,
@@ -88,7 +89,8 @@ const entities = [
 	EventListenerEntity,
 	TokenAuditEntity,
 	WebhookEntity,
-	PresetQnaEntity
+	PresetQnaEntity,
+	IntegrationEntity
 ]
 
 let AppDataSource: DataSource

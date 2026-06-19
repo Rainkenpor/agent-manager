@@ -1,0 +1,185 @@
+import { registry } from '@applicationService/registry.service.js'
+import { CreateIntegrationSchema, UpdateIntegrationSchema } from '@domain/entities/integration.entity.js'
+import { z } from 'zod'
+import { container } from '../container.js'
+import { INTEGRATION_CHAT_USER_ID } from '../use-cases/integration/create-integration-conversation.use-case.js'
+
+/** Normaliza un valor a su origen (`scheme://host[:port]`). Acepta un origen puro o un referer con ruta. */
+function normalizeOrigin(value: string | undefined): string {
+	if (!value) return ''
+	try {
+		return new URL(value).origin
+	} catch {
+		return value.trim()
+	}
+}
+
+const createConversationSchema = z.object({
+	origin: z.string().optional()
+})
+
+const sendMessageSchema = z.object({
+	id: z.string(),
+	content: z.string().min(1),
+	origin: z.string().optional()
+})
+
+const suggestSchema = z.object({
+	q: z.string().min(1)
+})
+
+export function registerIntegrationRoutes(): void {
+	// ── Endpoints públicos del widget ────────────────────────────────────────
+
+	// Inicia una conversación resolviendo la integración por origen. Auto-registra orígenes nuevos.
+	registry.register({
+		useBy: ['server'],
+		method: 'POST',
+		path: '/api/integration/chat/conversations',
+		inputSchema: createConversationSchema.shape,
+		requiresAuth: false,
+		handler: async ({ input, context: { req } }) => {
+			// El widget reenvía el origen anfitrión en el body; los headers son respaldo.
+			const origin = normalizeOrigin(input.origin || req.header('origin') || req.header('referer'))
+			return await container.createIntegrationConversationUseCase.execute(origin)
+		}
+	})
+
+	// Envía un mensaje a una conversación de integración — responde vía SSE.
+	registry.register({
+		useBy: ['server'],
+		method: 'POST',
+		path: '/api/integration/chat/conversations/:id/messages',
+		inputSchema: sendMessageSchema.shape,
+		requiresAuth: false,
+		handler: async ({ input, context: { req, res, signal } }) => {
+			res.setHeader('Content-Type', 'text/event-stream')
+			res.setHeader('Cache-Control', 'no-cache')
+			res.setHeader('Connection', 'keep-alive')
+			res.setHeader('X-Accel-Buffering', 'no')
+			res.flushHeaders()
+
+			const sendEvent = (data: Record<string, unknown>) => res.write(`data: ${JSON.stringify(data)}\n\n`)
+
+			const conv = await container.chatRepository.findConversationById(input.id)
+			if (!conv || conv.userId !== INTEGRATION_CHAT_USER_ID) {
+				sendEvent({ type: 'error', error: 'Conversación no encontrada' })
+				res.end()
+				return null
+			}
+
+			const origin = normalizeOrigin(input.origin || req.header('origin') || req.header('referer'))
+			const integration = origin ? await container.integrationRepository.findByOrigin(origin) : null
+			const contextLines = [`Origen del sitio: ${origin || 'desconocido'}`]
+			if (integration?.scope?.length) contextLines.push(`Scope solicitado: ${integration.scope.join(', ')}`)
+			const extraContext = contextLines.join('\n')
+
+			try {
+				await container.integrationChatAnswerUseCase.execute(input.id, input.content, sendEvent, signal, extraContext)
+			} catch (error) {
+				if ((error as any)?.name !== 'AbortError') {
+					sendEvent({ type: 'error', error: error instanceof Error ? error.message : 'Error desconocido' })
+				}
+			}
+
+			res.end()
+			return null
+		}
+	})
+
+	// Sugerencias de preguntas preestablecidas mientras el usuario escribe (público).
+	registry.register({
+		useBy: ['server'],
+		method: 'POST',
+		path: '/api/integration/qna/suggest',
+		inputSchema: suggestSchema.shape,
+		requiresAuth: false,
+		handler: async ({ input }) => {
+			const data = await container.suggestPresetQnaUseCase.execute(input.q)
+			return { success: true, data }
+		}
+	})
+
+	// ── CRUD de administración ───────────────────────────────────────────────
+
+	registry.register({
+		useBy: ['server'],
+		method: 'GET',
+		path: '/api/integrations',
+		inputSchema: {},
+		requiresAuth: true,
+		requiredPermission: { resource: 'integrations', action: 'read' },
+		handler: async () => {
+			const integrations = await container.integrationRepository.findAll()
+			return { success: true, data: integrations }
+		}
+	})
+
+	registry.register({
+		useBy: ['server'],
+		method: 'GET',
+		path: '/api/integrations/:id',
+		inputSchema: z.object({ id: z.string() }).shape,
+		requiresAuth: true,
+		requiredPermission: { resource: 'integrations', action: 'read' },
+		handler: async ({ input, context: { res } }) => {
+			const integration = await container.integrationRepository.findById(input.id)
+			if (!integration) return res.status(404).json({ error: 'Integración no encontrada' })
+			return { success: true, data: integration }
+		}
+	})
+
+	registry.register({
+		useBy: ['server'],
+		method: 'POST',
+		path: '/api/integrations',
+		inputSchema: CreateIntegrationSchema.shape,
+		requiresAuth: true,
+		requiredPermission: { resource: 'integrations', action: 'create' },
+		handler: async ({ context: { req, res } }) => {
+			try {
+				const origin = normalizeOrigin(req.body.origin)
+				const existing = await container.integrationRepository.findByOrigin(origin)
+				if (existing) return res.status(400).json({ error: `Ya existe una integración para el origen "${origin}"` })
+				const integration = await container.integrationRepository.create({ ...req.body, origin })
+				return res.status(201).json({ success: true, data: integration })
+			} catch (error: any) {
+				return res.status(400).json({ error: error.message })
+			}
+		}
+	})
+
+	registry.register({
+		useBy: ['server'],
+		method: 'PUT',
+		path: '/api/integrations/:id',
+		inputSchema: { ...UpdateIntegrationSchema.shape, id: z.string() },
+		requiresAuth: true,
+		requiredPermission: { resource: 'integrations', action: 'update' },
+		handler: async ({ context: { req, res } }) => {
+			try {
+				const integration = await container.integrationRepository.update(req.params.id as string, req.body)
+				return { success: true, data: integration }
+			} catch (error: any) {
+				return res.status(400).json({ error: error.message })
+			}
+		}
+	})
+
+	registry.register({
+		useBy: ['server'],
+		method: 'DELETE',
+		path: '/api/integrations/:id',
+		inputSchema: z.object({ id: z.string() }).shape,
+		requiresAuth: true,
+		requiredPermission: { resource: 'integrations', action: 'delete' },
+		handler: async ({ input, context: { res } }) => {
+			try {
+				await container.integrationRepository.delete(input.id)
+				return { success: true, message: 'Integración eliminada' }
+			} catch (error: any) {
+				return res.status(400).json({ error: error.message })
+			}
+		}
+	})
+}

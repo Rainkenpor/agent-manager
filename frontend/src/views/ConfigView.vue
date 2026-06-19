@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useAuthStore } from '@/store/useAuth'
 import RefreshTokenView from './RefreshTokenView.vue'
 import SystemMetricsView from './SystemMetricsView.vue'
+import IntegrationsConfigView from './IntegrationsConfigView.vue'
 import TokensView from './TokensView.vue'
 import WebhooksConfigView from './WebhooksConfigView.vue'
 
@@ -12,7 +13,15 @@ const allTabs = [
 	{ key: 'providers', label: 'Providers', icon: 'mdi-cog', resource: 'llm_tokens', accessMode: 'any', component: RefreshTokenView },
 	{ key: 'tokens', label: 'Tokens LLM', icon: 'mdi-counter', resource: 'llm_tokens', accessMode: 'any', component: TokensView },
 	{ key: 'system', label: 'Recursos', icon: 'mdi-chip', resource: 'system_metrics', accessMode: 'any', component: SystemMetricsView },
-	{ key: 'webhooks', label: 'Webhooks', icon: 'mdi-webhook', resource: 'webhooks', accessMode: 'any', component: WebhooksConfigView }
+	{ key: 'webhooks', label: 'Webhooks', icon: 'mdi-webhook', resource: 'webhooks', accessMode: 'any', component: WebhooksConfigView },
+	{
+		key: 'integrations',
+		label: 'Integraciones',
+		icon: 'mdi-puzzle',
+		resource: 'integrations',
+		accessMode: 'any',
+		component: IntegrationsConfigView
+	}
 ]
 const tabs = computed(() =>
 	allTabs.filter((t) => (t.accessMode === 'manage' ? auth.hasResourceManageAccess(t.resource) : auth.hasResourceAccess(t.resource)))

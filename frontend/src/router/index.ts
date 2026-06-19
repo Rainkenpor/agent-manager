@@ -24,6 +24,12 @@ const router = createRouter({
 			meta: { requiresAuth: false }
 		},
 		{
+			path: '/integration',
+			name: 'integration-widget',
+			component: () => import('@/views/IntegrationWidgetView.vue'),
+			meta: { requiresAuth: false }
+		},
+		{
 			path: '/',
 			component: AppLayout,
 			meta: { requiresAuth: true },
@@ -79,7 +85,7 @@ const router = createRouter({
 					path: 'config',
 					name: 'config',
 					component: () => import('@/views/ConfigView.vue'),
-					meta: { resources: ['users', 'llm_tokens', 'webhooks'] }
+					meta: { resources: ['users', 'llm_tokens', 'webhooks', 'integrations'] }
 				},
 				// Redirects for backward compatibility
 				{ path: 'agents', redirect: '/agentes' },

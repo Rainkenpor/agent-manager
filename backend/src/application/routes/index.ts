@@ -10,6 +10,7 @@ import { registerEventListenerRoutes } from './event-listener.route.js'
 import { registerGovernanceRoutes } from './governance.route.js'
 import { registerGovernanceSuggestionRoutes } from './governance-suggestion.route.js'
 import { registerHookServerRoutes } from './hook-server.route.js'
+import { registerIntegrationRoutes } from './integration.route.js'
 import { registerLogsRoutes } from './logs.route.js'
 import { registerMcpCredentialRoutes } from './mcp-credential.route.js'
 import { registerMcpServerRoutes } from './mcp-server.route.js'
@@ -48,6 +49,7 @@ export function initializeRegistry(): void {
 	registerLogsRoutes()
 	registerHookServerRoutes()
 	registerWebhookRoutes()
+	registerIntegrationRoutes()
 	registerEventListenerRoutes()
 	registerConfigRoutes()
 	registerAiAssistRoutes()

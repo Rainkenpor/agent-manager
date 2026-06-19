@@ -43,7 +43,13 @@ export class StreamMessageUseCase {
 		private readonly mcpServerRepository: IMcpServerRepository
 	) {}
 
-	async execute(conversationId: string, userContent: string, sendEvent: (event: SseEvent) => void, signal?: AbortSignal): Promise<void> {
+	async execute(
+		conversationId: string,
+		userContent: string,
+		sendEvent: (event: SseEvent) => void,
+		signal?: AbortSignal,
+		extraContext?: string
+	): Promise<void> {
 		const startTime = Date.now()
 
 		const conv = await this.chatRepository.findConversationById(conversationId)
@@ -137,6 +143,7 @@ export class StreamMessageUseCase {
 		const contextLines = [`ChatId: ${conversationId}`]
 		if (traceabilityId) contextLines.push(`TraceabilityId: ${traceabilityId}`)
 		if (stageId) contextLines.push(`StageId: ${stageId}`)
+		if (extraContext) contextLines.push(extraContext)
 
 		for await (const chunk of MCPAgentService.asyncCall(
 			{ ...agent, addContext: `\n\n${contextLines.join('\n')}` },

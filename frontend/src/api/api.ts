@@ -370,6 +370,14 @@ export const updateWebhook = (id: string, data: any) =>
 	request<{ success: boolean; data: any }>(`/webhooks/${id}`, { method: 'PUT', body: JSON.stringify(data) })
 export const deleteWebhook = (id: string) => request<{ success: boolean }>(`/webhooks/${id}`, { method: 'DELETE' })
 
+// Integrations (admin)
+export const getIntegrations = () => request<{ success: boolean; data: any[] }>('/integrations')
+export const createIntegration = (data: any) =>
+	request<{ success: boolean; data: any }>('/integrations', { method: 'POST', body: JSON.stringify(data) })
+export const updateIntegration = (id: string, data: any) =>
+	request<{ success: boolean; data: any }>(`/integrations/${id}`, { method: 'PUT', body: JSON.stringify(data) })
+export const deleteIntegration = (id: string) => request<{ success: boolean }>(`/integrations/${id}`, { method: 'DELETE' })
+
 // Event Listeners
 export const getEventListeners = () => request<{ success: boolean; data: any[] }>('/event-listeners')
 export const getEventListenerById = (id: string) => request<{ success: boolean; data: any }>(`/event-listeners/${id}`)
@@ -471,6 +479,47 @@ export function streamPublicMessage(conversationId: string, content: string, sig
 		body: JSON.stringify({ content }),
 		signal
 	})
+}
+
+// ── Integration widget (no auth, resolved by origin) ───────────────────────
+export async function createIntegrationConversation(
+	origin: string
+): Promise<{ success: boolean; status?: string; data?: { id: string; agentName: string; scope: string[] }; error?: string }> {
+	const res = await fetch(`${__API_BASE__}/integration/chat/conversations`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ origin })
+	})
+	if (!res.ok) {
+		const err = await res.json().catch(() => ({ error: res.statusText }))
+		throw new Error(err.error || res.statusText)
+	}
+	return res.json()
+}
+
+export function streamIntegrationMessage(
+	conversationId: string,
+	content: string,
+	origin: string,
+	signal?: AbortSignal
+): Promise<Response> {
+	return fetch(`${__API_BASE__}/integration/chat/conversations/${conversationId}/messages`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ content, origin }),
+		signal
+	})
+}
+
+export async function suggestIntegrationQna(q: string): Promise<{ id: string; question: string }[]> {
+	const res = await fetch(`${__API_BASE__}/integration/qna/suggest`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ q })
+	})
+	if (!res.ok) return []
+	const body = await res.json().catch(() => ({ data: [] }))
+	return body?.data ?? []
 }
 
 export interface MessageImage {

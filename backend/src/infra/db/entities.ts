@@ -963,6 +963,39 @@ export class WebhookEntity {
 	updatedAt!: string
 }
 
+@Entity('integrations')
+export class IntegrationEntity {
+	@PrimaryColumn({ type: 'text' })
+	id!: string
+
+	@Column({ type: 'text' })
+	name!: string
+
+	@Column({ type: 'text', unique: true })
+	origin!: string
+
+	@Column({ name: 'agent_slug', type: 'text', nullable: true })
+	agentSlug!: string | null
+
+	@Column({ name: 'agent_name', type: 'text', nullable: true })
+	agentName!: string | null
+
+	@Column({ type: 'simple-json' })
+	scope!: string[]
+
+	@Column({ type: 'text', nullable: true })
+	description!: string | null
+
+	@Column({ type: 'boolean', default: false })
+	active!: boolean
+
+	@Column({ name: 'created_at', type: 'text' })
+	createdAt!: string
+
+	@Column({ name: 'updated_at', type: 'text' })
+	updatedAt!: string
+}
+
 @Entity('event_listeners')
 export class EventListenerEntity {
 	@PrimaryColumn({ type: 'text' })

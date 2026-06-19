@@ -65,6 +65,12 @@ async function seedDefaultPermissions() {
 		{ resource: 'webhooks', action: 'read', description: 'Ver webhooks' },
 		{ resource: 'webhooks', action: 'update', description: 'Actualizar webhooks' },
 		{ resource: 'webhooks', action: 'delete', description: 'Eliminar webhooks' },
+
+		// Integraciones
+		{ resource: 'integrations', action: 'create', description: 'Crear integraciones de chat embebible' },
+		{ resource: 'integrations', action: 'read', description: 'Ver integraciones de chat embebible' },
+		{ resource: 'integrations', action: 'update', description: 'Actualizar y configurar integraciones' },
+		{ resource: 'integrations', action: 'delete', description: 'Eliminar integraciones' },
 		// Traceability
 		{ resource: 'traceability', action: 'create', description: 'Crear trazabilidades y templates' },
 		{ resource: 'traceability', action: 'read', description: 'Ver trazabilidades y templates' },

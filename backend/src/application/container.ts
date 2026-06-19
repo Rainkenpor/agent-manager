@@ -6,6 +6,7 @@ import type {
 	IGovernanceRepository,
 	IGovernanceSuggestionRepository,
 	IHookServerRepository,
+	IIntegrationRepository,
 	IMcpCredentialProvider,
 	IMcpServerRepository,
 	IMcpUserCredentialRepository,
@@ -27,6 +28,7 @@ import {
 	GovernanceRepository,
 	GovernanceSuggestionRepository,
 	HookServerRepository,
+	IntegrationRepository,
 	McpServerRepository,
 	McpUserCredentialRepository,
 	PermissionRepository,
@@ -57,6 +59,8 @@ import {
 	// Chat Use Cases
 	CreateConversationUseCase,
 	CreatePublicConversationUseCase,
+	CreateIntegrationConversationUseCase,
+	IntegrationChatAnswerUseCase,
 	CreateDocumentUseCase,
 	// Preset Q&A Use Cases
 	DeletePresetQnaUseCase,
@@ -262,6 +266,11 @@ export class Container {
 	private readonly _webhookRepository: IWebhookRepository
 	private _webhookExecutor?: WebhookExecutorService
 
+	// Integration Repository & Use Cases
+	private readonly _integrationRepository: IIntegrationRepository
+	private _createIntegrationConversationUseCase?: CreateIntegrationConversationUseCase
+	private _integrationChatAnswerUseCase?: IntegrationChatAnswerUseCase
+
 	// Event Listener Repository, Use Cases & Executor
 	private readonly _eventListenerRepository: IEventListenerRepository
 	private _createEventListenerUseCase?: CreateEventListenerUseCase
@@ -343,6 +352,7 @@ export class Container {
 		this._traceabilityParticipantRepository = new TraceabilityParticipantRepository()
 		this._hookServerRepository = new HookServerRepository()
 		this._webhookRepository = new WebhookRepository()
+		this._integrationRepository = new IntegrationRepository()
 		this._eventListenerRepository = new EventListenerRepository()
 		this.tokenAuditRepository = new TokenAuditRepository()
 
@@ -612,6 +622,37 @@ export class Container {
 			)
 		}
 		return this._publicChatAnswerUseCase
+	}
+
+	// ==========================================
+	// INTEGRATION USE CASES
+	// ==========================================
+
+	get integrationRepository(): IIntegrationRepository {
+		return this._integrationRepository
+	}
+
+	get createIntegrationConversationUseCase(): CreateIntegrationConversationUseCase {
+		if (!this._createIntegrationConversationUseCase) {
+			this._createIntegrationConversationUseCase = new CreateIntegrationConversationUseCase(
+				this._integrationRepository,
+				this._chatRepository,
+				this._agentRepository
+			)
+		}
+		return this._createIntegrationConversationUseCase
+	}
+
+	get integrationChatAnswerUseCase(): IntegrationChatAnswerUseCase {
+		if (!this._integrationChatAnswerUseCase) {
+			this._integrationChatAnswerUseCase = new IntegrationChatAnswerUseCase(
+				this._chatRepository,
+				this.matchPresetQnaUseCase,
+				this.streamMessageUseCase,
+				this.generatePresetQnaUseCase
+			)
+		}
+		return this._integrationChatAnswerUseCase
 	}
 
 	// ==========================================
