@@ -5,18 +5,18 @@ import DistiLoader from '@/components/DistiLoader.vue'
 import MermaidRenderer from '@/components/MermaidRenderer.vue'
 
 interface DisplayMessage {
-	id: string
-	role: 'user' | 'assistant'
-	content: string
-	createdAt: string
-	responseTime?: number
-	streaming?: boolean
-	toolCalls?: string[]
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  createdAt: string
+  responseTime?: number
+  streaming?: boolean
+  toolCalls?: string[]
 }
 
 const mermaidRenderer = ref<InstanceType<typeof MermaidRenderer> | null>(null)
 function renderMermaidDiagrams() {
-	void mermaidRenderer.value?.renderDiagrams()
+  void mermaidRenderer.value?.renderDiagrams()
 }
 
 // ── Estado del widget flotante ─────────────────────────────────────────────
@@ -39,56 +39,56 @@ let abortController: AbortController | null = null
 
 /** Origen del sitio anfitrión derivado del propio contenedor (respaldo si el loader no lo envía). */
 function resolveHostOrigin(): string {
-	try {
-		if (window.location.ancestorOrigins?.length) return window.location.ancestorOrigins[0]
-	} catch {
-		/* no soportado */
-	}
-	if (document.referrer) {
-		try {
-			return new URL(document.referrer).origin
-		} catch {
-			/* ignore */
-		}
-	}
-	return window.location.origin
+  try {
+    if (window.location.ancestorOrigins?.length) return window.location.ancestorOrigins[0]
+  } catch {
+    /* no soportado */
+  }
+  if (document.referrer) {
+    try {
+      return new URL(document.referrer).origin
+    } catch {
+      /* ignore */
+    }
+  }
+  return window.location.origin
 }
 
 // Notifica al loader de embebido (abrir/cerrar para redimensionar el iframe).
 function notifyParent() {
-	try {
-		window.parent?.postMessage({ source: 'integration-widget', open: open.value }, '*')
-	} catch {
-		/* sin parent */
-	}
+  try {
+    window.parent?.postMessage({ source: 'integration-widget', open: open.value }, '*')
+  } catch {
+    /* sin parent */
+  }
 }
 
 // Tema por defecto según la preferencia del sistema.
 const DEFAULT_THEME = (() => {
-	try {
-		return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'am-dark' : 'am-light'
-	} catch {
-		return 'am-light'
-	}
+  try {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'am-dark' : 'am-light'
+  } catch {
+    return 'am-light'
+  }
 })()
 
 function applyTheme(theme: string) {
-	if (theme) document.documentElement.setAttribute('data-theme', theme)
+  if (theme) document.documentElement.setAttribute('data-theme', theme)
 }
 
 // El loader del sitio anfitrión envía su origen (y opcionalmente el tema) por postMessage.
 function handleHostMessage(e: MessageEvent) {
-	if (e.data?.source !== 'integration-host') return
-	if (typeof e.data.host === 'string') hostOrigin.value = e.data.host
-	if (typeof e.data.theme === 'string') applyTheme(e.data.theme)
+  if (e.data?.source !== 'integration-host') return
+  if (typeof e.data.host === 'string') hostOrigin.value = e.data.host
+  if (typeof e.data.theme === 'string') applyTheme(e.data.theme)
 }
 
 function toggleOpen() {
-	open.value = !open.value
-	notifyParent()
-	if (open.value && !conversationId.value && !pending.value && !starting.value) {
-		void startConversation()
-	}
+  open.value = !open.value
+  notifyParent()
+  if (open.value && !conversationId.value && !pending.value && !starting.value) {
+    void startConversation()
+  }
 }
 
 // ── Sugerencias mientras se escribe ───────────────────────────────────────
@@ -96,297 +96,297 @@ const suggestions = ref<Array<{ id: string; question: string }>>([])
 let suggestTimer: ReturnType<typeof setTimeout> | null = null
 
 watch(messageInput, (value) => {
-	if (suggestTimer) clearTimeout(suggestTimer)
-	const text = value.trim()
-	if (sending.value || text.length < 3) {
-		suggestions.value = []
-		return
-	}
-	suggestTimer = setTimeout(async () => {
-		try {
-			suggestions.value = await api.suggestIntegrationQna(text)
-		} catch {
-			suggestions.value = []
-		}
-	}, 250)
+  if (suggestTimer) clearTimeout(suggestTimer)
+  const text = value.trim()
+  if (sending.value || text.length < 3) {
+    suggestions.value = []
+    return
+  }
+  suggestTimer = setTimeout(async () => {
+    try {
+      suggestions.value = await api.suggestIntegrationQna(text)
+    } catch {
+      suggestions.value = []
+    }
+  }, 250)
 })
 
 function pickSuggestion(question: string) {
-	suggestions.value = []
-	messageInput.value = question
-	sendMessage()
+  suggestions.value = []
+  messageInput.value = question
+  sendMessage()
 }
 
 async function startConversation() {
-	starting.value = true
-	pending.value = false
-	error.value = ''
-	try {
-		const res = await api.createIntegrationConversation(hostOrigin.value)
-		if (res.status === 'pending' || (!res.success && !res.data)) {
-			pending.value = true
-			return
-		}
-		if (!res.success || !res.data?.id) {
-			error.value = res.error || 'No se pudo iniciar el asistente'
-			return
-		}
-		conversationId.value = res.data.id
-		agentName.value = res.data.agentName || 'Asistente'
-		scope.value = res.data.scope || []
-		messages.value = []
-	} catch (e: any) {
-		error.value = e.message || 'No se pudo iniciar el asistente'
-	} finally {
-		starting.value = false
-	}
+  starting.value = true
+  pending.value = false
+  error.value = ''
+  try {
+    const res = await api.createIntegrationConversation(hostOrigin.value)
+    if (res.status === 'pending' || (!res.success && !res.data)) {
+      pending.value = true
+      return
+    }
+    if (!res.success || !res.data?.id) {
+      error.value = res.error || 'No se pudo iniciar el asistente'
+      return
+    }
+    conversationId.value = res.data.id
+    agentName.value = res.data.agentName || 'Asistente'
+    scope.value = res.data.scope || []
+    messages.value = []
+  } catch (e: any) {
+    error.value = e.message || 'No se pudo iniciar el asistente'
+  } finally {
+    starting.value = false
+  }
 }
 
 async function sendMessage() {
-	if (!messageInput.value.trim() || !conversationId.value || sending.value) return
-	const content = messageInput.value.trim()
-	messageInput.value = ''
-	suggestions.value = []
-	sending.value = true
-	error.value = ''
+  if (!messageInput.value.trim() || !conversationId.value || sending.value) return
+  const content = messageInput.value.trim()
+  messageInput.value = ''
+  suggestions.value = []
+  sending.value = true
+  error.value = ''
 
-	messages.value.push({ id: `user-${Date.now()}`, role: 'user', content, createdAt: new Date().toISOString() })
+  messages.value.push({ id: `user-${Date.now()}`, role: 'user', content, createdAt: new Date().toISOString() })
 
-	const streamingId = `stream-${Date.now()}`
-	messages.value.push({ id: streamingId, role: 'assistant', content: '', createdAt: new Date().toISOString(), streaming: true })
-	await scrollToBottom()
+  const streamingId = `stream-${Date.now()}`
+  messages.value.push({ id: streamingId, role: 'assistant', content: '', createdAt: new Date().toISOString(), streaming: true })
+  await scrollToBottom()
 
-	abortController = new AbortController()
-	distiState.value = 'loading'
+  abortController = new AbortController()
+  distiState.value = 'loading'
 
-	try {
-		let response: Response
-		try {
-			response = await api.streamIntegrationMessage(conversationId.value, content, hostOrigin.value, abortController.signal)
-		} catch (fetchErr: any) {
-			if (fetchErr.name === 'AbortError') throw fetchErr
-			throw new Error('No se pudo conectar con el servidor. Verifica tu conexión e intenta de nuevo.')
-		}
+  try {
+    let response: Response
+    try {
+      response = await api.streamIntegrationMessage(conversationId.value, content, hostOrigin.value, abortController.signal)
+    } catch (fetchErr: any) {
+      if (fetchErr.name === 'AbortError') throw fetchErr
+      throw new Error('No se pudo conectar con el servidor. Verifica tu conexión e intenta de nuevo.')
+    }
 
-		if (!response.ok) {
-			let errMsg = `Error del servidor (${response.status})`
-			try {
-				const body = await response.json()
-				if (body?.error) errMsg = body.error
-				else if (body?.message) errMsg = body.message
-			} catch {
-				if (response.statusText) errMsg = `${errMsg}: ${response.statusText}`
-			}
-			throw new Error(errMsg)
-		}
+    if (!response.ok) {
+      let errMsg = `Error del servidor (${response.status})`
+      try {
+        const body = await response.json()
+        if (body?.error) errMsg = body.error
+        else if (body?.message) errMsg = body.message
+      } catch {
+        if (response.statusText) errMsg = `${errMsg}: ${response.statusText}`
+      }
+      throw new Error(errMsg)
+    }
 
-		if (!response.body) throw new Error('El servidor no devolvió contenido.')
+    if (!response.body) throw new Error('El servidor no devolvió contenido.')
 
-		const reader = response.body.getReader()
-		const decoder = new TextDecoder()
-		let buffer = ''
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
 
-		while (true) {
-			let done: boolean
-			let value: Uint8Array | undefined
-			try {
-				;({ done, value } = await reader.read())
-			} catch (readErr: any) {
-				if (readErr.name === 'AbortError') throw readErr
-				throw new Error('La conexión con el servidor se interrumpió inesperadamente.')
-			}
-			if (done) break
+    while (true) {
+      let done: boolean
+      let value: Uint8Array | undefined
+      try {
+        ; ({ done, value } = await reader.read())
+      } catch (readErr: any) {
+        if (readErr.name === 'AbortError') throw readErr
+        throw new Error('La conexión con el servidor se interrumpió inesperadamente.')
+      }
+      if (done) break
 
-			buffer += decoder.decode(value, { stream: true })
-			const parts = buffer.split('\n\n')
-			buffer = parts.pop() ?? ''
+      buffer += decoder.decode(value, { stream: true })
+      const parts = buffer.split('\n\n')
+      buffer = parts.pop() ?? ''
 
-			for (const part of parts) {
-				const line = part.trim()
-				if (!line.startsWith('data: ')) continue
-				let event: any
-				try {
-					event = JSON.parse(line.slice(6))
-				} catch {
-					continue
-				}
+      for (const part of parts) {
+        const line = part.trim()
+        if (!line.startsWith('data: ')) continue
+        let event: any
+        try {
+          event = JSON.parse(line.slice(6))
+        } catch {
+          continue
+        }
 
-				if (event.type === 'chunk') {
-					distiState.value = 'loading'
-					const idx = messages.value.findIndex((m) => m.id === streamingId)
-					if (idx !== -1) {
-						messages.value[idx] = { ...messages.value[idx], content: messages.value[idx].content + event.content }
-						await followIfPinned()
-					}
-				} else if (event.type === 'tool') {
-					distiState.value = 'thinking'
-					const idx = messages.value.findIndex((m) => m.id === streamingId)
-					if (idx !== -1) {
-						const existing = messages.value[idx].toolCalls ?? []
-						if (!existing.includes(event.name)) {
-							messages.value[idx] = { ...messages.value[idx], toolCalls: [...existing, event.name] }
-						}
-					}
-				} else if (event.type === 'done') {
-					distiState.value = 'happy'
-					const idx = messages.value.findIndex((m) => m.id === streamingId)
-					if (idx !== -1) {
-						messages.value[idx] = {
-							...event.message,
-							streaming: false,
-							responseTime: event.responseTime,
-							toolCalls: messages.value[idx].toolCalls
-						}
-					}
-					setTimeout(() => {
-						distiState.value = 'idle'
-					}, 1200)
-				} else if (event.type === 'error') {
-					throw new Error(event.error || 'El asistente reportó un error inesperado.')
-				}
-			}
-		}
-	} catch (e: any) {
-		messages.value = messages.value.filter((m) => m.id !== streamingId)
-		if (e.name !== 'AbortError') {
-			error.value = e.message
-			distiState.value = 'sad'
-			setTimeout(() => {
-				distiState.value = 'idle'
-			}, 2500)
-		} else {
-			distiState.value = 'idle'
-		}
-	} finally {
-		abortController = null
-		sending.value = false
-		await followIfPinned()
-	}
+        if (event.type === 'chunk') {
+          distiState.value = 'loading'
+          const idx = messages.value.findIndex((m) => m.id === streamingId)
+          if (idx !== -1) {
+            messages.value[idx] = { ...messages.value[idx], content: messages.value[idx].content + event.content }
+            await followIfPinned()
+          }
+        } else if (event.type === 'tool') {
+          distiState.value = 'thinking'
+          const idx = messages.value.findIndex((m) => m.id === streamingId)
+          if (idx !== -1) {
+            const existing = messages.value[idx].toolCalls ?? []
+            if (!existing.includes(event.name)) {
+              messages.value[idx] = { ...messages.value[idx], toolCalls: [...existing, event.name] }
+            }
+          }
+        } else if (event.type === 'done') {
+          distiState.value = 'happy'
+          const idx = messages.value.findIndex((m) => m.id === streamingId)
+          if (idx !== -1) {
+            messages.value[idx] = {
+              ...event.message,
+              streaming: false,
+              responseTime: event.responseTime,
+              toolCalls: messages.value[idx].toolCalls
+            }
+          }
+          setTimeout(() => {
+            distiState.value = 'idle'
+          }, 1200)
+        } else if (event.type === 'error') {
+          throw new Error(event.error || 'El asistente reportó un error inesperado.')
+        }
+      }
+    }
+  } catch (e: any) {
+    messages.value = messages.value.filter((m) => m.id !== streamingId)
+    if (e.name !== 'AbortError') {
+      error.value = e.message
+      distiState.value = 'sad'
+      setTimeout(() => {
+        distiState.value = 'idle'
+      }, 2500)
+    } else {
+      distiState.value = 'idle'
+    }
+  } finally {
+    abortController = null
+    sending.value = false
+    await followIfPinned()
+  }
 }
 
 function cancelRequest() {
-	abortController?.abort()
+  abortController?.abort()
 }
 
 function handleKeydown(e: KeyboardEvent) {
-	if (e.key === 'Enter' && !e.shiftKey) {
-		e.preventDefault()
-		sendMessage()
-	}
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault()
+    sendMessage()
+  }
 }
 
 const isAtBottom = ref(true)
 
 function updateIsAtBottom() {
-	const el = messagesContainer.value
-	if (!el) return
-	isAtBottom.value = el.scrollHeight - el.scrollTop - el.clientHeight < 80
+  const el = messagesContainer.value
+  if (!el) return
+  isAtBottom.value = el.scrollHeight - el.scrollTop - el.clientHeight < 80
 }
 
 async function scrollToBottom() {
-	await nextTick()
-	if (messagesContainer.value) {
-		messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
-	}
-	isAtBottom.value = true
-	void renderMermaidDiagrams()
+  await nextTick()
+  if (messagesContainer.value) {
+    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+  }
+  isAtBottom.value = true
+  void renderMermaidDiagrams()
 }
 
 async function followIfPinned() {
-	await nextTick()
-	void renderMermaidDiagrams()
-	if (isAtBottom.value && messagesContainer.value) {
-		messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
-	}
+  await nextTick()
+  void renderMermaidDiagrams()
+  if (isAtBottom.value && messagesContainer.value) {
+    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+  }
 }
 
 function formatTime(iso: string) {
-	return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
 function maskTokens(text: string): string {
-	text = text.replace(/eyJ[a-zA-Z0-9+/_-]+=*\.[a-zA-Z0-9+/_-]+=*\.[a-zA-Z0-9+/_-]+=*/g, (m) => m.slice(0, 5) + '*****')
-	text = text.replace(/\b(sk-|ghp_|ghs_|github_pat_|xoxb-|xoxp-|Bearer\s+)[a-zA-Z0-9+/_.-]{8,}/gi, (m) => m.slice(0, 5) + '*****')
-	text = text.replace(/[a-zA-Z0-9+/_-]{25,}/g, (m) => {
-		if (/[A-Z]/.test(m) && /[a-z]/.test(m) && /[0-9]/.test(m)) return m.slice(0, 5) + '*****'
-		return m
-	})
-	return text
+  text = text.replace(/eyJ[a-zA-Z0-9+/_-]+=*\.[a-zA-Z0-9+/_-]+=*\.[a-zA-Z0-9+/_-]+=*/g, (m) => m.slice(0, 5) + '*****')
+  text = text.replace(/\b(sk-|ghp_|ghs_|github_pat_|xoxb-|xoxp-|Bearer\s+)[a-zA-Z0-9+/_.-]{8,}/gi, (m) => m.slice(0, 5) + '*****')
+  text = text.replace(/[a-zA-Z0-9+/_-]{25,}/g, (m) => {
+    if (/[A-Z]/.test(m) && /[a-z]/.test(m) && /[0-9]/.test(m)) return m.slice(0, 5) + '*****'
+    return m
+  })
+  return text
 }
 
 function renderInlineMarkdown(text: string): string {
-	return text
-		.replace(/&/g, '&amp;')
-		.replace(/</g, '&lt;')
-		.replace(/>/g, '&gt;')
-		.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-		.replace(/`(.+?)`/g, '<code class="bg-base-100/80 px-1 rounded text-xs font-mono">$1</code>')
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/`(.+?)`/g, '<code class="bg-base-100/80 px-1 rounded text-xs font-mono">$1</code>')
 }
 
 function renderMarkdown(text: string): string {
-	text = maskTokens(text)
-	const isTableRow = (line: string) => /^\|.+\|$/.test(line.trim())
-	const isSeparator = (line: string) => /^\|[\s\-:|]+\|$/.test(line.trim())
+  text = maskTokens(text)
+  const isTableRow = (line: string) => /^\|.+\|$/.test(line.trim())
+  const isSeparator = (line: string) => /^\|[\s\-:|]+\|$/.test(line.trim())
 
-	function parseRow(line: string): string[] {
-		return line
-			.trim()
-			.slice(1, -1)
-			.split('|')
-			.map((c) => c.trim())
-	}
+  function parseRow(line: string): string[] {
+    return line
+      .trim()
+      .slice(1, -1)
+      .split('|')
+      .map((c) => c.trim())
+  }
 
-	function renderTable(lines: string[]): string {
-		const headers = parseRow(lines[0])
-		const body = lines.slice(2)
-		const th = headers
-			.map(
-				(h) =>
-					`<th style="text-align:left;padding:6px 12px;border-bottom:1px solid #475569;color:#cbd5e1;font-weight:600;white-space:nowrap">${renderInlineMarkdown(h)}</th>`
-			)
-			.join('')
-		const trs = body
-			.map(
-				(row) =>
-					'<tr style="border-bottom:1px solid #1e293b">' +
-					parseRow(row)
-						.map((cell) => `<td style="padding:5px 12px;color:#e2e8f0">${renderInlineMarkdown(cell)}</td>`)
-						.join('') +
-					'</tr>'
-			)
-			.join('')
-		return `<div class="overflow-auto"><table style="border-collapse:collapse;width:100%;font-size:0.8rem;margin:8px 0;background:#0f172a;border-radius:8px;overflow:hidden"><thead><tr>${th}</tr></thead><tbody>${trs}</tbody></table></div>`
-	}
+  function renderTable(lines: string[]): string {
+    const headers = parseRow(lines[0])
+    const body = lines.slice(2)
+    const th = headers
+      .map(
+        (h) =>
+          `<th style="text-align:left;padding:6px 12px;border-bottom:1px solid #475569;color:#cbd5e1;font-weight:600;white-space:nowrap">${renderInlineMarkdown(h)}</th>`
+      )
+      .join('')
+    const trs = body
+      .map(
+        (row) =>
+          '<tr style="border-bottom:1px solid #1e293b">' +
+          parseRow(row)
+            .map((cell) => `<td style="padding:5px 12px;color:#e2e8f0">${renderInlineMarkdown(cell)}</td>`)
+            .join('') +
+          '</tr>'
+      )
+      .join('')
+    return `<div class="overflow-auto"><table style="border-collapse:collapse;width:100%;font-size:0.8rem;margin:8px 0;background:#0f172a;border-radius:8px;overflow:hidden"><thead><tr>${th}</tr></thead><tbody>${trs}</tbody></table></div>`
+  }
 
-	const lines = text.split('\n')
-	const out: string[] = []
-	let i = 0
-	while (i < lines.length) {
-		if (/^```mermaid\s*$/.test(lines[i].trim())) {
-			const diagram: string[] = []
-			let j = i + 1
-			while (j < lines.length && lines[j].trim() !== '```') {
-				diagram.push(lines[j++])
-			}
-			if (j < lines.length) {
-				out.push(`<div class="mermaid-block" data-mermaid="${encodeURIComponent(diagram.join('\n'))}"></div>`)
-				i = j + 1
-				continue
-			}
-		}
-		if (isTableRow(lines[i]) && i + 1 < lines.length && isSeparator(lines[i + 1])) {
-			const tableLines = [lines[i], lines[i + 1]]
-			i += 2
-			while (i < lines.length && isTableRow(lines[i])) {
-				tableLines.push(lines[i++])
-			}
-			out.push(renderTable(tableLines))
-		} else {
-			out.push(renderInlineMarkdown(lines[i]))
-			i++
-		}
-	}
-	return out.join('\n')
+  const lines = text.split('\n')
+  const out: string[] = []
+  let i = 0
+  while (i < lines.length) {
+    if (/^```mermaid\s*$/.test(lines[i].trim())) {
+      const diagram: string[] = []
+      let j = i + 1
+      while (j < lines.length && lines[j].trim() !== '```') {
+        diagram.push(lines[j++])
+      }
+      if (j < lines.length) {
+        out.push(`<div class="mermaid-block" data-mermaid="${encodeURIComponent(diagram.join('\n'))}"></div>`)
+        i = j + 1
+        continue
+      }
+    }
+    if (isTableRow(lines[i]) && i + 1 < lines.length && isSeparator(lines[i + 1])) {
+      const tableLines = [lines[i], lines[i + 1]]
+      i += 2
+      while (i < lines.length && isTableRow(lines[i])) {
+        tableLines.push(lines[i++])
+      }
+      out.push(renderTable(tableLines))
+    } else {
+      out.push(renderInlineMarkdown(lines[i]))
+      i++
+    }
+  }
+  return out.join('\n')
 }
 
 // El widget vive en un iframe: fondo transparente para mostrar solo el botón/panel.
@@ -396,37 +396,37 @@ function renderMarkdown(text: string): string {
 const prevBg = { html: '', body: '', scheme: '' }
 let prevTheme = ''
 onMounted(() => {
-	prevBg.html = document.documentElement.style.background
-	prevBg.body = document.body.style.background
-	prevBg.scheme = document.documentElement.style.colorScheme
-	document.documentElement.style.background = 'transparent'
-	document.body.style.background = 'transparent'
-	document.documentElement.style.colorScheme = 'normal'
+  prevBg.html = document.documentElement.style.background
+  prevBg.body = document.body.style.background
+  prevBg.scheme = document.documentElement.style.colorScheme
+  document.documentElement.style.background = 'transparent'
+  document.body.style.background = 'transparent'
+  document.documentElement.style.colorScheme = 'normal'
 
-	// Tema inicial: query `?theme=` (si se abre directo) o preferencia del sistema.
-	// El loader puede sobrescribirlo luego vía postMessage.
-	prevTheme = document.documentElement.getAttribute('data-theme') || ''
-	applyTheme(new URLSearchParams(window.location.search).get('theme') || DEFAULT_THEME)
+  // Tema inicial: query `?theme=` (si se abre directo) o preferencia del sistema.
+  // El loader puede sobrescribirlo luego vía postMessage.
+  prevTheme = document.documentElement.getAttribute('data-theme') || ''
+  applyTheme(new URLSearchParams(window.location.search).get('theme') || DEFAULT_THEME)
 
-	// Respaldo inmediato; el loader sobrescribe con el origen real vía postMessage.
-	hostOrigin.value = resolveHostOrigin()
-	window.addEventListener('message', handleHostMessage)
-	// Pide al loader que nos envíe el origen del sitio anfitrión y el tema.
-	try {
-		window.parent?.postMessage({ source: 'integration-widget', type: 'ready' }, '*')
-	} catch {
-		/* sin parent */
-	}
-	starting.value = false
-	notifyParent()
+  // Respaldo inmediato; el loader sobrescribe con el origen real vía postMessage.
+  hostOrigin.value = resolveHostOrigin()
+  window.addEventListener('message', handleHostMessage)
+  // Pide al loader que nos envíe el origen del sitio anfitrión y el tema.
+  try {
+    window.parent?.postMessage({ source: 'integration-widget', type: 'ready' }, '*')
+  } catch {
+    /* sin parent */
+  }
+  starting.value = false
+  notifyParent()
 })
 
 onBeforeUnmount(() => {
-	window.removeEventListener('message', handleHostMessage)
-	document.documentElement.style.background = prevBg.html
-	document.body.style.background = prevBg.body
-	document.documentElement.style.colorScheme = prevBg.scheme
-	if (prevTheme) document.documentElement.setAttribute('data-theme', prevTheme)
+  window.removeEventListener('message', handleHostMessage)
+  document.documentElement.style.background = prevBg.html
+  document.body.style.background = prevBg.body
+  document.documentElement.style.colorScheme = prevBg.scheme
+  if (prevTheme) document.documentElement.setAttribute('data-theme', prevTheme)
 })
 </script>
 
@@ -527,10 +527,10 @@ onBeforeUnmount(() => {
           <!-- Entrada -->
           <div class="px-3 pb-3 pt-2">
             <div class="flex items-end gap-2 rounded-2xl border bg-base-300 px-3 py-2 transition-colors"
-              :class="conversationId ? 'border-base-300 focus-within:border-indigo-500/60' : 'border-base-300 opacity-50'">
+              :class="conversationId ? 'border-indigo-500/30 focus-within:border-indigo-500/60' : 'border-base-300 opacity-50'">
               <textarea v-model="messageInput" :disabled="!conversationId || sending" rows="1"
                 placeholder="Escribe un mensaje..."
-                class="flex-1 resize-none bg-transparent text-sm text-base-content placeholder:text-base-content/40 focus:outline-none max-h-28"
+                class="flex-1 resize-none bg-transparent p-2 text-sm text-base-content placeholder:text-base-content/40 focus:outline-none max-h-28"
                 @keydown="handleKeydown" />
               <button v-if="sending"
                 class="shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-colors bg-red-600 hover:bg-red-500"
