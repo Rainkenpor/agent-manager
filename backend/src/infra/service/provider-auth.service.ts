@@ -139,7 +139,7 @@ export class ProviderAuthService {
 
 	private async refreshOpenAI(record: ProviderConfig): Promise<ProviderConfig> {
 		const lock = this.refreshLocks.get('openai')
-		if (lock) return lock
+		if (lock !== undefined) return lock
 
 		const refreshPromise = (async () => {
 			const refreshToken = record.payload.refresh_token

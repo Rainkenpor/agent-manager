@@ -260,7 +260,7 @@ export async function callMCPAgent(
 		}
 
 		// Stream
-		if (args.stream) return await agentService.initAgentStream(params)
+		if (args.stream) return agentService.initAgentStream(params)
 
 		const response = await agentService.initAgent(params)
 

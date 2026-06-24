@@ -103,7 +103,9 @@ export function registerGovernanceRoutes(): void {
 		handler: async () => {
 			const result = await container.listGovernanceUseCase.execute()
 			if (!result.success) return result
-			const data = [...new Set(result.data.filter((item) => item.isActive).map((item) => item.type))].sort()
+			const data = [...new Set(result.data.filter((item) => item.isActive).map((item) => item.type))].sort((a, b) =>
+				a.localeCompare(b)
+			)
 			return { success: true, data }
 		}
 	})
