@@ -83,6 +83,7 @@ export class ImportConfigUseCase {
 					mode: a.mode ?? 'primary',
 					model: a.model ?? '',
 					temperature: a.temperature ?? '0.7',
+					maxOutputTokens: a.maxOutputTokens ?? null,
 					tools: a.tools ?? {},
 					content: a.content ?? ''
 				})

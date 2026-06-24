@@ -68,6 +68,7 @@ export class ExportConfigUseCase {
 			mode: a.mode,
 			model: a.model,
 			temperature: a.temperature,
+			maxOutputTokens: a.maxOutputTokens,
 			tools: a.tools,
 			content: a.content,
 			isActive: a.isActive,

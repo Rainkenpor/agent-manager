@@ -255,6 +255,7 @@ export async function callMCPAgent(
 					.filter(([_, enabled]) => enabled)
 					.map(([toolName]) => toolName)
 			),
+			maxOutputTokens: agentEntity.data.maxOutputTokens ?? undefined,
 			history: args.history || []
 		}
 

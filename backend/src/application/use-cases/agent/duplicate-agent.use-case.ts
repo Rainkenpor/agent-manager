@@ -24,6 +24,7 @@ export class DuplicateAgentUseCase {
 				mode: source.mode,
 				model: source.model,
 				temperature: source.temperature,
+				maxOutputTokens: source.maxOutputTokens,
 				tools: source.tools as Record<string, boolean>,
 				content: source.content,
 				subagentIds: source.subagents.map((s) => s.id)

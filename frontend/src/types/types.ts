@@ -39,6 +39,7 @@ export interface Agent {
 	groupIds: string[]
 	model: string
 	temperature: string
+	maxOutputTokens: number | null
 	tools: Record<string, boolean>
 	content: string
 	createdAt: string

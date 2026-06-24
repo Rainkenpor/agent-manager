@@ -31,6 +31,7 @@ interface AgentFormData {
 	groupIds: string[]
 	model: string
 	temperature: string
+	maxOutputTokens: string
 	content: string
 	isActive: boolean
 	tools: Record<string, boolean>
@@ -45,6 +46,7 @@ const defaultForm = (): AgentFormData => ({
 	groupIds: [],
 	model: '',
 	temperature: '0.7',
+	maxOutputTokens: '',
 	content: '',
 	isActive: true,
 	tools: {},
@@ -165,6 +167,7 @@ function openEdit(agent: Agent) {
 		groupIds: [...(agent.groupIds ?? [])],
 		model: agent.model,
 		temperature: agent.temperature,
+		maxOutputTokens: agent.maxOutputTokens != null ? String(agent.maxOutputTokens) : '',
 		content: agent.content,
 		isActive: agent.isActive,
 		tools: { ...agent.tools },
@@ -197,6 +200,7 @@ async function saveAgent() {
 			groupIds: agentForm.value.groupIds,
 			model: agentForm.value.model,
 			temperature: agentForm.value.temperature,
+			maxOutputTokens: agentForm.value.maxOutputTokens ? Number(agentForm.value.maxOutputTokens) : null,
 			content: agentForm.value.content,
 			isActive: agentForm.value.isActive,
 			tools: agentForm.value.tools
@@ -493,7 +497,8 @@ watch(newGroupName, (v) => {
               </div>
             </template>
 
-            <p v-if="agent.description" class="text-sm text-base-content/50 mb-3 line-clamp-2">{{ agent.description }}</p>
+            <p v-if="agent.description" class="text-sm text-base-content/50 mb-3 line-clamp-2">{{ agent.description }}
+            </p>
 
             <div class="flex items-center gap-2 text-xs text-base-content/50 mb-4 flex-wrap">
               <span v-if="(agent.subagents ?? []).length"
@@ -580,6 +585,15 @@ watch(newGroupName, (v) => {
               </div>
             </div>
 
+            <!-- Max output tokens -->
+            <div>
+              <label class="block text-sm font-medium text-base-content mb-1.5">Límite de tokens de salida</label>
+              <input v-model="agentForm.maxOutputTokens" type="number" min="1" step="1" placeholder="Sin límite"
+                class="w-full px-3 py-2.5 rounded-lg border border-base-content/20 bg-base-200 text-base-content text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              <p class="text-xs text-base-content/50 mt-1">Máximo de tokens que el agente puede generar por respuesta. Déjalo
+                vacío para usar el valor por defecto del modelo.</p>
+            </div>
+
             <!-- Groups (multi-select) -->
             <div>
               <label class="block text-sm font-medium text-base-content mb-1.5">Grupos</label>
@@ -593,14 +607,7 @@ watch(newGroupName, (v) => {
                   {{ g.name }}
                 </button>
               </div>
-              <p class="text-xs text-base-content/60 mt-1.5">
-                Un agente puede pertenecer a varios grupos. Solo los agentes del grupo "Trazabilidad" se ofrecen al
-                asignar etapas en las plantillas de trazabilidad.
-              </p>
             </div>
-
-
-
             <!-- Content (system prompt) -->
             <div>
               <label class="block text-sm font-medium text-base-content mb-1.5">System Prompt / Content</label>
@@ -644,7 +651,8 @@ watch(newGroupName, (v) => {
                       <input v-model="agentForm.tools[tool.name]" type="checkbox"
                         class="w-4 h-4 rounded border-base-content/20 text-indigo-600 focus:ring-indigo-500 shrink-0" />
                       <div class="flex-1 min-w-0">
-                        <span class="text-sm font-mono font-medium text-base-content">{{ toolDisplayName(tool.name) }}</span>
+                        <span class="text-sm font-mono font-medium text-base-content">{{ toolDisplayName(tool.name)
+                        }}</span>
                         <p v-if="tool.description" class="text-xs text-base-content/60 mt-0.5 line-clamp-2">{{
                           tool.description
                         }}</p>
@@ -654,7 +662,8 @@ watch(newGroupName, (v) => {
                 </div>
               </div>
               <div class="overflow-y-auto divide-y divide-base-300/50">
-                <div v-if="!selectedToolSource" class="flex items-center justify-center h-full text-base-content/50 text-xs">
+                <div v-if="!selectedToolSource"
+                  class="flex items-center justify-center h-full text-base-content/50 text-xs">
                   Select a source
                 </div>
               </div>
@@ -714,6 +723,9 @@ watch(newGroupName, (v) => {
         }}</span>
         <span class="bg-base-100 text-base-content/40 px-2.5 py-1 rounded-full text-xs">T: {{ detailAgent.temperature
         }}</span>
+        <span v-if="detailAgent.maxOutputTokens"
+          class="bg-base-100 text-base-content/40 px-2.5 py-1 rounded-full text-xs">Max tokens: {{
+            detailAgent.maxOutputTokens }}</span>
       </div>
 
       <!-- Description -->
@@ -825,7 +837,8 @@ watch(newGroupName, (v) => {
           <p class="text-sm font-semibold text-base-content">
             {{ editingGroupId ? 'Editar grupo' : 'Nuevo grupo' }}
           </p>
-          <button v-if="editingGroupId" class="text-xs text-base-content/60 hover:text-base-content" @click="resetGroupForm">
+          <button v-if="editingGroupId" class="text-xs text-base-content/60 hover:text-base-content"
+            @click="resetGroupForm">
             Cancelar edición
           </button>
         </div>

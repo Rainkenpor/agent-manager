@@ -235,7 +235,7 @@ async function sendMessage() {
               ...event.message,
               streaming: false,
               responseTime: event.responseTime,
-              toolCalls: messages.value[idx].toolCalls
+              toolCalls: [] //messages.value[idx].toolCalls
             }
           }
           setTimeout(() => {
@@ -486,11 +486,11 @@ onBeforeUnmount(() => {
                   <div class="rounded-2xl text-sm leading-relaxed px-3 py-2" :class="msg.role === 'user'
                     ? 'bg-indigo-600 text-white rounded-tr-sm'
                     : 'bg-base-100 text-base-content rounded-tl-sm border border-base-300'">
-                    <div v-if="msg.toolCalls?.length" class="flex flex-wrap gap-1.5 mb-2">
-                      <span v-for="tool in msg.toolCalls" :key="tool"
+                    <div v-if="msg.toolCalls && msg.toolCalls.length > 0" class="flex flex-wrap gap-1.5 mb-2">
+                      <span
                         class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-base-100/60 text-base-content/50 text-[11px] font-mono">
-                        <span class="mdi mdi-cog-outline"></span>
-                        {{ tool }}
+                        <span class="mdi mdi-search-web"></span>
+                        Buscando información... ({{ msg.toolCalls.length }})
                       </span>
                     </div>
                     <span class="whitespace-pre-wrap" v-html="renderMarkdown(msg.content)" />

@@ -1,6 +1,6 @@
 {
   "name": "agent-manager",
-  "version": "1.12.0",
+  "version": "1.13.0",
   "description": "A project management tool for AI agents.",
   "type": "module",
   "workspaces": [
@@ -22,7 +22,6 @@
     "models": "bun ./scripts/auth.ts models"
   },
   "dependencies": {
-    "@biomejs/biome": "^2.4.8",
     "@mdi/font": "^7.4.47",
     "@modelcontextprotocol/sdk": "^1.27.1",
     "bcryptjs": "^3.0.3",
@@ -45,6 +44,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.5.1",
     "@types/connect-history-api-fallback": "^1.5.4",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",

@@ -126,6 +126,9 @@ export class AgentEntity {
 	@Column({ type: 'text', default: '0.2' })
 	temperature!: string
 
+	@Column({ name: 'max_output_tokens', type: 'integer', nullable: true })
+	maxOutputTokens!: number | null
+
 	@Column({ type: 'simple-json', default: '{}' })
 	tools!: Record<string, boolean>
 

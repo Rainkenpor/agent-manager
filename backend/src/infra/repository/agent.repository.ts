@@ -29,6 +29,7 @@ export class AgentRepository implements IAgentRepository {
 			mode: data.mode,
 			model: data.model,
 			temperature: data.temperature,
+			maxOutputTokens: data.maxOutputTokens ?? null,
 			tools: data.tools as Record<string, boolean>,
 			content: data.content,
 			isActive: true,
@@ -101,6 +102,7 @@ export class AgentRepository implements IAgentRepository {
 		if (data.mode !== undefined) updateValues.mode = data.mode
 		if (data.model !== undefined) updateValues.model = data.model
 		if (data.temperature !== undefined) updateValues.temperature = data.temperature
+		if (data.maxOutputTokens !== undefined) updateValues.maxOutputTokens = data.maxOutputTokens
 		if (data.tools !== undefined) updateValues.tools = data.tools as Record<string, boolean>
 		if (data.content !== undefined) updateValues.content = data.content
 		if (data.isActive !== undefined) updateValues.isActive = data.isActive

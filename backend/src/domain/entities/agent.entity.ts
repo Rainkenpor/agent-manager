@@ -59,6 +59,7 @@ export interface IAgentServiceExecute {
 	query: string
 	history?: Array<{ role: 'user' | 'assistant'; content: string }>
 	allowedTools?: Set<string> // Lista de herramientas permitidas para este agente
+	maxOutputTokens?: number // Límite de tokens de salida (max_tokens) para la llamada al LLM
 	artifacts?: { name: string; content: string }[]
 	stream?: boolean // Indica si la respuesta debe ser en formato stream
 	toolsCallbacks?: ToolCallbacks // Callbacks para invocar herramientas y manejar borradores
@@ -85,6 +86,7 @@ export interface AgentRecord {
 	groupIds: string[]
 	model: string
 	temperature: string
+	maxOutputTokens: number | null
 	tools: Record<string, boolean>
 	content: string
 	isActive: boolean
@@ -105,6 +107,7 @@ export interface CreateAgentDTO {
 	groupIds?: string[]
 	model: string
 	temperature: string
+	maxOutputTokens?: number | null
 	tools: Record<string, boolean>
 	content: string
 	subagentIds?: string[]
@@ -119,6 +122,7 @@ export interface UpdateAgentDTO {
 	groupIds?: string[]
 	model?: string
 	temperature?: string
+	maxOutputTokens?: number | null
 	tools?: Record<string, boolean>
 	content?: string
 	useByChat?: boolean

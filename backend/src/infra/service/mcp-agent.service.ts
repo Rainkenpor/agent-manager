@@ -27,6 +27,7 @@ export class MCPAgentService {
 						.map(([toolName]) => toolName)
 				),
 				history: args.history || [],
+				maxOutputTokens: agentEntity.data.maxOutputTokens ?? undefined,
 				auditSourceType: 'tool',
 				auditAgentId: agentEntity.data.id,
 				auditAgentName: agentEntity.data.name,
@@ -76,7 +77,6 @@ export class MCPAgentService {
 				throw new Error(`Agent not found: ${agent.id}`)
 			}
 
-
 			const params: IAgentServiceExecute = {
 				systemPrompt: `${systemPrompt}\n${agentEntity.data.content}${agent.addContext || ''}`,
 				agentSlug: agentEntity.data.slug,
@@ -89,6 +89,7 @@ export class MCPAgentService {
 				history: args.history || [],
 				userId: args.userId,
 				signal: args.signal,
+				maxOutputTokens: agentEntity.data.maxOutputTokens ?? undefined,
 				auditSourceType: args.auditSourceType ?? 'chat',
 				auditAgentId: agentEntity.data.id,
 				auditAgentName: agentEntity.data.name,
@@ -101,7 +102,7 @@ export class MCPAgentService {
 						setCredential: async () => {},
 						deleteCredential: async () => {},
 						getListCredentials: async () => []
-					},
+					}
 				}
 			}
 
