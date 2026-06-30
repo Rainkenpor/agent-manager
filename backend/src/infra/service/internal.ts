@@ -19,6 +19,8 @@
 import fs from 'node:fs'
 import nodePath from 'node:path'
 import type { IAgentService, IAgentServiceExecute } from '@domain/entities/agent.entity.js'
+import type { ProviderConfig } from '@domain/entities/provider-config.entity.js'
+import { isApiPayload } from '@domain/entities/provider-config.entity.js'
 import { container } from '../../application/container.js'
 import { envs } from '../../envs.js'
 import { buildToolDefinitions, executeToolCall } from '../utils/tools.js'
@@ -250,6 +252,43 @@ export class InternalAgentService implements IAgentService {
 			model: parsed.model,
 			provider: 'direct'
 		}
+	}
+
+	/**
+	 * Resolve which provider drives this run. If an active provider is configured
+	 * in the database it takes precedence over AGENT_MODEL; otherwise fall back to
+	 * the env-based selection.
+	 */
+	private async resolveProviderConfig(): Promise<{ parsed: ParsedModel; config: RequestConfig }> {
+		const active = await providerAuthService.getActiveProvider()
+		if (active) {
+			const config = await this.buildConfigFromActiveProvider(active)
+			return { parsed: { provider: config.provider, model: config.model }, config }
+		}
+		const parsed = this.parseModel(envs.AGENT_MODEL)
+		return { parsed, config: await this.buildRequestConfig(parsed) }
+	}
+
+	private async buildConfigFromActiveProvider(active: ProviderConfig): Promise<RequestConfig> {
+		if (active.type === 'api' && isApiPayload(active.payload)) {
+			const { baseURL, apiKey, model } = active.payload
+			const headers: Record<string, string> = {
+				'content-type': 'application/json',
+				'x-initiator': 'agent',
+				'user-agent': 'opencode/local',
+				'Openai-Intent': 'conversation-edits'
+			}
+			if (apiKey) headers.Authorization = `Bearer ${apiKey}`
+			return {
+				baseURL,
+				headers,
+				model,
+				provider: 'direct'
+			}
+		}
+
+		// codex — reuse the OpenAI Responses (Codex) branch; model comes from AGENT_MODEL
+		return this.buildRequestConfig({ provider: 'openai', model: this.parseModel(envs.AGENT_MODEL).model })
 	}
 
 	/**
@@ -915,8 +954,7 @@ export class InternalAgentService implements IAgentService {
 		agentLogger.info(`[${this.agentType}] model=${envs.AGENT_MODEL}`)
 		agentLogger.info(`[${this.agentType}] query=${query.slice(0, 120)}`)
 
-		const parsed = this.parseModel(envs.AGENT_MODEL)
-		const config = await this.buildRequestConfig(parsed)
+		const { parsed, config } = await this.resolveProviderConfig()
 
 		const tools = buildToolDefinitions(mcpExternalManager, allowedTools ?? undefined, toolsCallbacks)
 
@@ -955,8 +993,7 @@ export class InternalAgentService implements IAgentService {
 		agentLogger.info(`[${this.agentType}] model=${envs.AGENT_MODEL}`)
 		// agentLogger.info(`[${this.agentType}] query=${query.slice(0, 120)}`)
 
-		const parsed = this.parseModel(envs.AGENT_MODEL)
-		const config = await this.buildRequestConfig(parsed)
+		const { parsed, config } = await this.resolveProviderConfig()
 
 		const tools = buildToolDefinitions(mcpExternalManager, allowedTools ?? undefined, toolsCallbacks)
 

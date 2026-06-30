@@ -1,6 +1,6 @@
 {
   "name": "agent-manager",
-  "version": "1.14.0",
+  "version": "1.15.0",
   "description": "A project management tool for AI agents.",
   "type": "module",
   "workspaces": [

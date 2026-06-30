@@ -1,8 +1,8 @@
 import { registry } from '@applicationService/registry.service.js'
-import { container } from '../container.js'
-import { z } from 'zod'
 import { providerAuthService } from '@infra/service/provider-auth.service.js'
+import { z } from 'zod'
 import { envs } from '../../envs.js'
+import { container } from '../container.js'
 
 const ExportResourceEnum = z.enum(['agents', 'skills', 'mcps', 'traceabilities', 'roles', 'users'])
 
@@ -16,6 +16,18 @@ const importSchema = z.object({
 
 const providerStartAuthSchema = z.object({
 	returnTo: z.string().url().optional()
+})
+
+const saveApiProviderSchema = z.object({
+	provider: z.string().min(1),
+	label: z.string().min(1),
+	baseURL: z.string().url(),
+	apiKey: z.string().min(1).optional(),
+	model: z.string().min(1)
+})
+
+const providerParamSchema = z.object({
+	provider: z.string().min(1)
 })
 
 export function registerConfigRoutes(): void {
@@ -40,6 +52,54 @@ export function registerConfigRoutes(): void {
 		requiredPermission: { resource: 'users', action: 'create' },
 		handler: async ({ input }) => {
 			return await container.importConfigUseCase.execute(input.payload as Record<string, unknown>)
+		}
+	})
+
+	registry.register({
+		useBy: ['server'],
+		method: 'GET',
+		path: '/api/config/providers',
+		requiresAuth: true,
+		requiredPermission: { resource: 'users', action: 'read' },
+		handler: async () => {
+			return { success: true, data: await providerAuthService.listProviders() }
+		}
+	})
+
+	registry.register({
+		useBy: ['server'],
+		method: 'POST',
+		path: '/api/config/providers',
+		inputSchema: saveApiProviderSchema.shape,
+		requiresAuth: true,
+		requiredPermission: { resource: 'users', action: 'update' },
+		handler: async ({ input }) => {
+			return { success: true, data: await providerAuthService.saveApiProvider(input as z.infer<typeof saveApiProviderSchema>) }
+		}
+	})
+
+	registry.register({
+		useBy: ['server'],
+		method: 'POST',
+		path: '/api/config/providers/:provider/activate',
+		inputSchema: providerParamSchema.shape,
+		requiresAuth: true,
+		requiredPermission: { resource: 'users', action: 'update' },
+		handler: async ({ input }) => {
+			return { success: true, data: await providerAuthService.setActiveProvider((input as { provider: string }).provider) }
+		}
+	})
+
+	registry.register({
+		useBy: ['server'],
+		method: 'DELETE',
+		path: '/api/config/providers/:provider',
+		inputSchema: providerParamSchema.shape,
+		requiresAuth: true,
+		requiredPermission: { resource: 'users', action: 'update' },
+		handler: async ({ input }) => {
+			await providerAuthService.deleteProvider((input as { provider: string }).provider)
+			return { success: true }
 		}
 	})
 
@@ -74,18 +134,6 @@ export function registerConfigRoutes(): void {
 		requiredPermission: { resource: 'users', action: 'update' },
 		handler: async () => {
 			return { success: true, data: await providerAuthService.refreshOpenAIIfNeeded(true) }
-		}
-	})
-
-	registry.register({
-		useBy: ['server'],
-		method: 'DELETE',
-		path: '/api/config/providers/openai',
-		requiresAuth: true,
-		requiredPermission: { resource: 'users', action: 'update' },
-		handler: async () => {
-			await providerAuthService.deleteProvider('openai')
-			return { success: true }
 		}
 	})
 

@@ -376,8 +376,7 @@ export const createHttpEndpoint = (data: any) =>
 	request<{ success: boolean; data: any }>('/http-endpoints', { method: 'POST', body: JSON.stringify(data) })
 export const updateHttpEndpoint = (id: string, data: any) =>
 	request<{ success: boolean; data: any }>(`/http-endpoints/${id}`, { method: 'PUT', body: JSON.stringify(data) })
-export const deleteHttpEndpoint = (id: string) =>
-	request<{ success: boolean }>(`/http-endpoints/${id}`, { method: 'DELETE' })
+export const deleteHttpEndpoint = (id: string) => request<{ success: boolean }>(`/http-endpoints/${id}`, { method: 'DELETE' })
 export const executeHttpEndpoint = (id: string, overrideBody?: string) =>
 	request<{ success: boolean; data: { status: number; ok: boolean; body: string } }>(`/http-endpoints/${id}/execute`, {
 		method: 'POST',
@@ -418,15 +417,48 @@ export const importConfig = (payload: Record<string, unknown>) =>
 		body: JSON.stringify({ payload })
 	})
 
+export type ProviderType = 'codex' | 'api'
+
 export interface ProviderConfigSummary {
-	provider: 'openai' | 'copilot'
+	provider: string
+	label: string
+	type: ProviderType
+	isActive: boolean
 	configured: boolean
 	hasRefreshToken: boolean
 	lastValidatedAt: string | null
 	expiresAt: string | null
 	updatedAt: string | null
 	needsRefresh: boolean
+	baseURL: string | null
+	model: string | null
 }
+
+export interface SaveApiProviderPayload {
+	provider: string
+	label: string
+	baseURL: string
+	apiKey?: string
+	model: string
+}
+
+export const listProviders = () => request<{ success: boolean; data: ProviderConfigSummary[] }>('/config/providers')
+
+export const saveApiProvider = (payload: SaveApiProviderPayload) =>
+	request<{ success: boolean; data: ProviderConfigSummary }>('/config/providers', {
+		method: 'POST',
+		body: JSON.stringify(payload)
+	})
+
+export const activateProvider = (provider: string) =>
+	request<{ success: boolean; data: ProviderConfigSummary }>(`/config/providers/${encodeURIComponent(provider)}/activate`, {
+		method: 'POST'
+	})
+
+export const deleteProvider = (provider: string) =>
+	request<{ success: boolean }>(`/config/providers/${encodeURIComponent(provider)}`, {
+		method: 'DELETE'
+	})
 
 export const getOpenAIProviderConfig = () => request<{ success: boolean; data: ProviderConfigSummary }>('/config/providers/openai')
 
@@ -511,12 +543,7 @@ export async function createIntegrationConversation(
 	return res.json()
 }
 
-export function streamIntegrationMessage(
-	conversationId: string,
-	content: string,
-	origin: string,
-	signal?: AbortSignal
-): Promise<Response> {
+export function streamIntegrationMessage(conversationId: string, content: string, origin: string, signal?: AbortSignal): Promise<Response> {
 	return fetch(`${__API_BASE__}/integration/chat/conversations/${conversationId}/messages`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },

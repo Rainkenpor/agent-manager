@@ -2,7 +2,14 @@ import { createHash, randomBytes } from 'node:crypto'
 import fs from 'node:fs'
 import nodePath from 'node:path'
 import NodeCache from 'node-cache'
-import type { ProviderConfig, ProviderName, ProviderTokenPayload } from '../../domain/entities/provider-config.entity.js'
+import type {
+	ApiProviderPayload,
+	ProviderConfig,
+	ProviderName,
+	ProviderTokenPayload,
+	ProviderType
+} from '../../domain/entities/provider-config.entity.js'
+import { isApiPayload } from '../../domain/entities/provider-config.entity.js'
 import { envs } from '../../envs.js'
 import { ProviderConfigRepository } from '../repository/provider-config.repository.js'
 
@@ -18,12 +25,25 @@ interface OpenAIStartAuthState {
 
 export interface ProviderConfigSummary {
 	provider: ProviderName
+	label: string
+	type: ProviderType
+	isActive: boolean
 	configured: boolean
 	hasRefreshToken: boolean
 	lastValidatedAt: string | null
 	expiresAt: string | null
 	updatedAt: string | null
 	needsRefresh: boolean
+	baseURL: string | null
+	model: string | null
+}
+
+export interface SaveApiProviderDTO {
+	provider: ProviderName
+	label: string
+	baseURL: string
+	apiKey?: string
+	model: string
 }
 
 function generateVerifier(): string {
@@ -117,6 +137,8 @@ export class ProviderAuthService {
 		})
 		const record = await this.repo.upsert({
 			provider,
+			type: 'codex',
+			label: provider === 'openai' ? 'OpenAI Codex' : provider,
 			payload,
 			expiresAt: computeExpiresAt(payload),
 			lastValidatedAt: new Date().toISOString()
@@ -142,7 +164,7 @@ export class ProviderAuthService {
 		if (lock !== undefined) return lock
 
 		const refreshPromise = (async () => {
-			const refreshToken = record.payload.refresh_token
+			const refreshToken = (record.payload as ProviderTokenPayload).refresh_token
 			if (!refreshToken) {
 				throw new Error('OpenAI token does not include refresh_token. Reconnect the provider from Config.')
 			}
@@ -180,17 +202,82 @@ export class ProviderAuthService {
 		}
 	}
 
-	async getProviderSummary(provider: ProviderName): Promise<ProviderConfigSummary> {
-		const record = await this.getRecord(provider)
+	private toSummary(
+		record: ProviderConfig | null,
+		fallbackProvider: ProviderName,
+		fallbackType: ProviderType = 'codex'
+	): ProviderConfigSummary {
+		const apiPayload = record && isApiPayload(record.payload) ? record.payload : null
+		const tokenPayload = record && !isApiPayload(record.payload) ? record.payload : null
 		return {
-			provider,
+			provider: record?.provider ?? fallbackProvider,
+			label: record?.label ?? fallbackProvider,
+			type: record?.type ?? fallbackType,
+			isActive: Boolean(record?.isActive),
 			configured: Boolean(record),
-			hasRefreshToken: Boolean(record?.payload.refresh_token),
+			hasRefreshToken: Boolean(tokenPayload?.refresh_token),
 			lastValidatedAt: record?.lastValidatedAt ?? null,
 			expiresAt: record?.expiresAt ?? null,
 			updatedAt: record?.updatedAt ?? null,
-			needsRefresh: shouldRefresh(record)
+			needsRefresh: shouldRefresh(record),
+			baseURL: apiPayload?.baseURL ?? null,
+			model: apiPayload?.model ?? null
 		}
+	}
+
+	async getProviderSummary(provider: ProviderName): Promise<ProviderConfigSummary> {
+		const record = await this.getRecord(provider)
+		return this.toSummary(record, provider)
+	}
+
+	async listProviders(): Promise<ProviderConfigSummary[]> {
+		const records = await this.repo.findAll()
+		return records.map((record) => this.toSummary(record, record.provider, record.type))
+	}
+
+	async getActiveProvider(): Promise<ProviderConfig | null> {
+		return this.repo.findActive()
+	}
+
+	async setActiveProvider(provider: ProviderName): Promise<ProviderConfigSummary> {
+		const record = await this.repo.findByProvider(provider)
+		if (!record) {
+			throw new Error(`Provider '${provider}' is not configured.`)
+		}
+		await this.repo.setActive(provider)
+		this.tokenCache.flushAll()
+		return this.getProviderSummary(provider)
+	}
+
+	async saveApiProvider(dto: SaveApiProviderDTO): Promise<ProviderConfigSummary> {
+		const provider = dto.provider.trim()
+		if (!provider) {
+			throw new Error('Provider identifier is required.')
+		}
+
+		// On edit a blank API key keeps the stored one; some providers have no key at all.
+		let apiKey = dto.apiKey?.trim() ?? ''
+		if (!apiKey) {
+			const existing = await this.repo.findByProvider(provider)
+			if (existing && isApiPayload(existing.payload)) apiKey = existing.payload.apiKey ?? ''
+		}
+
+		const payload: ApiProviderPayload = {
+			baseURL: dto.baseURL.trim(),
+			model: dto.model.trim(),
+			...(apiKey ? { apiKey } : {})
+		}
+		if (!payload.baseURL || !payload.model) {
+			throw new Error('baseURL and model are required for an API provider.')
+		}
+		await this.repo.upsert({
+			provider,
+			type: 'api',
+			label: dto.label.trim() || provider,
+			payload
+		})
+		this.tokenCache.del(provider)
+		return this.getProviderSummary(provider)
 	}
 
 	async beginOpenAIAuth(returnTo?: string): Promise<{ authUrl: string }> {
@@ -264,7 +351,7 @@ export class ProviderAuthService {
 			record = await this.markValidated(record)
 		}
 
-		return record.payload
+		return record.payload as ProviderTokenPayload
 	}
 
 	async getProviderAccessToken(provider: ProviderName): Promise<string> {
@@ -277,7 +364,7 @@ export class ProviderAuthService {
 		if (!record) {
 			throw new Error(`Token for '${provider}' not found in database or legacy auth storage.`)
 		}
-		return record.payload.accessToken
+		return (record.payload as ProviderTokenPayload).accessToken
 	}
 
 	async refreshOpenAIIfNeeded(force = false): Promise<ProviderConfigSummary> {

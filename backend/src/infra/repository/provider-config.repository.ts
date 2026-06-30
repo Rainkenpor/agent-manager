@@ -4,29 +4,33 @@ import { v4 as uuidv4 } from 'uuid'
 import type {
 	ProviderConfig,
 	ProviderName,
-	ProviderTokenPayload,
+	ProviderPayload,
+	ProviderType,
 	UpsertProviderConfigDTO
 } from '../../domain/entities/provider-config.entity.js'
 import type { IProviderConfigRepository } from '../../domain/repositories/provider-config.repository.js'
 import { envs } from '../../envs.js'
 import { decrypt, encrypt } from '../service/crypto.service.js'
 
-function parsePayload(raw: string): ProviderTokenPayload {
+function parsePayload(raw: string): ProviderPayload {
 	const decrypted = decrypt(raw, envs.CREDENTIAL_ENCRYPTION_KEY)
-	return JSON.parse(decrypted) as ProviderTokenPayload
+	return JSON.parse(decrypted) as ProviderPayload
 }
 
 function toDomain(entity: ProviderConfigEntity): ProviderConfig {
-	let payload: ProviderTokenPayload
+	let payload: ProviderPayload
 	try {
 		payload = parsePayload(entity.payload)
 	} catch {
-		payload = JSON.parse(entity.payload) as ProviderTokenPayload
+		payload = JSON.parse(entity.payload) as ProviderPayload
 	}
 
 	return {
 		id: entity.id,
 		provider: entity.provider as ProviderName,
+		label: entity.label ?? entity.provider,
+		type: (entity.type as ProviderType) ?? 'codex',
+		isActive: Boolean(entity.isActive),
 		payload,
 		expiresAt: entity.expiresAt,
 		lastValidatedAt: entity.lastValidatedAt,
@@ -40,8 +44,18 @@ export class ProviderConfigRepository implements IProviderConfigRepository {
 		return AppDataSource.getRepository(ProviderConfigEntity)
 	}
 
+	async findAll(): Promise<ProviderConfig[]> {
+		const rows = await this.repo.find({ order: { createdAt: 'ASC' } })
+		return rows.map(toDomain)
+	}
+
 	async findByProvider(provider: ProviderName): Promise<ProviderConfig | null> {
 		const row = await this.repo.findOneBy({ provider })
+		return row ? toDomain(row) : null
+	}
+
+	async findActive(): Promise<ProviderConfig | null> {
+		const row = await this.repo.findOneBy({ isActive: true })
 		return row ? toDomain(row) : null
 	}
 
@@ -53,6 +67,9 @@ export class ProviderConfigRepository implements IProviderConfigRepository {
 		if (existing) {
 			await this.repo.update(existing.id, {
 				payload: encryptedPayload,
+				...(data.label !== undefined ? { label: data.label } : {}),
+				...(data.type !== undefined ? { type: data.type } : {}),
+				...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
 				expiresAt: data.expiresAt ?? null,
 				lastValidatedAt: data.lastValidatedAt ?? null,
 				updatedAt: now
@@ -64,6 +81,9 @@ export class ProviderConfigRepository implements IProviderConfigRepository {
 		const entity = this.repo.create({
 			id: uuidv4(),
 			provider: data.provider,
+			label: data.label ?? data.provider,
+			type: data.type ?? 'codex',
+			isActive: data.isActive ?? false,
 			payload: encryptedPayload,
 			expiresAt: data.expiresAt ?? null,
 			lastValidatedAt: data.lastValidatedAt ?? null,
@@ -72,6 +92,11 @@ export class ProviderConfigRepository implements IProviderConfigRepository {
 		})
 		await this.repo.save(entity)
 		return toDomain(entity)
+	}
+
+	async setActive(provider: ProviderName): Promise<void> {
+		await this.repo.update({ isActive: true }, { isActive: false })
+		await this.repo.update({ provider }, { isActive: true, updatedAt: new Date().toISOString() })
 	}
 
 	async updateValidation(provider: ProviderName, lastValidatedAt: string): Promise<void> {

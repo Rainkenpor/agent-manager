@@ -448,6 +448,15 @@ export class ProviderConfigEntity {
 	@Column({ type: 'text', unique: true })
 	provider!: string
 
+	@Column({ type: 'text', default: 'codex' })
+	type!: string
+
+	@Column({ type: 'text', nullable: true })
+	label!: string | null
+
+	@Column({ name: 'is_active', type: 'boolean', default: false })
+	isActive!: boolean
+
 	@Column({ type: 'text' })
 	payload!: string
 

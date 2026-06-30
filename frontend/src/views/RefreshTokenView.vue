@@ -1,76 +1,111 @@
 <template>
-  <PageLayout title="OpenAI"
-    description="La credencial se guarda en base de datos, se sirve desde cache y se valida automáticamente cada 2 horas.">
+  <PageLayout title="Providers de LLM"
+    description="Configura uno o más providers (Codex u OpenAI-compatible por API) y marca cuál usa el agente. Las credenciales se guardan cifradas en base de datos.">
     <template #actions>
-      <div :class="['px-3 py-1 rounded-full border text-xs font-medium', openaiBadgeClass]">
-        {{ openaiBadgeText }}
-      </div>
+      <button @click="loadProviders" :disabled="loading"
+        class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors bg-base-200 hover:bg-base-100 disabled:text-base-content/50">
+        <i class="mdi mdi-reload mr-1" :class="{ 'animate-spin': loading }"></i>
+        Recargar
+      </button>
     </template>
 
-
-    <div v-if="providerMessage"
+    <div v-if="message"
       class="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg text-emerald-300 text-sm">
-      <i class="mdi mdi-check-circle mr-2"></i>{{ providerMessage }}
+      <i class="mdi mdi-check-circle mr-2"></i>{{ message }}
     </div>
 
-    <div v-if="providerError" class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
-      <i class="mdi mdi-alert-circle mr-2"></i>{{ providerError }}
+    <div v-if="error" class="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
+      <i class="mdi mdi-alert-circle mr-2"></i>{{ error }}
     </div>
 
-    <div v-if="openaiAuthUrl" class="mb-4 p-4 bg-indigo-500/10 border border-indigo-500/30 rounded-lg">
+    <div v-if="authUrl" class="mb-4 p-4 bg-indigo-500/10 border border-indigo-500/30 rounded-lg">
       <p class="text-sm text-indigo-200 mb-2">Enlace de autenticación generado:</p>
-      <a :href="openaiAuthUrl" target="_blank" rel="noopener noreferrer"
-        class="text-sm break-all text-indigo-300 hover:text-indigo-200 underline">
-        {{ openaiAuthUrl }}
-      </a>
+      <a :href="authUrl" target="_blank" rel="noopener noreferrer"
+        class="text-sm break-all text-indigo-300 hover:text-indigo-200 underline">{{ authUrl }}</a>
     </div>
 
-    <div class="grid sm:grid-cols-2 gap-3 mb-6">
-      <div class="rounded-lg border border-base-300 bg-base-300/50 p-4">
-        <p class="text-xs uppercase tracking-wide text-base-content/50 mb-1">Última actualización</p>
-        <p class="text-sm text-base-content">{{ formatDate(openaiStatus?.updatedAt ?? null) }}</p>
-      </div>
-      <div class="rounded-lg border border-base-300 bg-base-300/50 p-4">
-        <p class="text-xs uppercase tracking-wide text-base-content/50 mb-1">Última validación</p>
-        <p class="text-sm text-base-content">{{ formatDate(openaiStatus?.lastValidatedAt ?? null) }}</p>
-      </div>
-      <div class="rounded-lg border border-base-300 bg-base-300/50 p-4">
-        <p class="text-xs uppercase tracking-wide text-base-content/50 mb-1">Expira</p>
-        <p class="text-sm text-base-content">{{ formatDate(openaiStatus?.expiresAt ?? null) }}</p>
-      </div>
-      <div class="rounded-lg border border-base-300 bg-base-300/50 p-4">
-        <p class="text-xs uppercase tracking-wide text-base-content/50 mb-1">Refresh token</p>
-        <p class="text-sm text-base-content">{{ openaiStatus?.hasRefreshToken ? 'Disponible' : 'No disponible' }}
-        </p>
-      </div>
-    </div>
+    <!-- ── OpenAI Codex ─────────────────────────────────────────────── -->
+    <section class="mb-8">
+      <h3 class="text-sm font-semibold text-base-content/70 uppercase tracking-wide mb-3">OpenAI (Codex)</h3>
+      <div class="rounded-lg border p-4" :class="codex?.isActive ? 'border-indigo-500/50 bg-indigo-500/5' : 'border-base-300 bg-base-300/40'">
+        <div class="flex items-start justify-between gap-3 mb-3">
+          <div>
+            <p class="text-base-content font-medium">{{ codex?.label ?? 'OpenAI Codex' }}</p>
+            <p class="text-xs text-base-content/50">Autenticación OAuth contra ChatGPT (codex).</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <span v-if="codex?.isActive" class="px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">Activo</span>
+            <span :class="['px-2 py-0.5 rounded-full border text-xs font-medium', badgeClass(codex)]">{{ badgeText(codex) }}</span>
+          </div>
+        </div>
 
-    <div class="flex flex-wrap gap-3">
-      <button @click="connectOpenAI" :disabled="providerBusy"
-        class="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-indigo-600 hover:bg-indigo-500 disabled:bg-base-200 disabled:text-base-content/50">
-        <i class="mdi mdi-open-in-new mr-2"></i>
-        {{ openaiStatus?.configured ? 'Reconectar OpenAI' : 'Conectar OpenAI' }}
-      </button>
+        <div class="grid sm:grid-cols-3 gap-2 mb-3 text-xs">
+          <div><span class="text-base-content/50">Última validación:</span> {{ formatDate(codex?.lastValidatedAt ?? null) }}</div>
+          <div><span class="text-base-content/50">Expira:</span> {{ formatDate(codex?.expiresAt ?? null) }}</div>
+          <div><span class="text-base-content/50">Refresh token:</span> {{ codex?.hasRefreshToken ? 'Disponible' : 'No disponible' }}</div>
+        </div>
 
-      <button @click="refreshOpenAI" :disabled="providerBusy || !openaiStatus?.configured"
-        class="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-base-200 hover:bg-base-100 disabled:text-base-content/50">
-        <i class="mdi mdi-refresh mr-2" :class="{ 'animate-spin': providerBusy }"></i>
-        Validar / refrescar
-      </button>
+        <div class="flex flex-wrap gap-2">
+          <button @click="connectOpenAI" :disabled="busy"
+            class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors bg-indigo-600 hover:bg-indigo-500 disabled:bg-base-200 disabled:text-base-content/50">
+            <i class="mdi mdi-open-in-new mr-1"></i>{{ codex?.configured ? 'Reconectar' : 'Conectar' }}
+          </button>
+          <button @click="refreshOpenAI" :disabled="busy || !codex?.configured"
+            class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors bg-base-200 hover:bg-base-100 disabled:text-base-content/50">
+            <i class="mdi mdi-refresh mr-1" :class="{ 'animate-spin': busy }"></i>Validar / refrescar
+          </button>
+          <button v-if="codex?.configured && !codex.isActive" @click="activate(codex.provider)" :disabled="busy"
+            class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors bg-emerald-600 hover:bg-emerald-500 disabled:text-base-content/50">
+            <i class="mdi mdi-check mr-1"></i>Marcar como activo
+          </button>
+          <button v-if="codex?.configured" @click="remove(codex.provider, codex.label)" :disabled="busy"
+            class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors bg-red-500/10 hover:bg-red-500/20 text-red-300 border border-red-500/30 disabled:text-base-content/50">
+            <i class="mdi mdi-delete-outline mr-1"></i>Eliminar
+          </button>
+        </div>
+      </div>
+    </section>
 
-      <button @click="loadOpenAIStatus" :disabled="providerLoading"
-        class="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-base-200 hover:bg-base-100 disabled:text-base-content/50">
-        <i class="mdi mdi-reload mr-2" :class="{ 'animate-spin': providerLoading }"></i>
-        Recargar estado
-      </button>
+    <!-- ── Providers por API ────────────────────────────────────────── -->
+    <section class="mb-8">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-sm font-semibold text-base-content/70 uppercase tracking-wide">Providers por API</h3>
+        <button @click="openCreate"
+          class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors bg-indigo-600 hover:bg-indigo-500">
+          <i class="mdi mdi-plus mr-1"></i>Agregar provider
+        </button>
+      </div>
 
-      <button @click="deleteOpenAI" :disabled="providerBusy || !openaiStatus?.configured"
-        class="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-red-500/10 hover:bg-red-500/20 text-red-300 border border-red-500/30 disabled:text-base-content/50 disabled:border-base-300">
-        <i class="mdi mdi-delete-outline mr-2"></i>
-        Eliminar
-      </button>
-    </div>
-  </pageLayout>
+      <p v-if="!apiProviders.length" class="text-sm text-base-content/50 mb-3">No hay providers por API configurados.</p>
+
+      <div v-for="p in apiProviders" :key="p.provider"
+        class="rounded-lg border p-4 mb-3" :class="p.isActive ? 'border-indigo-500/50 bg-indigo-500/5' : 'border-base-300 bg-base-300/40'">
+        <div class="flex items-start justify-between gap-3 mb-3">
+          <div>
+            <p class="text-base-content font-medium">{{ p.label }}</p>
+            <p class="text-xs text-base-content/50 break-all">{{ p.baseURL }} · modelo {{ p.model }}</p>
+          </div>
+          <span v-if="p.isActive" class="px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">Activo</span>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button v-if="!p.isActive" @click="activate(p.provider)" :disabled="busy"
+            class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors bg-emerald-600 hover:bg-emerald-500 disabled:text-base-content/50">
+            <i class="mdi mdi-check mr-1"></i>Marcar como activo
+          </button>
+          <button @click="openEdit(p)" :disabled="busy"
+            class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors bg-base-200 hover:bg-base-100 disabled:text-base-content/50">
+            <i class="mdi mdi-pencil-outline mr-1"></i>Editar
+          </button>
+          <button @click="remove(p.provider, p.label)" :disabled="busy"
+            class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors bg-red-500/10 hover:bg-red-500/20 text-red-300 border border-red-500/30 disabled:text-base-content/50">
+            <i class="mdi mdi-delete-outline mr-1"></i>Eliminar
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <ProviderFormModal v-if="modalOpen" :provider="editing" @close="modalOpen = false" @saved="onSaved" />
+  </PageLayout>
 </template>
 
 <script setup lang="ts">
@@ -79,117 +114,143 @@ import { useRoute, useRouter } from 'vue-router'
 import type { ProviderConfigSummary } from '@/api/api'
 import * as api from '@/api/api'
 import PageLayout from '@/components/PageLayout.vue'
+import ProviderFormModal from '@/components/ProviderFormModal.vue'
 
 const route = useRoute()
 const router = useRouter()
 
-const tab = ref<'providers'>('providers')
-const openaiStatus = ref<ProviderConfigSummary | null>(null)
-const providerLoading = ref(false)
-const providerBusy = ref(false)
-const providerError = ref('')
-const providerMessage = ref('')
-const openaiAuthUrl = ref('')
+const providers = ref<ProviderConfigSummary[]>([])
+const loading = ref(false)
+const busy = ref(false)
+const error = ref('')
+const message = ref('')
+const authUrl = ref('')
 
-const openaiBadgeClass = computed(() => {
-  if (!openaiStatus.value?.configured) return 'bg-base-200 text-base-content border-base-300'
-  if (openaiStatus.value.needsRefresh) return 'bg-amber-500/10 text-amber-300 border-amber-500/30'
-  return 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
-})
+const modalOpen = ref(false)
+const editing = ref<ProviderConfigSummary | null>(null)
 
-const openaiBadgeText = computed(() => {
-  if (!openaiStatus.value?.configured) return 'No configurado'
-  return openaiStatus.value.needsRefresh ? 'Requiere refresh' : 'Conectado'
-})
+const codex = computed(() => providers.value.find((p) => p.type === 'codex'))
+const apiProviders = computed(() => providers.value.filter((p) => p.type === 'api'))
 
 function formatDate(value: string | null) {
-  if (!value) return 'N/D'
-  return new Date(value).toLocaleString()
+	if (!value) return 'N/D'
+	return new Date(value).toLocaleString()
 }
 
-async function loadOpenAIStatus() {
-  providerLoading.value = true
-  providerError.value = ''
-  try {
-    const res = await api.getOpenAIProviderConfig()
-    openaiStatus.value = res.data
-  } catch (error: any) {
-    providerError.value = error.message
-  } finally {
-    providerLoading.value = false
-  }
+function badgeClass(p?: ProviderConfigSummary) {
+	if (!p?.configured) return 'bg-base-200 text-base-content border-base-300'
+	if (p.needsRefresh) return 'bg-amber-500/10 text-amber-300 border-amber-500/30'
+	return 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+}
+
+function badgeText(p?: ProviderConfigSummary) {
+	if (!p?.configured) return 'No configurado'
+	return p.needsRefresh ? 'Requiere refresh' : 'Conectado'
+}
+
+async function loadProviders() {
+	loading.value = true
+	error.value = ''
+	try {
+		const res = await api.listProviders()
+		providers.value = res.data
+	} catch (err: any) {
+		error.value = err.message
+	} finally {
+		loading.value = false
+	}
 }
 
 async function connectOpenAI() {
-  providerBusy.value = true
-  providerError.value = ''
-  providerMessage.value = ''
-  try {
-    const returnTo = `${window.location.origin}/config`
-    const res = await api.startOpenAIProviderAuth(returnTo)
-    openaiAuthUrl.value = res.data.authUrl
-    providerMessage.value = 'Abre el enlace para completar la autenticación de OpenAI.'
-  } catch (error: any) {
-    providerError.value = error.message
-    openaiAuthUrl.value = ''
-  } finally {
-    providerBusy.value = false
-  }
+	busy.value = true
+	error.value = ''
+	message.value = ''
+	try {
+		const returnTo = `${window.location.origin}/config`
+		const res = await api.startOpenAIProviderAuth(returnTo)
+		authUrl.value = res.data.authUrl
+		message.value = 'Abre el enlace para completar la autenticación de OpenAI.'
+	} catch (err: any) {
+		error.value = err.message
+		authUrl.value = ''
+	} finally {
+		busy.value = false
+	}
 }
 
 async function refreshOpenAI() {
-  providerBusy.value = true
-  providerError.value = ''
-  providerMessage.value = ''
-  try {
-    const res = await api.refreshOpenAIProviderToken()
-    openaiStatus.value = res.data
-    providerMessage.value = 'Token de OpenAI validado correctamente.'
-  } catch (error: any) {
-    providerError.value = error.message
-  } finally {
-    providerBusy.value = false
-  }
+	busy.value = true
+	error.value = ''
+	message.value = ''
+	try {
+		await api.refreshOpenAIProviderToken()
+		message.value = 'Token de OpenAI validado correctamente.'
+		await loadProviders()
+	} catch (err: any) {
+		error.value = err.message
+	} finally {
+		busy.value = false
+	}
 }
 
-async function deleteOpenAI() {
-  if (!window.confirm('Se eliminará la configuración almacenada de OpenAI.')) return
+async function activate(provider: string) {
+	busy.value = true
+	error.value = ''
+	message.value = ''
+	try {
+		await api.activateProvider(provider)
+		message.value = `Provider activo: ${provider}.`
+		await loadProviders()
+	} catch (err: any) {
+		error.value = err.message
+	} finally {
+		busy.value = false
+	}
+}
 
-  providerBusy.value = true
-  providerError.value = ''
-  providerMessage.value = ''
-  try {
-    await api.deleteOpenAIProviderConfig()
-    openaiAuthUrl.value = ''
-    openaiStatus.value = {
-      provider: 'openai',
-      configured: false,
-      hasRefreshToken: false,
-      lastValidatedAt: null,
-      expiresAt: null,
-      updatedAt: null,
-      needsRefresh: false
-    }
-    providerMessage.value = 'Configuración de OpenAI eliminada.'
-  } catch (error: any) {
-    providerError.value = error.message
-  } finally {
-    providerBusy.value = false
-  }
+async function remove(provider: string, label: string) {
+	if (!window.confirm(`Se eliminará la configuración del provider "${label}".`)) return
+	busy.value = true
+	error.value = ''
+	message.value = ''
+	try {
+		await api.deleteProvider(provider)
+		if (provider === codex.value?.provider) authUrl.value = ''
+		message.value = `Provider "${label}" eliminado.`
+		await loadProviders()
+	} catch (err: any) {
+		error.value = err.message
+	} finally {
+		busy.value = false
+	}
+}
+
+function openCreate() {
+	editing.value = null
+	modalOpen.value = true
+}
+
+function openEdit(provider: ProviderConfigSummary) {
+	editing.value = provider
+	modalOpen.value = true
+}
+
+async function onSaved() {
+	message.value = 'Provider guardado.'
+	await loadProviders()
 }
 
 onMounted(async () => {
-  const authResult = typeof route.query.auth === 'string' ? route.query.auth : ''
-  const authMessage = typeof route.query.message === 'string' ? route.query.message : ''
-  const provider = typeof route.query.provider === 'string' ? route.query.provider : ''
+	const authResult = typeof route.query.auth === 'string' ? route.query.auth : ''
+	const authMessage = typeof route.query.message === 'string' ? route.query.message : ''
+	const provider = typeof route.query.provider === 'string' ? route.query.provider : ''
 
-  if (provider === 'openai') {
-    tab.value = 'providers'
-    if (authResult === 'success') providerMessage.value = 'OpenAI conectado correctamente.'
-    if (authResult === 'error') providerError.value = authMessage || 'No fue posible completar la autenticación de OpenAI.'
-    await router.replace({ query: {} })
-  }
+	if (provider === 'openai') {
+		if (authResult === 'success') message.value = 'OpenAI conectado correctamente.'
+		if (authResult === 'error') error.value = authMessage || 'No fue posible completar la autenticación de OpenAI.'
+		await router.replace({ query: {} })
+	}
 
-  await loadOpenAIStatus()
+	await loadProviders()
 })
 </script>
