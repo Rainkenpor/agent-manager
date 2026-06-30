@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useAuthStore } from '@/store/useAuth'
 import RefreshTokenView from './RefreshTokenView.vue'
 import SystemMetricsView from './SystemMetricsView.vue'
+import HttpEndpointsConfigView from './HttpEndpointsConfigView.vue'
 import IntegrationsConfigView from './IntegrationsConfigView.vue'
 import TokensView from './TokensView.vue'
 import WebhooksConfigView from './WebhooksConfigView.vue'
@@ -14,6 +15,14 @@ const allTabs = [
 	{ key: 'tokens', label: 'Tokens LLM', icon: 'mdi-counter', resource: 'llm_tokens', accessMode: 'any', component: TokensView },
 	{ key: 'system', label: 'Recursos', icon: 'mdi-chip', resource: 'system_metrics', accessMode: 'any', component: SystemMetricsView },
 	{ key: 'webhooks', label: 'Webhooks', icon: 'mdi-webhook', resource: 'webhooks', accessMode: 'any', component: WebhooksConfigView },
+	{
+		key: 'http_endpoints',
+		label: 'Endpoints',
+		icon: 'mdi-cloud-upload-outline',
+		resource: 'http_endpoints',
+		accessMode: 'any',
+		component: HttpEndpointsConfigView
+	},
 	{
 		key: 'integrations',
 		label: 'Integraciones',

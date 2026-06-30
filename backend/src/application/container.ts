@@ -6,6 +6,7 @@ import type {
 	IGovernanceRepository,
 	IGovernanceSuggestionRepository,
 	IHookServerRepository,
+	IHttpEndpointRepository,
 	IIntegrationRepository,
 	IMcpCredentialProvider,
 	IMcpServerRepository,
@@ -28,6 +29,7 @@ import {
 	GovernanceRepository,
 	GovernanceSuggestionRepository,
 	HookServerRepository,
+	HttpEndpointRepository,
 	IntegrationRepository,
 	McpServerRepository,
 	McpUserCredentialRepository,
@@ -43,6 +45,7 @@ import {
 } from '@infra/repository/index.js'
 import { EventListenerExecutorService } from '@infra/service/event-listener-executor.service.js'
 import { HookDispatcherService } from '@infra/service/hook-dispatcher.service.js'
+import { HttpEndpointExecutorService } from '@infra/service/http-endpoint-executor.service.js'
 import { mcpExternalManager } from '@infra/service/mcp-external.js'
 import { TraceabilityAgentTriggerService } from '@infra/service/traceability-agent-trigger.service.js'
 import { WebhookExecutorService } from '@infra/service/webhook-executor.service.js'
@@ -266,6 +269,10 @@ export class Container {
 	private readonly _webhookRepository: IWebhookRepository
 	private _webhookExecutor?: WebhookExecutorService
 
+	// HTTP Endpoint Repository & Executor
+	private readonly _httpEndpointRepository: IHttpEndpointRepository
+	private _httpEndpointExecutor?: HttpEndpointExecutorService
+
 	// Integration Repository & Use Cases
 	private readonly _integrationRepository: IIntegrationRepository
 	private _createIntegrationConversationUseCase?: CreateIntegrationConversationUseCase
@@ -352,6 +359,7 @@ export class Container {
 		this._traceabilityParticipantRepository = new TraceabilityParticipantRepository()
 		this._hookServerRepository = new HookServerRepository()
 		this._webhookRepository = new WebhookRepository()
+		this._httpEndpointRepository = new HttpEndpointRepository()
 		this._integrationRepository = new IntegrationRepository()
 		this._eventListenerRepository = new EventListenerRepository()
 		this.tokenAuditRepository = new TokenAuditRepository()
@@ -1013,6 +1021,21 @@ export class Container {
 			this._webhookExecutor = new WebhookExecutorService()
 		}
 		return this._webhookExecutor
+	}
+
+	// ==========================================
+	// HTTP ENDPOINTS
+	// ==========================================
+
+	get httpEndpointRepository(): IHttpEndpointRepository {
+		return this._httpEndpointRepository
+	}
+
+	get httpEndpointExecutor(): HttpEndpointExecutorService {
+		if (!this._httpEndpointExecutor) {
+			this._httpEndpointExecutor = new HttpEndpointExecutorService(this._httpEndpointRepository)
+		}
+		return this._httpEndpointExecutor
 	}
 
 	// ==========================================

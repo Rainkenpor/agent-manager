@@ -966,6 +966,66 @@ export class WebhookEntity {
 	updatedAt!: string
 }
 
+@Entity('http_endpoints')
+export class HttpEndpointEntity {
+	@PrimaryColumn({ type: 'text' })
+	id!: string
+
+	@Column({ type: 'text', unique: true })
+	name!: string
+
+	@Column({ type: 'text', nullable: true })
+	description!: string | null
+
+	@Column({ type: 'text' })
+	url!: string
+
+	@Column({ type: 'text', default: 'POST' })
+	method!: string
+
+	@Column({ name: 'auth_type', type: 'text', default: 'none' })
+	authType!: string
+
+	@Column({ name: 'auth_token', type: 'text', nullable: true })
+	authToken!: string | null
+
+	@Column({ name: 'api_key_header', type: 'text', nullable: true })
+	apiKeyHeader!: string | null
+
+	@Column({ name: 'api_key_value', type: 'text', nullable: true })
+	apiKeyValue!: string | null
+
+	@Column({ type: 'simple-json', nullable: true })
+	headers!: Record<string, string> | null
+
+	@Column({ name: 'body_template', type: 'text', nullable: true })
+	bodyTemplate!: string | null
+
+	@Column({ name: 'content_type', type: 'text', nullable: true })
+	contentType!: string | null
+
+	@Column({ type: 'text', nullable: true })
+	schedule!: string | null
+
+	@Column({ type: 'boolean', default: true })
+	active!: boolean
+
+	@Column({ name: 'last_run_at', type: 'text', nullable: true })
+	lastRunAt!: string | null
+
+	@Column({ name: 'last_run_status', type: 'integer', nullable: true })
+	lastRunStatus!: number | null
+
+	@Column({ name: 'last_run_result', type: 'text', nullable: true })
+	lastRunResult!: string | null
+
+	@Column({ name: 'created_at', type: 'text' })
+	createdAt!: string
+
+	@Column({ name: 'updated_at', type: 'text' })
+	updatedAt!: string
+}
+
 @Entity('integrations')
 export class IntegrationEntity {
 	@PrimaryColumn({ type: 'text' })

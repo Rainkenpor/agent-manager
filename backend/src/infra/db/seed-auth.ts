@@ -65,6 +65,11 @@ async function seedDefaultPermissions() {
 		{ resource: 'webhooks', action: 'read', description: 'Ver webhooks' },
 		{ resource: 'webhooks', action: 'update', description: 'Actualizar webhooks' },
 		{ resource: 'webhooks', action: 'delete', description: 'Eliminar webhooks' },
+		// HTTP Endpoints (salida)
+		{ resource: 'http_endpoints', action: 'create', description: 'Crear endpoints HTTP de salida' },
+		{ resource: 'http_endpoints', action: 'read', description: 'Ver endpoints HTTP de salida' },
+		{ resource: 'http_endpoints', action: 'update', description: 'Actualizar y ejecutar endpoints HTTP de salida' },
+		{ resource: 'http_endpoints', action: 'delete', description: 'Eliminar endpoints HTTP de salida' },
 
 		// Integraciones
 		{ resource: 'integrations', action: 'create', description: 'Crear integraciones de chat embebible' },
