@@ -198,19 +198,6 @@ async function startServers() {
 		})
 
 	// ==========================================
-	// 8.8. HTTP Endpoint Executor Initialization
-	// ==========================================
-	console.log('🌐 Initializing HTTP Endpoint Executor...')
-	container.httpEndpointExecutor
-		.initialize()
-		.then(() => {
-			console.log('✅ HTTP Endpoint Executor initialized successfully')
-		})
-		.catch((err) => {
-			console.error('⚠️  HTTP Endpoint Executor failed to initialize:', err.message)
-		})
-
-	// ==========================================
 	// 9. Setup Scheduled Services
 	// ==========================================
 	console.log('⏰ Setting up scheduled services...')

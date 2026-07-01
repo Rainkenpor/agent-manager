@@ -370,19 +370,6 @@ export const updateWebhook = (id: string, data: any) =>
 	request<{ success: boolean; data: any }>(`/webhooks/${id}`, { method: 'PUT', body: JSON.stringify(data) })
 export const deleteWebhook = (id: string) => request<{ success: boolean }>(`/webhooks/${id}`, { method: 'DELETE' })
 
-// HTTP Endpoints (salida)
-export const getHttpEndpoints = () => request<{ success: boolean; data: any[] }>('/http-endpoints')
-export const createHttpEndpoint = (data: any) =>
-	request<{ success: boolean; data: any }>('/http-endpoints', { method: 'POST', body: JSON.stringify(data) })
-export const updateHttpEndpoint = (id: string, data: any) =>
-	request<{ success: boolean; data: any }>(`/http-endpoints/${id}`, { method: 'PUT', body: JSON.stringify(data) })
-export const deleteHttpEndpoint = (id: string) => request<{ success: boolean }>(`/http-endpoints/${id}`, { method: 'DELETE' })
-export const executeHttpEndpoint = (id: string, overrideBody?: string) =>
-	request<{ success: boolean; data: { status: number; ok: boolean; body: string } }>(`/http-endpoints/${id}/execute`, {
-		method: 'POST',
-		body: JSON.stringify(overrideBody !== undefined ? { overrideBody } : {})
-	})
-
 // Integrations (admin)
 export const getIntegrations = () => request<{ success: boolean; data: any[] }>('/integrations')
 export const createIntegration = (data: any) =>
