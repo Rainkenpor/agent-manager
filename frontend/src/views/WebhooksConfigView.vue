@@ -15,7 +15,7 @@ interface Webhook {
 	name: string
 	description?: string | null
 	method: string
-	targetType: 'agent' | 'mcp_tool'
+	targetType: 'agent' | 'mcp_tool' | 'llm'
 	targetId: string
 	targetName: string
 	extraData?: Record<string, string> | null
@@ -37,6 +37,12 @@ interface McpTool {
 	description: string
 }
 
+interface AvailableTool {
+	name: string
+	description: string
+	source: string
+}
+
 const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
 
 // ── Permissions ───────────────────────────────────────────────────────────────
@@ -51,6 +57,7 @@ const webhooks = ref<Webhook[]>([])
 const loading = ref(false)
 const agents = ref<Agent[]>([])
 const mcpServers = ref<any[]>([])
+const availableTools = ref<AvailableTool[]>([])
 const revealedSecrets = ref<Set<string>>(new Set())
 
 // ── Form / Modal ──────────────────────────────────────────────────────────────
@@ -67,15 +74,41 @@ const emptyForm = () => ({
 	name: '',
 	description: '',
 	method: 'POST',
-	targetType: 'agent' as 'agent' | 'mcp_tool',
+	targetType: 'agent' as 'agent' | 'mcp_tool' | 'llm',
 	agentSlug: '',
 	mcpServerId: '',
 	toolName: '',
+	systemPrompt: '',
+	tools: {} as Record<string, boolean>,
 	authEnabled: true,
 	active: true
 })
 
 const form = ref(emptyForm())
+
+function parseTools(raw: string | undefined | null): Record<string, boolean> {
+	if (!raw) return {}
+	try {
+		return JSON.parse(raw) as Record<string, boolean>
+	} catch {
+		return {}
+	}
+}
+
+// Tools agrupadas por origen para el selector del destino LLM (mismo patrón que AgentsView)
+const toolGroups = computed(() => {
+	const byKey: Record<string, AvailableTool[]> = {}
+	for (const tool of availableTools.value) {
+		const key = tool.source === 'external' && tool.name.startsWith('mcp__') ? tool.name.slice(5).split('__')[0] : tool.source
+		if (!byKey[key]) byKey[key] = []
+		byKey[key].push(tool)
+	}
+	return Object.entries(byKey)
+		.map(([key, tools]) => ({ key, tools }))
+		.sort((a, b) => a.key.localeCompare(b.key))
+})
+
+const selectedToolCount = computed(() => Object.values(form.value.tools).filter(Boolean).length)
 
 function openCreate() {
 	editing.value = null
@@ -95,6 +128,8 @@ async function openEdit(item: Webhook) {
 		agentSlug: item.targetType === 'agent' ? item.targetId : '',
 		mcpServerId: '',
 		toolName: item.targetType === 'mcp_tool' ? item.targetName : '',
+		systemPrompt: item.targetType === 'llm' ? (item.extraData?.systemPrompt ?? '') : '',
+		tools: item.targetType === 'llm' ? parseTools(item.extraData?.tools) : {},
 		authEnabled: item.authEnabled,
 		active: item.active
 	}
@@ -131,8 +166,7 @@ async function onMcpServerChange(mcpServerId: string) {
 async function save() {
 	const errors: string[] = []
 	if (!form.value.name.trim()) errors.push('El nombre es requerido.')
-	else if (!/^[a-z0-9_-]+$/.test(form.value.name.trim()))
-		errors.push('El nombre solo admite minúsculas, números, guiones y guiones bajos.')
+	else if (!/^[a-z0-9_-]+$/.test(form.value.name.trim())) errors.push('El nombre solo admite minúsculas, números, guiones y guiones bajos.')
 	if (form.value.targetType === 'agent' && !form.value.agentSlug) errors.push('Selecciona un agente.')
 	if (form.value.targetType === 'mcp_tool' && (!form.value.mcpServerId || !form.value.toolName))
 		errors.push('Selecciona un servidor MCP y un tool.')
@@ -147,6 +181,12 @@ async function save() {
 			return
 		}
 		target = { targetId: agent.slug, targetName: agent.name }
+	} else if (form.value.targetType === 'llm') {
+		target = {
+			targetId: 'llm',
+			targetName: 'LLM directo',
+			extraData: { systemPrompt: form.value.systemPrompt.trim(), tools: JSON.stringify(form.value.tools) }
+		}
 	} else {
 		const server = mcpServers.value.find((s) => s.id === form.value.mcpServerId)
 		if (!server) {
@@ -162,7 +202,7 @@ async function save() {
 
 	const payload = {
 		description: form.value.description.trim() || undefined,
-		method: form.value.method,
+		method: form.value.targetType === 'llm' ? 'POST' : form.value.method,
 		targetType: form.value.targetType,
 		...target,
 		authEnabled: form.value.authEnabled,
@@ -258,9 +298,10 @@ async function fetchWebhooks() {
 onMounted(async () => {
 	await fetchWebhooks()
 	try {
-		const [agentsRes, mcpRes] = await Promise.all([api.getAgents(), api.getMcpServers()])
+		const [agentsRes, mcpRes, toolsRes] = await Promise.all([api.getAgents(), api.getMcpServers(), api.getAgentTools()])
 		agents.value = agentsRes.data ?? []
 		mcpServers.value = mcpRes.data ?? []
+		availableTools.value = toolsRes.data ?? []
 	} catch {
 		/* non-critical */
 	}
@@ -274,7 +315,7 @@ onMounted(async () => {
       <div>
         <h1 class="text-2xl font-bold text-base-content">Webhooks</h1>
         <p class="text-base-content/60 text-sm mt-1">
-          Endpoints HTTP que ejecutan un agente o un tool MCP cuando son invocados desde sistemas externos.
+          Endpoints HTTP que ejecutan un agente, un tool MCP o el LLM directo (estilo OpenAI, con tools asignables) cuando son invocados desde sistemas externos.
         </p>
       </div>
       <button v-if="canCreate" @click="openCreate"
@@ -318,6 +359,10 @@ onMounted(async () => {
               <span v-if="item.targetType === 'agent'"
                 class="bg-indigo-500/10 text-indigo-300 ring-1 ring-indigo-500/20 px-2 py-0.5 rounded">
                 <span class="mdi mdi-robot-outline mr-1"></span>{{ item.targetName }}
+              </span>
+              <span v-else-if="item.targetType === 'llm'"
+                class="bg-emerald-500/10 text-emerald-300 ring-1 ring-emerald-500/20 px-2 py-0.5 rounded">
+                <span class="mdi mdi-brain mr-1"></span>LLM directo (OpenAI)
               </span>
               <span v-else class="bg-amber-500/10 text-amber-300 ring-1 ring-amber-500/20 px-2 py-0.5 rounded">
                 <span class="mdi mdi-tools mr-1"></span>{{ item.extraData?.mcpServerName }} · {{ item.targetName }}
@@ -421,6 +466,13 @@ onMounted(async () => {
                 : 'border-base-content/20 text-base-content/60 hover:text-base-content'">
               <span class="mdi mdi-tools"></span> Tool MCP
             </button>
+            <button type="button" @click="form.targetType = 'llm'"
+              class="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors"
+              :class="form.targetType === 'llm'
+                ? 'border-emerald-500 bg-emerald-500/10 text-emerald-300'
+                : 'border-base-content/20 text-base-content/60 hover:text-base-content'">
+              <span class="mdi mdi-brain"></span> LLM
+            </button>
           </div>
 
           <!-- Agent selector -->
@@ -431,6 +483,39 @@ onMounted(async () => {
               <option value="" disabled>Selecciona un agente...</option>
               <option v-for="agent in agents" :key="agent.id" :value="agent.slug">{{ agent.name }}</option>
             </select>
+          </div>
+
+          <!-- LLM selector -->
+          <div v-else-if="form.targetType === 'llm'" class="space-y-3">
+            <p class="text-xs text-base-content/50">
+              Expone el LLM del proveedor activo con contrato compatible con OpenAI Chat Completions. El modelo lo determina
+              el proveedor activo (el campo <code class="bg-base-200 px-1 rounded">model</code> del request se ignora).
+            </p>
+            <div>
+              <label class="block text-sm text-base-content mb-1">System prompt</label>
+              <textarea v-model="form.systemPrompt" rows="4" placeholder="Instrucciones que se anteponen a cada solicitud..."
+                class="w-full bg-base-200 border border-base-content/20 rounded-lg px-3 py-2 text-base-content text-sm focus:outline-none focus:border-emerald-500"></textarea>
+            </div>
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label class="block text-sm text-base-content">Tools disponibles para el LLM</label>
+                <span class="text-xs text-base-content/50">{{ selectedToolCount }} seleccionada(s)</span>
+              </div>
+              <div class="max-h-56 overflow-y-auto space-y-3 border border-base-content/10 rounded-lg p-3 bg-base-200/40">
+                <div v-for="group in toolGroups" :key="group.key">
+                  <p class="text-xs font-semibold text-base-content/50 uppercase tracking-wider mb-1">{{ group.key }}</p>
+                  <label v-for="tool in group.tools" :key="tool.name"
+                    class="flex items-start gap-2 py-1 cursor-pointer hover:bg-base-200/60 rounded px-1">
+                    <input type="checkbox" v-model="form.tools[tool.name]" class="w-4 h-4 mt-0.5 rounded accent-emerald-500" />
+                    <span class="min-w-0">
+                      <span class="block text-sm text-base-content truncate">{{ tool.name }}</span>
+                      <span v-if="tool.description" class="block text-xs text-base-content/50 truncate">{{ tool.description }}</span>
+                    </span>
+                  </label>
+                </div>
+                <p v-if="toolGroups.length === 0" class="text-xs text-base-content/50 py-2">No hay tools disponibles.</p>
+              </div>
+            </div>
           </div>
 
           <!-- Tool selector -->

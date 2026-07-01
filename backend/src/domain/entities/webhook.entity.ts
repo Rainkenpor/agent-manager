@@ -11,7 +11,7 @@ export const CreateWebhookSchema = z.object({
 		.regex(/^[a-z0-9_-]+$/, 'Only lowercase letters, numbers, hyphens and underscores'),
 	description: z.string().optional(),
 	method: z.enum(WebhookMethods).optional().default('POST'),
-	targetType: z.enum(['agent', 'mcp_tool']),
+	targetType: z.enum(['agent', 'mcp_tool', 'llm']),
 	targetId: z.string().min(1),
 	targetName: z.string().min(1),
 	extraData: z.record(z.string(), z.string()).optional(),
@@ -22,7 +22,7 @@ export const CreateWebhookSchema = z.object({
 export const UpdateWebhookSchema = z.object({
 	description: z.string().optional(),
 	method: z.enum(WebhookMethods).optional(),
-	targetType: z.enum(['agent', 'mcp_tool']).optional(),
+	targetType: z.enum(['agent', 'mcp_tool', 'llm']).optional(),
 	targetId: z.string().min(1).optional(),
 	targetName: z.string().min(1).optional(),
 	extraData: z.record(z.string(), z.string()).optional(),
@@ -35,7 +35,7 @@ export interface WebhookEntity {
 	name: string
 	description?: string | null
 	method: WebhookMethod
-	targetType: 'agent' | 'mcp_tool'
+	targetType: 'agent' | 'mcp_tool' | 'llm'
 	targetId: string
 	targetName: string
 	extraData?: Record<string, string> | null
@@ -50,7 +50,7 @@ export interface CreateWebhookDTO {
 	name: string
 	description?: string
 	method?: WebhookMethod
-	targetType: 'agent' | 'mcp_tool'
+	targetType: 'agent' | 'mcp_tool' | 'llm'
 	targetId: string
 	targetName: string
 	extraData?: Record<string, string>
@@ -61,7 +61,7 @@ export interface CreateWebhookDTO {
 export interface UpdateWebhookDTO {
 	description?: string
 	method?: WebhookMethod
-	targetType?: 'agent' | 'mcp_tool'
+	targetType?: 'agent' | 'mcp_tool' | 'llm'
 	targetId?: string
 	targetName?: string
 	extraData?: Record<string, string>
