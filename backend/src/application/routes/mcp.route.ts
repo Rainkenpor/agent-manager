@@ -22,11 +22,29 @@ const transports: Record<string, StreamableHTTPServerTransport> = {}
 const sessionContexts: Record<string, HttpContext> = {}
 // still routed to their existing session.
 const userSessionMap: Record<string, string> = {}
+// Marca de última actividad por sesión, base para la evicción por inactividad.
+const sessionLastActivity: Record<string, number> = {}
 
 declare global {
 	var __mcpSessionContexts: Record<string, HttpContext>
 }
 globalThis.__mcpSessionContexts = sessionContexts
+
+// Evicción por inactividad: sin esto las sesiones de clientes que no envían DELETE
+// (navegador cerrado, red caída, Inspector recargado) quedan retenidas para siempre.
+const SESSION_TTL_MS = Number(process.env.MCP_SESSION_TTL_MS) || 30 * 60 * 1000 // 30 min inactividad
+const SWEEP_INTERVAL_MS = Number(process.env.MCP_SESSION_SWEEP_MS) || 60 * 1000 // barrido cada 1 min
+
+setInterval(() => {
+	const now = Date.now()
+	for (const [sid, lastSeen] of Object.entries(sessionLastActivity)) {
+		if (now - lastSeen > SESSION_TTL_MS) {
+			console.log(`[MCP] Session evicted (idle): ${sid}`)
+			// transport.close() dispara onclose, que limpia los tres mapas.
+			transports[sid]?.close()
+		}
+	}
+}, SWEEP_INTERVAL_MS).unref()
 
 /** Conteo de sesiones MCP vivas en memoria — expuesto en /api/system/metrics para vigilar fugas. */
 export function getMcpSessionStats(): { sessions: number; contexts: number } {
@@ -309,6 +327,7 @@ class CreateMcpServer {
 			if (transport.sessionId) {
 				delete transports[transport.sessionId]
 				delete sessionContexts[transport.sessionId]
+				delete sessionLastActivity[transport.sessionId]
 				// Remove user → session mapping if it still points to this session
 				for (const [uid, sid] of Object.entries(userSessionMap)) {
 					if (sid === transport.sessionId) delete userSessionMap[uid]
@@ -327,6 +346,7 @@ class CreateMcpServer {
 		})
 
 		sessionContexts[this.sessionId] = context
+		sessionLastActivity[this.sessionId] = Date.now()
 
 		// Register role-based tools (includes local MCP tools filtered by role)
 		const user = context.req.user as Record<string, unknown> | undefined
@@ -400,6 +420,7 @@ export function registerMCPRoutes(oauth?: McpOAuthService): express.Router {
 		if (sessionId && transports[sessionId]) {
 			transport = transports[sessionId]
 			sessionContexts[sessionId] = { req, res, next, signal: new AbortController().signal }
+			sessionLastActivity[sessionId] = Date.now()
 		} else if (!sessionId && isInitializeRequest(req.body)) {
 			const mcpServer = new CreateMcpServer(sessionId)
 			transport = await mcpServer.connect({ context: { req, res, next, signal: new AbortController().signal } })
@@ -422,6 +443,7 @@ export function registerMCPRoutes(oauth?: McpOAuthService): express.Router {
 		const sessionId = req.headers['mcp-session-id'] as string
 		const transport = transports[sessionId]
 		if (transport) {
+			sessionLastActivity[sessionId] = Date.now()
 			await transport.handleRequest(req, res)
 		} else {
 			res.status(400).json({
