@@ -59,27 +59,39 @@ export function registerIntegrationRoutes(): void {
 			res.setHeader('X-Accel-Buffering', 'no')
 			res.flushHeaders()
 
+			// Mantener viva la conexión SSE mientras el modelo genera el primer token.
+			// Sin esto, un LLM local lento (a menudo tras un proxy con read-timeout) deja
+			// la conexión inactiva, el cliente/proxy la cierra, se aborta el fetch al LLM y
+			// el servidor local reporta "Connection handling canceled" sin devolver nada.
+			const heartbeat = setInterval(() => {
+				if (!res.writableEnded) res.write(': keep-alive\n\n')
+			}, 15000)
+
 			const sendEvent = (data: Record<string, unknown>) => res.write(`data: ${JSON.stringify(data)}\n\n`)
 
-			const conv = await container.chatRepository.findConversationById(input.id)
-			if (!conv || conv.userId !== INTEGRATION_CHAT_USER_ID) {
-				sendEvent({ type: 'error', error: 'Conversación no encontrada' })
-				res.end()
-				return null
-			}
-
-			const origin = normalizeOrigin(input.origin || req.header('origin') || req.header('referer'))
-			const integration = origin ? await container.integrationRepository.findByOrigin(origin) : null
-			const contextLines = [`Origen del sitio: ${origin || 'desconocido'}`]
-			if (integration?.scope?.length) contextLines.push(`Scope solicitado: ${integration.scope.join(', ')}`)
-			const extraContext = contextLines.join('\n')
-
 			try {
+				const conv = await container.chatRepository.findConversationById(input.id)
+				if (!conv || conv.userId !== INTEGRATION_CHAT_USER_ID) {
+					sendEvent({ type: 'error', error: 'Conversación no encontrada' })
+					return null
+				}
+
+				const origin = normalizeOrigin(input.origin || req.header('origin') || req.header('referer'))
+				const integration = origin ? await container.integrationRepository.findByOrigin(origin) : null
+				const contextLines = [`Origen del sitio: ${origin || 'desconocido'}`]
+				if (integration?.scope?.length) contextLines.push(`Scope solicitado: ${integration.scope.join(', ')}`)
+				const extraContext = contextLines.join('\n')
+
 				await container.integrationChatAnswerUseCase.execute(input.id, input.content, sendEvent, signal, extraContext)
 			} catch (error) {
-				if ((error as any)?.name !== 'AbortError') {
+				// Un cliente que se desconecta aborta el fetch al LLM; undici lo expone como
+				// AbortError o como un TypeError envuelto. Nunca mostrar un abort como error de
+				// chat: el cliente ya no está para recibirlo.
+				if (!signal.aborted && (error as any)?.name !== 'AbortError') {
 					sendEvent({ type: 'error', error: error instanceof Error ? error.message : 'Error desconocido' })
 				}
+			} finally {
+				clearInterval(heartbeat)
 			}
 
 			res.end()
