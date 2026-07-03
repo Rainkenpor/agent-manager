@@ -30,10 +30,6 @@ export interface ToolImageInfo {
 export interface ToolCallbacks {
 	onToolCall: (toolName: string, args: any) => Promise<void>
 	onToolImage?: (info: ToolImageInfo) => Promise<void>
-	draftCallbacks: {
-		onUpdate: (draft: string) => Promise<void>
-		onRead: () => Promise<string | null>
-	}
 	credentialCallbacks: {
 		getCredentials: (mcpServerId: string) => Promise<Record<string, string>>
 		setCredential: (mcpServerId: string, key: string, value: string) => Promise<void>
@@ -46,10 +42,6 @@ export interface ToolCallbacks {
 				credentialFields: { key: string; description: string }[]
 			}[]
 		>
-	}
-	governanceCallbacks?: {
-		getByType: (type: string) => Promise<GovernanceData[]>
-		listTypes: () => Promise<string[]>
 	}
 }
 

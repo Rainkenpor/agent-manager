@@ -28,6 +28,8 @@ export class RouteToolRegistry {
 			toolDescription: config.toolDescription,
 			toolSource: config.toolSource,
 			toolAlwaysAvailable: config.toolAlwaysAvailable,
+			toolAvailableViaChat: config.toolAvailableViaChat,
+			toolShowAssignment: config.toolShowAssignment,
 			inputSchema: config.inputSchema as any, // Cast to any to avoid complex Zod generic issues
 			handler: config.handler as (input: unknown, context?: any, oauthService?: McpOAuthService) => Promise<unknown>,
 			requiresAuth: config.requiresAuth,

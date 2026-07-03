@@ -10,7 +10,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js'
 import express, { type NextFunction, type Request, type Response } from 'express'
 import { type ZodRawShape, type ZodTypeAny, z } from 'zod'
-import { systemPrompt } from '../../const.js'
+import { systemPromptChat } from '../../const.js'
 import { envs } from '../../envs.js'
 import { container } from '../container.js'
 import { mcpTokenAuthMiddleware } from './middlewares/mcp-token-auth.middleware.js'
@@ -265,7 +265,7 @@ export async function callMCPAgent(
 			throw new Error(`Agent not found: ${agent.id}`)
 		}
 		const params = {
-			systemPrompt: `${systemPrompt}\n${agentEntity.data.content}`,
+			systemPrompt: `${systemPromptChat}\n${agentEntity.data.content}`,
 			agentSlug: agentEntity.data.slug,
 			query: args.instruction,
 			allowedTools: new Set(

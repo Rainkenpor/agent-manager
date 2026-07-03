@@ -30,6 +30,20 @@ const attachImagesSchema = z.object({
 	images: z.array(persistedImageSchema)
 })
 
+const taskSchema = z.object({
+	chatId: z.string(),
+	name: z.string(),
+	description: z.string().optional()
+})
+
+const taskUpdateSchema = z.object({
+	id: z.string(),
+	chatId: z.string(),
+	status: z.enum(['pending', 'in_progress', 'completed', 'failed'])
+})
+
+const tempSendEvent: Map<string, (data: Record<string, unknown>) => void> = new Map()
+
 export function registerChatRoutes(): void {
 	// List conversations for the authenticated user
 	registry.register({
@@ -124,7 +138,7 @@ export function registerChatRoutes(): void {
 		inputSchema: sendMessageSchema.shape,
 		requiresAuth: true,
 		requiredPermission: { resource: 'chat', action: 'create' },
-		handler: async ({ input, context: { req, res, signal } }) => {
+		handler: async ({ input, context: { res, signal } }) => {
 			res.setHeader('Content-Type', 'text/event-stream')
 			res.setHeader('Cache-Control', 'no-cache')
 			res.setHeader('Connection', 'keep-alive')
@@ -145,6 +159,9 @@ export function registerChatRoutes(): void {
 
 			const sendEvent = (data: Record<string, unknown>) => res.write(`data: ${JSON.stringify(data)}\n\n`)
 
+			// Se agrega el sendEvent
+			tempSendEvent.set(input.id, sendEvent)
+
 			try {
 				await container.streamMessageUseCase.execute(input.id, input.content, sendEvent, signal)
 			} catch (error) {
@@ -158,8 +175,53 @@ export function registerChatRoutes(): void {
 				clearInterval(heartbeat)
 			}
 
+			// Finaliza el sendEvent
+			await container.taskConversationsUseCase.deleteChatId(input.id)
+			tempSendEvent.delete(input.id)
+
 			res.end()
 			return null
+		}
+	})
+
+	/**
+	 * ===================================================================================================================
+	 * TASK
+	 * ===================================================================================================================
+	 */
+	registry.register({
+		useBy: ['mcp'],
+		method: 'POST',
+		path: '/api/chat/task',
+		inputSchema: taskSchema.shape,
+		toolName: 'create_task_chat',
+		toolDescription: 'Creación de tareas dentro del chat',
+		toolAvailableViaChat: true,
+		toolShowAssignment: false,
+		handler: async ({ input }) => {
+			const chatId = input.chatId
+
+			const sendEvent = tempSendEvent.get(chatId)
+			if (!sendEvent) return { status: false, message: 'No se encontró sendEvent' }
+
+			return await container.taskConversationsUseCase.create({ ...input, sendEvent })
+		}
+	})
+
+	registry.register({
+		useBy: ['mcp'],
+		method: 'PUT',
+		path: '/api/chat/task',
+		inputSchema: taskUpdateSchema.shape,
+		toolName: 'update_task_chat',
+		toolDescription: 'Actualización del status de una tarea dentro del chat',
+		toolAvailableViaChat: true,
+		toolShowAssignment: false,
+		handler: async ({ input }) => {
+			const chatId = input.chatId
+			const sendEvent = tempSendEvent.get(chatId)
+			if (!sendEvent) return { status: false, message: 'No se encontró sendEvent' }
+			return await container.taskConversationsUseCase.update({ ...input, sendEvent })
 		}
 	})
 }

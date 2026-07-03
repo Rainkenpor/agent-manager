@@ -1,7 +1,8 @@
 import type { GovernanceData, IAgentServiceExecute, ToolCallbacks } from '@domain/entities/agent.entity.js'
-import { systemPrompt } from '../../const'
+import { systemPromptChat } from '../../const'
 import { AgentService } from './agent.service'
 import { agentLogger } from './logger.service.js'
+import { registry } from '@application/services/registry.service'
 
 export class MCPAgentService {
 	static async call(
@@ -18,7 +19,7 @@ export class MCPAgentService {
 			}
 
 			const params: IAgentServiceExecute = {
-				systemPrompt: `${systemPrompt}\n${agentEntity.data.content}`,
+				systemPrompt: `${systemPromptChat}\n${agentEntity.data.content}`,
 				agentSlug: agentEntity.data.slug,
 				query: args.instruction,
 				allowedTools: new Set(
@@ -33,7 +34,6 @@ export class MCPAgentService {
 				auditAgentName: agentEntity.data.name,
 				toolsCallbacks: {
 					onToolCall: async () => {},
-					draftCallbacks: { onUpdate: async () => {}, onRead: async () => null },
 					credentialCallbacks: {
 						getCredentials: async () => ({}),
 						setCredential: async () => {},
@@ -77,15 +77,25 @@ export class MCPAgentService {
 				throw new Error(`Agent not found: ${agent.id}`)
 			}
 
+			// Tools disponibles para Chat
+			const allowedTools: Set<string> = new Set()
+			registry
+				.getRoutes()
+				.filter((r) => r.useBy?.includes('mcp') && r.toolAvailableViaChat)
+				.forEach((r) => {
+					allowedTools.add(`agent-manager_${r.toolName}`)
+				})
+			Object.entries(agentEntity.data.tools)
+				.filter(([_, enabled]) => enabled)
+				.forEach(([toolName]) => {
+					allowedTools.add(toolName)
+				})
+
 			const params: IAgentServiceExecute = {
-				systemPrompt: `${systemPrompt}\n${agentEntity.data.content}${agent.addContext || ''}`,
+				systemPrompt: `${systemPromptChat}\n${agentEntity.data.content}${agent.addContext || ''}`,
 				agentSlug: agentEntity.data.slug,
 				query: args.instruction,
-				allowedTools: new Set(
-					Object.entries(agentEntity.data.tools)
-						.filter(([_, enabled]) => enabled)
-						.map(([toolName]) => toolName)
-				),
+				allowedTools,
 				history: args.history || [],
 				userId: args.userId,
 				signal: args.signal,
@@ -96,7 +106,6 @@ export class MCPAgentService {
 				toolsCallbacks: {
 					...args.toolsCallbacks,
 					onToolCall: args.toolsCallbacks?.onToolCall ?? (async () => {}),
-					draftCallbacks: args.toolsCallbacks?.draftCallbacks ?? { onUpdate: async () => {}, onRead: async () => null },
 					credentialCallbacks: args.toolsCallbacks?.credentialCallbacks ?? {
 						getCredentials: async () => ({}),
 						setCredential: async () => {},

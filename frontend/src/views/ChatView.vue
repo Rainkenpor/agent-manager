@@ -156,6 +156,10 @@ const hoveredMessageId = ref<string | null>(null)
 const editingMessageId = ref<string | null>(null)
 const editingContent = ref('')
 
+type tasksStatus = 'pending' | 'in_progress' | 'completed' | 'failed'
+const tasks = ref<{ chatId: string, id: string, name: string, description?: string, status: tasksStatus }[]>([])
+const showTask = ref<boolean>(true)
+
 const messagesContainer = ref<HTMLElement | null>(null)
 let abortController: AbortController | null = null
 
@@ -306,6 +310,8 @@ const formAnswers = ref<Record<string, Record<string, { textValue: string; selec
 const submittedForms = ref<string[]>([])
 
 const activeAgent = computed(() => agents.value.find((a) => a.id === activeConversation.value?.agentId))
+
+const visibleTasks = computed(() => tasks.value.filter((t) => t.chatId === activeConversation.value?.id))
 
 async function fetchInitialData() {
   try {
@@ -669,8 +675,12 @@ async function sendMessage() {
           setTimeout(() => {
             distiState.value = 'idle'
           }, 1200)
-        } else if (event.type === 'draft_updated') {
-          draft.value = event.draft
+        } else if (event.type === 'task_create') {
+          tasks.value.push({ ...event, chatId: activeConversation.value.id, status: 'pending' })
+        } else if (event.type === 'task_update') {
+          const task = tasks.value.filter(f => f.id === event.id)
+          if (!task || task.length === 0) throw new Error('No se encontro el task en el chat')
+          task[0].status = event.status
         } else if (event.type === 'error') {
           throw new Error(event.error || 'El agente reportó un error inesperado.')
         }
@@ -812,30 +822,17 @@ function getRequestQuestions(msg: DisplayMessage): RequestQuestion[] | null {
   return parseRequestBlock(msg.content)
 }
 
-function maskTokens(text: string): string {
-  // JWT: eyJ...header.payload.signature
-  text = text.replace(/eyJ[a-zA-Z0-9+/_-]+=*\.[a-zA-Z0-9+/_-]+=*\.[a-zA-Z0-9+/_-]+=*/g, (m) => m.slice(0, 5) + '*****')
-  // Known prefixes: sk-, ghp_, Bearer, etc.
-  text = text.replace(/\b(sk-|ghp_|ghs_|github_pat_|xoxb-|xoxp-|Bearer\s+)[a-zA-Z0-9+/_.-]{8,}/gi, (m) => m.slice(0, 5) + '*****')
-  // Generic: 25+ char alphanum string with upper+lower+digit mix (high entropy)
-  text = text.replace(/[a-zA-Z0-9+/_-]{25,}/g, (m) => {
-    if (/[A-Z]/.test(m) && /[a-z]/.test(m) && /[0-9]/.test(m)) return m.slice(0, 5) + '*****'
-    return m
-  })
-  return text
-}
-
 function renderInlineMarkdown(text: string): string {
   return text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
+    .replace(/^#{1,6}\s+(.+?)\s*$/gm, '<strong>$1</strong>')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/`(.+?)`/g, '<code class="bg-base-100/80 px-1 rounded text-xs font-mono">$1</code>')
+
 }
 
 function renderMarkdown(text: string): string {
-  text = maskTokens(text)
   const isTableRow = (line: string) => /^\|.+\|$/.test(line.trim())
   const isSeparator = (line: string) => /^\|[\s\-:|]+\|$/.test(line.trim())
 
@@ -882,6 +879,30 @@ function renderMarkdown(text: string): string {
       if (j < lines.length) {
         // Bloque mermaid completo (con cierre ```): emitir placeholder a renderizar tras el montaje
         out.push(`<div class="mermaid-block" data-mermaid="${encodeURIComponent(diagram.join('\n'))}"></div>`)
+        i = j + 1
+        continue
+      }
+      // Bloque aún sin cerrar (streaming): se renderiza como texto hasta que llegue el cierre
+    }
+    if (/^```/.test(lines[i].trim())) {
+      const lang = lines[i].trim().slice(3).trim()
+      const code: string[] = []
+      let j = i + 1
+      while (j < lines.length && lines[j].trim() !== '```') {
+        code.push(lines[j++])
+      }
+      if (j < lines.length) {
+        const escaped = code
+          .join('\n')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+        const label = lang
+          ? `<span style="position:absolute;top:6px;right:10px;font-size:0.7em;color:#94a3b8;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;text-transform:lowercase">${lang.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>`
+          : ''
+        out.push(
+          `<pre style="position:relative;background:#0f172a;color:#e2e8f0;padding:12px;${lang ? 'padding-top:16px;' : ''}border-radius:8px;overflow:auto;margin:8px 0;font-size:0.85em;font-family:ui-monospace,SFMono-Regular,Menlo,monospace">${label}<code>${escaped}</code></pre>`
+        )
         i = j + 1
         continue
       }
@@ -1572,6 +1593,43 @@ onMounted(fetchInitialData)
             </template>
           </button>
         </transition>
+      </div>
+
+      <div class="px-9" v-if="visibleTasks.length > 0">
+        <div class="rounded-xl border border-base-content/10 bg-base-100 shadow-lg overflow-hidden min-h-3">
+          <!-- Barra de progreso -->
+          <div class="h-1 w-full bg-base-content/10 relative">
+            <div class="h-full bg-success transition-all duration-500 ease-out"
+              :style="{ width: (visibleTasks.filter(t => t.status === 'completed').length / visibleTasks.length * 100) + '%' }"></div>
+            <span class="absolute right-8 -top-1 px-0.5 bg-base-100 text-[12px] ">
+              {{visibleTasks.filter(t => t.status === 'completed').length}}/{{ visibleTasks.length }}
+            </span>
+            <span @click="showTask = !showTask"
+              class="absolute right-1 -top-1.5 px-2 bg-base-100 text-[13px] cursor-pointer">
+              <span v-if="!showTask" class="mdi mdi-unfold-less-horizontal"></span>
+              <span v-else class="mdi mdi-unfold-more-horizontal"></span>
+            </span>
+          </div>
+          <!-- Lista -->
+          <ul class="max-h-30 overflow-auto p-1.5 space-y-0.5" v-if="showTask">
+            <li v-for="task in visibleTasks" :key="task.id"
+              class="flex items-start gap-2 rounded-lg px-2 py-1.5 transition-colors"
+              :class="task.status === 'in_progress' ? 'bg-primary/5' : ''">
+              <span class="mt-0.5 shrink-0 text-sm leading-none">
+                <span v-if="task.status === 'pending'" class="mdi mdi-checkbox-blank-outline opacity-40"></span>
+                <div v-else-if="task.status === 'in_progress'" class="mdi mdi-loading text-primary animate-spin"></div>
+                <span v-else-if="task.status === 'completed'" class="mdi mdi-check-circle text-success"></span>
+                <span v-else-if="task.status === 'failed'" class="mdi mdi-alert-circle text-error"></span>
+              </span>
+              <div class="min-w-0 flex-1">
+                <div class="text-xs font-medium truncate"
+                  :class="{ 'line-through opacity-50': task.status === 'completed', 'text-error': task.status === 'failed' }">
+                  {{ task.name }} - <span class="text-base-content/50">{{ task.description }}</span>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </div>
       </div>
 
       <!-- Input area -->

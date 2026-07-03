@@ -142,6 +142,7 @@ import {
 	StreamAgentLogsUseCase,
 	StreamAiAssistUseCase,
 	StreamMessageUseCase,
+	TaskConversationsUseCase,
 	TruncateMessagesUseCase,
 	UpdateAgentGroupUseCase,
 	UpdateAgentUseCase,
@@ -216,6 +217,7 @@ export class Container {
 	private _getConversationUseCase?: GetConversationUseCase
 	private _deleteConversationUseCase?: DeleteConversationUseCase
 	private _streamMessageUseCase?: StreamMessageUseCase
+	private _taskConversationsUseCase?: TaskConversationsUseCase
 	private _truncateMessagesUseCase?: TruncateMessagesUseCase
 	private _appendMessageImagesUseCase?: AppendMessageImagesUseCase
 
@@ -546,6 +548,13 @@ export class Container {
 			)
 		}
 		return this._streamMessageUseCase
+	}
+
+	get taskConversationsUseCase(): TaskConversationsUseCase {
+		if (!this._taskConversationsUseCase) {
+			this._taskConversationsUseCase = new TaskConversationsUseCase()
+		}
+		return this._taskConversationsUseCase
 	}
 
 	get truncateMessagesUseCase(): TruncateMessagesUseCase {

@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import type { IAgentServiceExecute, ToolCallbacks } from '@domain/entities/agent.entity.js'
 import type { WebhookEntity } from '@domain/entities/webhook.entity.js'
 import { AgentService } from '@infra/service/agent.service.js'
-import { systemPrompt as basePrompt } from '../../../const.js'
+import { systemPromptChat as basePrompt } from '../../../const.js'
 
 /**
  * Webhook con destino `llm`: expone el LLM del proveedor activo con contrato
@@ -27,7 +27,6 @@ export interface OpenAiChatRequest {
 
 const NOOP_TOOL_CALLBACKS: ToolCallbacks = {
 	onToolCall: async () => {},
-	draftCallbacks: { onUpdate: async () => {}, onRead: async () => null },
 	credentialCallbacks: {
 		getCredentials: async () => ({}),
 		setCredential: async () => {},

@@ -53,7 +53,9 @@ export function invalidateExternalToolsCache(): void {
 export async function listAvailableAgentTools(): Promise<AvailableTool[]> {
 	const registryTools: AvailableTool[] = registry
 		.getRoutes()
-		.filter((r) => r.useBy?.includes('mcp') && r.toolName && r.toolDescription)
+		.filter(
+			(r) => r.useBy?.includes('mcp') && r.toolName && r.toolDescription && (r.toolShowAssignment === undefined || r.toolShowAssignment)
+		)
 		.map((r) => ({
 			name: `agent-manager_${r.toolName}`,
 			description: r.toolDescription as string,

@@ -27,7 +27,6 @@ export type SseEvent =
 	| { type: 'chunk'; content: string }
 	| { type: 'tool'; name: string }
 	| { type: 'tool_image'; serverId?: string; toolName: string; args: Record<string, unknown>; mimeType: string; data: string }
-	| { type: 'draft_updated'; draft: string }
 	| {
 			type: 'done'
 			message: { id: string; conversationId: string; role: string; content: string; createdAt: string }
@@ -86,16 +85,7 @@ export class StreamMessageUseCase {
 					data: info.data
 				})
 			},
-			draftCallbacks: {
-				onUpdate: async (draft: string) => {
-					await this.chatRepository.updateDraft(conversationId, draft)
-					sendEvent({ type: 'draft_updated', draft })
-				},
-				onRead: async () => {
-					const current = await this.chatRepository.findConversationById(conversationId)
-					return current?.draft ?? null
-				}
-			},
+
 			credentialCallbacks: {
 				getCredentials: async (mcpServerId: string): Promise<Record<string, string>> => {
 					const creds = await this.credentialRepository.findByUserAndMcp(userId, mcpServerId)

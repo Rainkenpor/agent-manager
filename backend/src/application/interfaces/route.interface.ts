@@ -3,6 +3,7 @@ import type { NextFunction, Request, Response } from 'express'
 import type { ZodRawShape, z } from 'zod'
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'
+export type RouteUseBy = 'server' | 'mcp'
 
 export interface AuthenticatedRequest extends Request {
 	user?: any
@@ -17,7 +18,7 @@ export interface HttpContext {
 
 export interface RouteToolConfig<T extends ZodRawShape | z.ZodObject<any>> {
 	// By which servers this route is available
-	useBy: string[]
+	useBy: RouteUseBy[]
 
 	// HTTP Route config
 	method: HttpMethod
@@ -27,8 +28,9 @@ export interface RouteToolConfig<T extends ZodRawShape | z.ZodObject<any>> {
 	toolName?: string
 	toolDescription?: string
 	toolSource?: string
-	// Siempre disponible sin necesidad de rol
 	toolAlwaysAvailable?: boolean
+	toolAvailableViaChat?: boolean
+	toolShowAssignment?: boolean
 
 	// Shared validation schema (Zod)
 	inputSchema?: T
@@ -59,7 +61,7 @@ export interface RouterPromptConfig {
 }
 
 export interface RegisteredRoute {
-	useBy: string[]
+	useBy: RouteUseBy[]
 	method: HttpMethod
 	path: string
 	toolName?: string
@@ -67,6 +69,8 @@ export interface RegisteredRoute {
 	toolSource?: string
 	inputSchema: ZodRawShape
 	toolAlwaysAvailable?: boolean
+	toolAvailableViaChat?: boolean
+	toolShowAssignment?: boolean
 	handler: ({ input, context, oauthService }: { input: unknown; context?: HttpContext; oauthService?: McpOAuthService }) => Promise<unknown>
 	requiresAuth?: boolean
 	requiredPermission?: { resource: string; action: string }
