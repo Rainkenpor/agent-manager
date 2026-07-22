@@ -1,5 +1,5 @@
 import { registry } from '@applicationService/registry.service.js'
-import { CreateIntegrationSchema, UpdateIntegrationSchema } from '@domain/entities/integration.entity.js'
+import { CreateIntegrationSchema, isIntegrationConfigured, UpdateIntegrationSchema } from '@domain/entities/integration.entity.js'
 import { z } from 'zod'
 import { container } from '../container.js'
 import { INTEGRATION_CHAT_USER_ID } from '../use-cases/integration/create-integration-conversation.use-case.js'
@@ -96,6 +96,30 @@ export function registerIntegrationRoutes(): void {
 
 			res.end()
 			return null
+		}
+	})
+
+	// Apariencia del widget resuelta por origen (público). Permite pintar el botón con los
+	// colores configurados antes de abrir el chat, sin crear una conversación.
+	registry.register({
+		useBy: ['server'],
+		method: 'POST',
+		path: '/api/integration/config',
+		inputSchema: createConversationSchema.shape,
+		requiresAuth: false,
+		handler: async ({ input, context: { req } }) => {
+			const origin = normalizeOrigin(input.origin || req.header('origin') || req.header('referer'))
+			const integration = origin ? await container.integrationRepository.findByOrigin(origin) : null
+			return {
+				success: true,
+				data: {
+					configured: !!integration && isIntegrationConfigured(integration),
+					agentName: integration?.agentName ?? null,
+					buttonColor: integration?.buttonColor ?? null,
+					iconColor: integration?.iconColor ?? null,
+					userBubbleColor: integration?.userBubbleColor ?? null
+				}
+			}
 		}
 	})
 

@@ -540,6 +540,23 @@ export async function createIntegrationConversation(origin: string): Promise<{
 	return res.json()
 }
 
+export async function getIntegrationConfig(origin: string): Promise<{
+	configured: boolean
+	agentName: string | null
+	buttonColor: string | null
+	iconColor: string | null
+	userBubbleColor: string | null
+} | null> {
+	const res = await fetch(`${__API_BASE__}/integration/config`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ origin })
+	})
+	if (!res.ok) return null
+	const body = await res.json().catch(() => null)
+	return body?.data ?? null
+}
+
 export function streamIntegrationMessage(conversationId: string, content: string, origin: string, signal?: AbortSignal): Promise<Response> {
 	return fetch(`${__API_BASE__}/integration/chat/conversations/${conversationId}/messages`, {
 		method: 'POST',
