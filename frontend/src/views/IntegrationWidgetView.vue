@@ -96,7 +96,11 @@ function applyTheme(theme: string) {
 // El loader del sitio anfitrión envía su origen (y opcionalmente el tema) por postMessage.
 function handleHostMessage(e: MessageEvent) {
   if (e.data?.source !== 'integration-host') return
-  if (typeof e.data.host === 'string') hostOrigin.value = e.data.host
+  if (typeof e.data.host === 'string' && e.data.host !== hostOrigin.value) {
+    hostOrigin.value = e.data.host
+    // El loader envía el origen real del sitio anfitrión: re-resolver la apariencia con él.
+    void applyAppearance(hostOrigin.value)
+  }
   if (typeof e.data.theme === 'string') applyTheme(e.data.theme)
 }
 
@@ -132,6 +136,21 @@ function pickSuggestion(question: string) {
   suggestions.value = []
   messageInput.value = question
   sendMessage()
+}
+
+/** Obtiene la apariencia configurada (colores) por origen y la aplica al botón antes de abrir el chat. */
+async function applyAppearance(origin: string) {
+  if (!origin) return
+  try {
+    const cfg = await api.getIntegrationConfig(origin)
+    if (!cfg) return
+    if (cfg.buttonColor) buttonColor.value = cfg.buttonColor
+    if (cfg.iconColor) iconColor.value = cfg.iconColor
+    if (cfg.userBubbleColor) userBubbleColor.value = cfg.userBubbleColor
+    if (cfg.agentName) agentName.value = cfg.agentName
+  } catch {
+    /* mantiene los colores por defecto */
+  }
 }
 
 async function startConversation() {
@@ -578,6 +597,8 @@ onMounted(() => {
 
   // Respaldo inmediato; el loader sobrescribe con el origen real vía postMessage.
   hostOrigin.value = resolveHostOrigin()
+  // Pinta el botón con los colores configurados desde el arranque (el loader los refinará luego).
+  void applyAppearance(hostOrigin.value)
   window.addEventListener('message', handleHostMessage)
   // Pide al loader que nos envíe el origen del sitio anfitrión y el tema.
   try {
