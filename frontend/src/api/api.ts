@@ -515,9 +515,19 @@ export function streamPublicMessage(conversationId: string, content: string, sig
 }
 
 // ── Integration widget (no auth, resolved by origin) ───────────────────────
-export async function createIntegrationConversation(
-	origin: string
-): Promise<{ success: boolean; status?: string; data?: { id: string; agentName: string; scope: string[] }; error?: string }> {
+export async function createIntegrationConversation(origin: string): Promise<{
+	success: boolean
+	status?: string
+	data?: {
+		id: string
+		agentName: string
+		scope: string[]
+		buttonColor?: string | null
+		iconColor?: string | null
+		userBubbleColor?: string | null
+	}
+	error?: string
+}> {
 	const res = await fetch(`${__API_BASE__}/integration/chat/conversations`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
@@ -677,3 +687,139 @@ export async function suggestPublicQna(q: string): Promise<{ id: string; questio
 	const body = await res.json().catch(() => ({ data: [] }))
 	return body?.data ?? []
 }
+
+// ── Proyectos ───────────────────────────────────────────────────────────────
+export interface ProyectoStakeholder {
+	name: string
+	role: string
+	email?: string
+}
+export interface Proyecto {
+	id: string
+	name: string
+	description: string | null
+	clarifyProjectId: string | null
+	architecture: string | null
+	programmingLanguage: string | null
+	stakeholders: ProyectoStakeholder[]
+	status: string
+	chatAgentId: string | null
+	createdBy: string | null
+	createdAt: string
+	updatedAt: string
+}
+export interface ProyectoServicio {
+	id: string
+	proyectoId: string
+	name: string
+	repoUrl: string
+	repoRef: string | null
+	governanceId: string | null
+	governanceType: string | null
+	agentMdStatus: 'ok' | 'outdated' | 'missing' | 'unknown'
+	claudeMdStatus: 'ok' | 'outdated' | 'missing' | 'unknown'
+	lastCheckedAt: string | null
+	createdAt: string
+	updatedAt: string
+}
+export interface HistoriaUsuario {
+	id: string
+	proyectoId: string
+	code: string | null
+	title: string
+	description: string | null
+	additionalInfo: Record<string, unknown> | null
+	status: 'pending' | 'in_progress' | 'done' | 'blocked'
+	createdAt: string
+	updatedAt: string
+}
+export interface HistoriaComentario {
+	id: string
+	historiaId: string
+	author: string
+	content: string
+	createdAt: string
+}
+
+type Res<T> = { success: boolean; data?: T; error?: string }
+
+export const getProyectos = () => request<Res<Proyecto[]>>('/proyectos')
+export const getProyecto = (id: string) => request<Res<Proyecto>>(`/proyectos/${id}`)
+export const createProyecto = (data: Partial<Proyecto>) =>
+	request<Res<Proyecto>>('/proyectos', { method: 'POST', body: JSON.stringify(data) })
+export const updateProyecto = (id: string, data: Partial<Proyecto>) =>
+	request<Res<Proyecto>>(`/proyectos/${id}`, { method: 'PUT', body: JSON.stringify({ id, ...data }) })
+export const deleteProyecto = (id: string) => request<Res<{ id: string }>>(`/proyectos/${id}`, { method: 'DELETE' })
+
+export const getServicios = (proyectoId: string) => request<Res<ProyectoServicio[]>>(`/proyectos/${proyectoId}/servicios`)
+export const createServicio = (proyectoId: string, data: Partial<ProyectoServicio>) =>
+	request<Res<ProyectoServicio>>(`/proyectos/${proyectoId}/servicios`, { method: 'POST', body: JSON.stringify({ proyectoId, ...data }) })
+export const updateServicio = (id: string, data: Partial<ProyectoServicio>) =>
+	request<Res<ProyectoServicio>>(`/proyectos/servicios/${id}`, { method: 'PUT', body: JSON.stringify({ id, ...data }) })
+export const deleteServicio = (id: string) => request<Res<{ id: string }>>(`/proyectos/servicios/${id}`, { method: 'DELETE' })
+
+export const getHistorias = (proyectoId: string) => request<Res<HistoriaUsuario[]>>(`/proyectos/${proyectoId}/historias`)
+export const createHistoria = (proyectoId: string, data: Partial<HistoriaUsuario>) =>
+	request<Res<HistoriaUsuario>>(`/proyectos/${proyectoId}/historias`, { method: 'POST', body: JSON.stringify({ proyectoId, ...data }) })
+export const updateHistoria = (id: string, data: Partial<HistoriaUsuario>) =>
+	request<Res<HistoriaUsuario>>(`/proyectos/historias/${id}`, { method: 'PUT', body: JSON.stringify({ id, ...data }) })
+export const deleteHistoria = (id: string) => request<Res<{ id: string }>>(`/proyectos/historias/${id}`, { method: 'DELETE' })
+
+export const getComentarios = (historiaId: string) => request<Res<HistoriaComentario[]>>(`/proyectos/historias/${historiaId}/comentarios`)
+export const addComentario = (historiaId: string, content: string) =>
+	request<Res<HistoriaComentario>>(`/proyectos/historias/${historiaId}/comentarios`, {
+		method: 'POST',
+		body: JSON.stringify({ id: historiaId, content })
+	})
+
+export const verifyRepos = (proyectoId: string, servicioId?: string) =>
+	request<Res<ProyectoServicio[]>>(`/proyectos/${proyectoId}/verify-repos`, {
+		method: 'POST',
+		body: JSON.stringify({ id: proyectoId, servicioId })
+	})
+export const applyRepos = (proyectoId: string, servicioId?: string) =>
+	request<Res<ProyectoServicio[]>>(`/proyectos/${proyectoId}/apply-repos`, {
+		method: 'POST',
+		body: JSON.stringify({ id: proyectoId, servicioId })
+	})
+
+export const getOrCreateProyectoChat = (proyectoId: string) =>
+	request<Res<{ id: string; title: string; agentId: string; proyectoId: string }>>(`/proyectos/${proyectoId}/chat`, {
+		method: 'POST',
+		body: JSON.stringify({ id: proyectoId })
+	})
+
+export function streamProyectoMessage(conversationId: string, content: string, signal?: AbortSignal): Promise<Response> {
+	return streamMessage(conversationId, content, signal)
+}
+
+// ── Proyectos: interesados (participantes) ─────────────────────────────────
+export interface ProyectoParticipante {
+	id: string
+	proyectoId: string
+	userId: string
+	role: string | null
+	chatId: string | null
+	invitedBy: string | null
+	createdAt: string
+	username?: string | null
+	email?: string | null
+	firstName?: string | null
+	lastName?: string | null
+}
+
+export const getParticipantes = (proyectoId: string) => request<Res<ProyectoParticipante[]>>(`/proyectos/${proyectoId}/participantes`)
+export const addParticipante = (proyectoId: string, userId: string, role?: string | null) =>
+	request<Res<ProyectoParticipante>>(`/proyectos/${proyectoId}/participantes`, {
+		method: 'POST',
+		body: JSON.stringify({ id: proyectoId, userId, role })
+	})
+export const removeParticipante = (proyectoId: string, userId: string) =>
+	request<Res<{ proyectoId: string; userId: string }>>(`/proyectos/${proyectoId}/participantes/${userId}`, { method: 'DELETE' })
+
+export const getMisProyectos = () => request<Res<Proyecto[]>>('/proyectos/mine')
+export const openParticipanteChat = (proyectoId: string, userId: string) =>
+	request<Res<{ id: string; title: string; agentId: string; proyectoId: string; userId: string }>>(
+		`/proyectos/${proyectoId}/participantes/${userId}/chat`,
+		{ method: 'POST', body: JSON.stringify({ id: proyectoId, userId }) }
+	)

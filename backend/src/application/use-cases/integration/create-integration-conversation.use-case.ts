@@ -7,7 +7,17 @@ import type { IIntegrationRepository } from '@domain/repositories/integration.re
 export const INTEGRATION_CHAT_USER_ID = 'integration-anonymous'
 
 type IntegrationConversationResult =
-	| { success: true; data: { id: string; agentName: string; scope: string[] } }
+	| {
+			success: true
+			data: {
+				id: string
+				agentName: string
+				scope: string[]
+				buttonColor: string | null
+				iconColor: string | null
+				userBubbleColor: string | null
+			}
+	  }
 	| { success: false; status: 'pending'; error: string }
 	| { success: false; status: 'error'; error: string }
 
@@ -59,6 +69,16 @@ export class CreateIntegrationConversationUseCase {
 			userId: INTEGRATION_CHAT_USER_ID
 		})
 
-		return { success: true, data: { id: conversation.id, agentName: agent.name, scope: integration.scope } }
+		return {
+			success: true,
+			data: {
+				id: conversation.id,
+				agentName: agent.name,
+				scope: integration.scope,
+				buttonColor: integration.buttonColor ?? null,
+				iconColor: integration.iconColor ?? null,
+				userBubbleColor: integration.userBubbleColor ?? null
+			}
+		}
 	}
 }

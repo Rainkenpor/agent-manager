@@ -43,6 +43,9 @@ export class IntegrationRepository implements IIntegrationRepository {
 			agentName: data.agentName ?? null,
 			scope: data.scope ?? [],
 			description: data.description ?? null,
+			buttonColor: data.buttonColor ?? null,
+			iconColor: data.iconColor ?? null,
+			userBubbleColor: data.userBubbleColor ?? null,
 			active: data.active ?? false,
 			createdAt: now,
 			updatedAt: now
@@ -58,6 +61,9 @@ export class IntegrationRepository implements IIntegrationRepository {
 		if (data.agentName !== undefined) updateData.agentName = data.agentName
 		if (data.scope !== undefined) updateData.scope = data.scope
 		if (data.description !== undefined) updateData.description = data.description
+		if (data.buttonColor !== undefined) updateData.buttonColor = data.buttonColor
+		if (data.iconColor !== undefined) updateData.iconColor = data.iconColor
+		if (data.userBubbleColor !== undefined) updateData.userBubbleColor = data.userBubbleColor
 		if (data.active !== undefined) updateData.active = data.active
 		await this.repo.update(id, updateData)
 		return this.mapIntegration(await this.repo.findOneByOrFail({ id }))
@@ -76,6 +82,9 @@ export class IntegrationRepository implements IIntegrationRepository {
 			agentName: e.agentName,
 			scope: e.scope ?? [],
 			description: e.description,
+			buttonColor: e.buttonColor,
+			iconColor: e.iconColor,
+			userBubbleColor: e.userBubbleColor,
 			active: e.active,
 			createdAt: e.createdAt,
 			updatedAt: e.updatedAt

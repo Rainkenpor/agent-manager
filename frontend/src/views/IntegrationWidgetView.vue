@@ -14,6 +14,14 @@ interface DisplayMessage {
   toolCalls?: string[]
 }
 
+interface RequestQuestion {
+  id: string
+  type: 'text' | 'multi' | 'single' | 'list' | 'confirm' | 'setCredential'
+  label: string
+  description: string
+  options: Array<{ label: string; description: string }>
+}
+
 const mermaidRenderer = ref<InstanceType<typeof MermaidRenderer> | null>(null)
 function renderMermaidDiagrams() {
   void mermaidRenderer.value?.renderDiagrams()
@@ -26,6 +34,11 @@ const hostOrigin = ref('')
 const conversationId = ref<string | null>(null)
 const agentName = ref('Asistente')
 const scope = ref<string[]>([])
+
+// Colores configurables por integración (con respaldo al índigo de marca).
+const buttonColor = ref('#4f46e5')
+const iconColor = ref('#ffffff')
+const userBubbleColor = ref('#4f46e5')
 const messages = ref<DisplayMessage[]>([])
 const messageInput = ref('')
 const sending = ref(false)
@@ -36,6 +49,10 @@ const distiState = ref<'loading' | 'thinking' | 'happy' | 'sad' | 'idle'>('idle'
 
 const messagesContainer = ref<HTMLElement | null>(null)
 let abortController: AbortController | null = null
+
+// Estado de formularios por id de mensaje (bloques ```request``` del asistente).
+const formAnswers = ref<Record<string, Record<string, { textValue: string; selectedOptions: any[] }>>>({})
+const submittedForms = ref<string[]>([])
 
 /** Origen del sitio anfitrión derivado del propio contenedor (respaldo si el loader no lo envía). */
 function resolveHostOrigin(): string {
@@ -134,6 +151,9 @@ async function startConversation() {
     conversationId.value = res.data.id
     agentName.value = res.data.agentName || 'Asistente'
     scope.value = res.data.scope || []
+    if (res.data.buttonColor) buttonColor.value = res.data.buttonColor
+    if (res.data.iconColor) iconColor.value = res.data.iconColor
+    if (res.data.userBubbleColor) userBubbleColor.value = res.data.userBubbleColor
     messages.value = []
   } catch (e: any) {
     error.value = e.message || 'No se pudo iniciar el asistente'
@@ -389,6 +409,154 @@ function renderMarkdown(text: string): string {
   return out.join('\n')
 }
 
+// ── Formularios de solicitud (bloques ```request```) ──────────────────────
+function parseRequestBlock(content: string): RequestQuestion[] | null {
+  const match = content.match(/```request\n([\s\S]*?)```/)
+  if (!match) return null
+
+  const questions: RequestQuestion[] = []
+  const parts = match[1].split(/(?=\[Q\d+\|)/)
+
+  for (const part of parts) {
+    const header = part.match(/^\[Q(\d+)\|(text|multi|list|single|confirm|setCredential)\]\s*(.+?)(?:\n|$)/)
+    if (!header) continue
+
+    const rest = part.slice(header[0].length).trim()
+    const lines = rest.split('\n')
+    const options: Array<{ label: string; description: string }> = []
+    const descLines: string[] = []
+
+    for (const line of lines) {
+      const opt = line.match(/^-\s*(.+?)\s*\|\s*(.+)$/)
+      if (opt) {
+        options.push({ label: opt[1].trim(), description: opt[2].trim() })
+      } else if (line.startsWith('-') && line.trim() !== '-') {
+        const label = line.replace(/^-\s*/, '').trim()
+        options.push({ label, description: '' })
+      } else if (line.trim()) descLines.push(line.trim())
+    }
+
+    questions.push({
+      id: `Q${header[1]}`,
+      type: header[2] as RequestQuestion['type'],
+      label: header[3].trim(),
+      description: descLines.join('\n'),
+      options
+    })
+  }
+
+  return questions.length > 0 ? questions : null
+}
+
+function getContentBeforeRequest(content: string): string {
+  const idx = content.indexOf('```request')
+  return idx > 0 ? content.slice(0, idx).trim() : ''
+}
+
+function getContentAfterRequest(content: string): string {
+  const match = content.match(/```request[\s\S]*?```/)
+  if (!match || match.index === undefined) return ''
+  const endIdx = match.index + match[0].length
+  return content.slice(endIdx).trim()
+}
+
+function getRequestQuestions(msg: DisplayMessage): RequestQuestion[] | null {
+  if (msg.role !== 'assistant' || msg.streaming) return null
+  return parseRequestBlock(msg.content)
+}
+
+function stripMarkdown(text: string): string {
+  return text.replace(/\*\*(.+?)\*\*/g, '$1').replace(/`(.+?)`/g, '$1')
+}
+
+function toggleOption(msgId: string, questionId: string, option: string) {
+  const q = formAnswers.value[msgId]?.[questionId]
+  if (!q) return
+  const idx = q.selectedOptions.indexOf(option)
+  if (idx === -1) q.selectedOptions.push(option)
+  else q.selectedOptions.splice(idx, 1)
+}
+
+function selectOption(msgId: string, questionId: string, option: string) {
+  const q = formAnswers.value[msgId]?.[questionId]
+  if (!q) return
+  q.selectedOptions = [option]
+}
+
+function listItemChanged(opt: { label: string; description: string }, e: Event, msgId: string, questionId: string, key: string) {
+  opt.description = (e.target as HTMLInputElement).value
+  if (Number(key) === formAnswers.value[msgId]?.[questionId].selectedOptions.length - 1) {
+    formAnswers.value[msgId][questionId].selectedOptions.push({ label: '', description: '' })
+  }
+}
+
+function removeOption(msgId: string, questionId: string, key: string) {
+  const q = formAnswers.value[msgId]?.[questionId]
+  if (!q) return
+  q.selectedOptions.splice(Number(key), 1)
+}
+
+function initFormAnswersFromMessages() {
+  for (let i = 0; i < messages.value.length; i++) {
+    const msg = messages.value[i]
+    if (msg.role !== 'assistant' || msg.streaming) continue
+    const questions = parseRequestBlock(msg.content)
+    if (!questions) continue
+
+    if (!formAnswers.value[msg.id]) {
+      const answers: Record<string, { textValue: string; selectedOptions: any[] }> = {}
+      for (const q of questions) {
+        const data: any[] = []
+        if (q.type === 'list') data.push({ label: '(sin selección)', description: '' })
+        answers[q.id] = { textValue: '', selectedOptions: data }
+      }
+      formAnswers.value[msg.id] = answers
+    }
+
+    const hasSubsequentMessage = messages.value.slice(i + 1).some((m) => !m.streaming)
+    if (hasSubsequentMessage && !submittedForms.value.includes(msg.id)) {
+      submittedForms.value.push(msg.id)
+    }
+  }
+}
+
+async function submitRequestForm(msgId: string, questions: RequestQuestion[]) {
+  const answers = formAnswers.value[msgId]
+  if (!answers) return
+
+  const lines: string[] = []
+  for (const q of questions) {
+    const a = answers[q.id]
+    let answerText: string
+
+    if (q.type === 'text') {
+      answerText = a.textValue.trim() || '(sin respuesta)'
+    } else if (q.type === 'multi') {
+      const parts = [...a.selectedOptions]
+      if (a.textValue.trim()) parts.push(a.textValue.trim())
+      answerText = parts.length > 0 ? parts.join(', ') : '(sin selección)'
+    } else if (q.type === 'list') {
+      const parts = [...a.selectedOptions.map((o) => `- ${o.description}`)]
+      if (a.textValue.trim()) parts.push(a.textValue.trim())
+      answerText = parts.length > 0 ? parts.join('\n ') : '(sin selección)'
+    } else if (q.type === 'confirm') {
+      answerText = a.selectedOptions[0] ?? (a.textValue.trim() || '(sin selección)')
+      if (a.textValue.trim() && a.textValue.trim() !== answerText) answerText += ` (${a.textValue.trim()})`
+    } else {
+      answerText = a.selectedOptions[0] ?? (a.textValue.trim() || '(sin selección)')
+      if (a.textValue.trim() && a.textValue.trim() !== answerText) answerText += ` (${a.textValue.trim()})`
+    }
+
+    lines.push(`${stripMarkdown(q.label)}: ${answerText}`)
+  }
+
+  submittedForms.value.push(msgId)
+  messageInput.value = lines.join('\n')
+  await sendMessage()
+}
+
+watch(messages, initFormAnswersFromMessages, { deep: true })
+
 // El widget vive en un iframe: fondo transparente para mostrar solo el botón/panel.
 // Además forzamos color-scheme normal: con el tema oscuro (color-scheme: dark) el
 // backdrop del iframe se pinta negro aunque el fondo sea transparente. Los colores del
@@ -439,8 +607,8 @@ onBeforeUnmount(() => {
         <!-- Header -->
         <header class="shrink-0 px-4 py-3 border-b border-base-300 bg-base-100 flex items-center justify-between">
           <div class="flex items-center gap-2.5 min-w-0">
-            <div
-              class="shrink-0 w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold">
+            <div class="shrink-0 w-8 h-8 rounded-xl flex items-center justify-center font-bold"
+              :style="{ backgroundColor: buttonColor, color: iconColor }">
               D
             </div>
             <div class="min-w-0">
@@ -478,14 +646,16 @@ onBeforeUnmount(() => {
               <div v-for="msg in messages" :key="msg.id" class="flex gap-2 w-full"
                 :class="msg.role === 'user' ? 'flex-row-reverse' : ''">
                 <div class="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold mt-0.5"
-                  :class="msg.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-base-100 text-base-content'">
+                  :class="msg.role === 'user' ? 'text-white' : 'bg-base-100 text-base-content'"
+                  :style="msg.role === 'user' ? { backgroundColor: userBubbleColor } : undefined">
                   {{ msg.role === 'user' ? 'U' : 'A' }}
                 </div>
 
                 <div class="flex flex-col gap-1 max-w-[82%]" :style="msg.role === 'user' ? 'align-items:flex-end' : ''">
                   <div class="rounded-2xl text-sm leading-relaxed px-3 py-2" :class="msg.role === 'user'
-                    ? 'bg-indigo-600 text-white rounded-tr-sm'
-                    : 'bg-base-100 text-base-content rounded-tl-sm border border-base-300'">
+                    ? 'text-white rounded-tr-sm'
+                    : 'bg-base-100 text-base-content rounded-tl-sm border border-base-300'"
+                    :style="msg.role === 'user' ? { backgroundColor: userBubbleColor } : undefined">
                     <div v-if="msg.toolCalls && msg.toolCalls.length > 0" class="flex flex-wrap gap-1.5 mb-2">
                       <span
                         class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-base-100/60 text-base-content/50 text-[11px] font-mono">
@@ -493,7 +663,116 @@ onBeforeUnmount(() => {
                         Buscando información... ({{ msg.toolCalls.length }})
                       </span>
                     </div>
-                    <span class="whitespace-pre-wrap" v-html="renderMarkdown(msg.content)" />
+
+                    <!-- ── Formulario de solicitud activo ── -->
+                    <template v-if="getRequestQuestions(msg) && !submittedForms.includes(msg.id) && formAnswers[msg.id]">
+                      <p v-if="getContentBeforeRequest(msg.content)" class="whitespace-pre-wrap mb-2 text-base-content"
+                        v-html="renderMarkdown(getContentBeforeRequest(msg.content))" />
+
+                      <div class="space-y-3 border border-base-content/20 rounded-xl p-3 bg-base-300/60">
+                        <p class="text-[11px] font-semibold text-indigo-400 uppercase tracking-wider">Completa el
+                          formulario</p>
+
+                        <div v-for="q in getRequestQuestions(msg)" :key="q.id" class="space-y-1.5">
+                          <div>
+                            <p class="text-xs font-medium text-base-content" v-html="renderInlineMarkdown(q.label)" />
+                            <p v-if="q.description" class="text-[11px] text-base-content/50 mt-0.5 whitespace-pre-wrap"
+                              v-html="renderInlineMarkdown(q.description)" />
+                          </div>
+
+                          <!-- Multi: opciones (checkboxes) -->
+                          <div v-if="q.type === 'multi' && q.options.length" class="space-y-1 pl-0.5">
+                            <label v-for="opt in q.options" :key="opt.label"
+                              class="flex items-start gap-2 cursor-pointer select-none">
+                              <input type="checkbox"
+                                :checked="formAnswers[msg.id][q.id].selectedOptions.includes(opt.label)"
+                                @change="toggleOption(msg.id, q.id, opt.label)"
+                                class="mt-0.5 shrink-0 rounded border-base-content/20 bg-base-200 accent-indigo-500 cursor-pointer" />
+                              <span class="text-xs text-base-content leading-snug">
+                                {{ opt.label }}
+                                <span v-if="opt.description" class="text-base-content/70"> — {{ opt.description }}</span>
+                              </span>
+                            </label>
+                          </div>
+
+                          <!-- List: entradas editables -->
+                          <div v-if="q.type === 'list'" class="flex flex-wrap gap-2">
+                            <div v-for="[key, opt] of Object.entries(formAnswers[msg.id][q.id].selectedOptions)"
+                              :key="`list_${key}`" class="w-full">
+                              <div class="flex w-full gap-1">
+                                <input type="text" :value="opt.description"
+                                  @input="(e) => listItemChanged(opt, e, msg.id, q.id, key)"
+                                  class="w-full px-2.5 py-1.5 rounded-lg bg-base-200 border border-base-300 text-xs text-base-content placeholder:text-base-content/40 focus:outline-none focus:border-indigo-500 transition-colors" />
+                                <button v-if="opt.description !== ''" type="button"
+                                  @click="removeOption(msg.id, q.id, key)"
+                                  class="shrink-0 w-8 rounded-lg flex items-center justify-center text-red-400 hover:bg-base-200 transition-colors">
+                                  <span class="mdi mdi-close"></span>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- Confirm: opciones como botones -->
+                          <div v-if="q.type === 'confirm' && q.options.length" class="flex flex-wrap gap-2">
+                            <button v-for="opt in q.options" :key="opt.label" type="button"
+                              @click="selectOption(msg.id, q.id, opt.label)" :title="opt.description || undefined"
+                              :class="formAnswers[msg.id][q.id].selectedOptions[0] === opt.label
+                                ? 'bg-indigo-600 border-indigo-500 text-white'
+                                : 'bg-base-200 border-base-content/20 text-base-content hover:border-indigo-500/60'"
+                              class="px-3 py-1 rounded-lg border text-xs font-medium transition-colors">
+                              {{ opt.label }}
+                            </button>
+                          </div>
+
+                          <!-- Single: opciones (radios) -->
+                          <div v-if="q.type === 'single' && q.options.length" class="space-y-1 pl-0.5">
+                            <label v-for="opt in q.options" :key="opt.label"
+                              class="flex items-start gap-2 cursor-pointer select-none">
+                              <input type="radio" :name="`${msg.id}-${q.id}`" :value="opt.label"
+                                :checked="formAnswers[msg.id][q.id].selectedOptions[0] === opt.label"
+                                @change="selectOption(msg.id, q.id, opt.label)"
+                                class="mt-0.5 shrink-0 border-base-content/20 bg-base-200 accent-indigo-500 cursor-pointer" />
+                              <span class="text-xs text-base-content leading-snug">
+                                {{ opt.label }}
+                                <span v-if="opt.description" class="text-base-content/70"> — {{ opt.description }}</span>
+                              </span>
+                            </label>
+                          </div>
+
+                          <!-- Entrada de texto -->
+                          <input v-if="q.type !== 'list' && q.type !== 'setCredential'"
+                            :value="formAnswers[msg.id][q.id].textValue"
+                            @input="(e) => (formAnswers[msg.id][q.id].textValue = (e.target as HTMLInputElement).value)"
+                            type="text" :placeholder="q.type === 'multi' || q.type === 'single' || q.type === 'confirm'
+                              ? 'Otra respuesta (opcional)...'
+                              : (q.description ? q.description.split('\n')[0] : 'Tu respuesta...')"
+                            class="w-full px-2.5 py-1.5 rounded-lg bg-base-200 border border-base-300 text-xs text-base-content placeholder:text-base-content/40 focus:outline-none focus:border-indigo-500 transition-colors" />
+                        </div>
+
+                        <button type="button" @click="submitRequestForm(msg.id, getRequestQuestions(msg)!)"
+                          :disabled="sending || !conversationId"
+                          class="w-full py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-xs font-semibold transition-colors">
+                          Enviar respuestas
+                        </button>
+                      </div>
+                      <p v-if="getContentAfterRequest(msg.content)" class="whitespace-pre-wrap mt-2 text-base-content"
+                        v-html="renderMarkdown(getContentAfterRequest(msg.content))" />
+                    </template>
+
+                    <!-- ── Formulario enviado ── -->
+                    <template v-else-if="getRequestQuestions(msg)">
+                      <p v-if="getContentBeforeRequest(msg.content)" class="whitespace-pre-wrap mb-1.5 text-base-content"
+                        v-html="renderMarkdown(getContentBeforeRequest(msg.content))" />
+                      <span class="inline-flex items-center gap-1.5 text-[11px] text-base-content/50">
+                        <span class="mdi mdi-check text-green-400"></span>
+                        Formulario enviado
+                      </span>
+                      <p v-if="getContentAfterRequest(msg.content)" class="whitespace-pre-wrap mt-1.5 text-base-content"
+                        v-html="renderMarkdown(getContentAfterRequest(msg.content))" />
+                    </template>
+
+                    <!-- ── Texto plano ── -->
+                    <span v-else class="whitespace-pre-wrap" v-html="renderMarkdown(msg.content)" />
                   </div>
                   <span class="text-[10px] text-base-content/40 px-1">{{ formatTime(msg.createdAt) }}</span>
                 </div>
@@ -539,7 +818,8 @@ onBeforeUnmount(() => {
               </button>
               <button v-else
                 class="shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-colors disabled:opacity-40"
-                :class="messageInput.trim() && conversationId ? 'bg-indigo-600 hover:bg-indigo-500' : 'bg-base-100'"
+                :class="messageInput.trim() && conversationId ? '' : 'bg-base-100'"
+                :style="messageInput.trim() && conversationId ? { backgroundColor: buttonColor, color: iconColor } : undefined"
                 :disabled="!messageInput.trim() || !conversationId" @click="sendMessage">
                 <span class="mdi mdi-send"></span>
               </button>
@@ -551,8 +831,8 @@ onBeforeUnmount(() => {
 
     <!-- Botón flotante -->
     <button type="button" @click="toggleOpen"
-      class="pointer-events-auto shrink-0 w-14 h-14 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white shadow-2xl flex items-center justify-center transition-transform hover:scale-105"
-      :title="open ? 'Cerrar chat' : 'Abrir chat'">
+      class="pointer-events-auto shrink-0 w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-transform hover:scale-105"
+      :style="{ backgroundColor: buttonColor, color: iconColor }" :title="open ? 'Cerrar chat' : 'Abrir chat'">
       <span class="mdi text-2xl" :class="open ? 'mdi-close' : 'mdi-chat-processing'"></span>
     </button>
 

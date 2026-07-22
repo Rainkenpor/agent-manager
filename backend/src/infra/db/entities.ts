@@ -391,6 +391,9 @@ export class ConversationEntity {
 	@Column({ type: 'text', nullable: true })
 	draft!: string | null
 
+	@Column({ name: 'proyecto_id', type: 'text', nullable: true })
+	proyectoId!: string | null
+
 	@Column({ name: 'created_at', type: 'text' })
 	createdAt!: string
 
@@ -998,6 +1001,15 @@ export class IntegrationEntity {
 	@Column({ type: 'text', nullable: true })
 	description!: string | null
 
+	@Column({ name: 'button_color', type: 'text', nullable: true })
+	buttonColor!: string | null
+
+	@Column({ name: 'icon_color', type: 'text', nullable: true })
+	iconColor!: string | null
+
+	@Column({ name: 'user_bubble_color', type: 'text', nullable: true })
+	userBubbleColor!: string | null
+
 	@Column({ type: 'boolean', default: false })
 	active!: boolean
 
@@ -1102,4 +1114,155 @@ export class PresetQnaEntity {
 
 	@Column({ name: 'updated_at', type: 'text' })
 	updatedAt!: string
+}
+
+@Entity('proyectos')
+export class ProyectoEntity {
+	@PrimaryColumn({ type: 'text' })
+	id!: string
+
+	@Column({ type: 'text' })
+	name!: string
+
+	@Column({ type: 'text', nullable: true })
+	description!: string | null
+
+	@Column({ name: 'clarify_project_id', type: 'text', nullable: true })
+	clarifyProjectId!: string | null
+
+	@Column({ type: 'text', nullable: true })
+	architecture!: string | null
+
+	@Column({ name: 'programming_language', type: 'text', nullable: true })
+	programmingLanguage!: string | null
+
+	@Column({ type: 'simple-json', nullable: true })
+	stakeholders!: Array<{ name: string; role: string; email?: string }> | null
+
+	@Column({ type: 'text', default: 'active' })
+	status!: string
+
+	@Column({ name: 'chat_agent_id', type: 'text', nullable: true })
+	chatAgentId!: string | null
+
+	@Column({ name: 'created_by', type: 'text', nullable: true })
+	createdBy!: string | null
+
+	@Column({ name: 'created_at', type: 'text' })
+	createdAt!: string
+
+	@Column({ name: 'updated_at', type: 'text' })
+	updatedAt!: string
+}
+
+@Entity('proyecto_servicios')
+export class ProyectoServicioEntity {
+	@PrimaryColumn({ type: 'text' })
+	id!: string
+
+	@Column({ name: 'proyecto_id', type: 'text' })
+	proyectoId!: string
+
+	@Column({ type: 'text' })
+	name!: string
+
+	@Column({ name: 'repo_url', type: 'text' })
+	repoUrl!: string
+
+	@Column({ name: 'repo_ref', type: 'text', nullable: true })
+	repoRef!: string | null
+
+	@Column({ name: 'governance_id', type: 'text', nullable: true })
+	governanceId!: string | null
+
+	@Column({ name: 'governance_type', type: 'text', nullable: true })
+	governanceType!: string | null
+
+	@Column({ name: 'agent_md_status', type: 'text', default: 'unknown' })
+	agentMdStatus!: string
+
+	@Column({ name: 'claude_md_status', type: 'text', default: 'unknown' })
+	claudeMdStatus!: string
+
+	@Column({ name: 'last_checked_at', type: 'text', nullable: true })
+	lastCheckedAt!: string | null
+
+	@Column({ name: 'created_at', type: 'text' })
+	createdAt!: string
+
+	@Column({ name: 'updated_at', type: 'text' })
+	updatedAt!: string
+}
+
+@Entity('historias_usuario')
+export class HistoriaUsuarioEntity {
+	@PrimaryColumn({ type: 'text' })
+	id!: string
+
+	@Column({ name: 'proyecto_id', type: 'text' })
+	proyectoId!: string
+
+	@Column({ type: 'text', nullable: true })
+	code!: string | null
+
+	@Column({ type: 'text' })
+	title!: string
+
+	@Column({ type: 'text', nullable: true })
+	description!: string | null
+
+	@Column({ name: 'additional_info', type: 'simple-json', nullable: true })
+	additionalInfo!: Record<string, unknown> | null
+
+	@Column({ type: 'text', default: 'pending' })
+	status!: string
+
+	@Column({ name: 'created_at', type: 'text' })
+	createdAt!: string
+
+	@Column({ name: 'updated_at', type: 'text' })
+	updatedAt!: string
+}
+
+@Entity('hu_comentarios')
+export class HistoriaComentarioEntity {
+	@PrimaryColumn({ type: 'text' })
+	id!: string
+
+	@Column({ name: 'historia_id', type: 'text' })
+	historiaId!: string
+
+	@Column({ type: 'text' })
+	author!: string
+
+	@Column({ type: 'text' })
+	content!: string
+
+	@Column({ name: 'created_at', type: 'text' })
+	createdAt!: string
+}
+
+@Entity('proyecto_participantes')
+@Index('uq_proyecto_participantes_proy_user', ['proyectoId', 'userId'], { unique: true })
+export class ProyectoParticipanteEntity {
+	@PrimaryColumn({ type: 'text' })
+	id!: string
+
+	@Column({ name: 'proyecto_id', type: 'text' })
+	proyectoId!: string
+
+	@Column({ name: 'user_id', type: 'text' })
+	userId!: string
+
+	@Column({ type: 'text', nullable: true })
+	role!: string | null
+
+	@Column({ name: 'chat_id', type: 'text', nullable: true })
+	chatId!: string | null
+
+	@Column({ name: 'invited_by', type: 'text', nullable: true })
+	invitedBy!: string | null
+
+	@Column({ name: 'created_at', type: 'text' })
+	createdAt!: string
 }

@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+const HexColor = z.string().regex(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, 'Color inválido (usa formato hexadecimal, p. ej. #4f46e5)')
+
 export const CreateIntegrationSchema = z.object({
 	name: z.string().min(1),
 	origin: z.string().min(1),
@@ -7,6 +9,9 @@ export const CreateIntegrationSchema = z.object({
 	agentName: z.string().min(1).optional(),
 	scope: z.array(z.string()).optional().default([]),
 	description: z.string().optional(),
+	buttonColor: HexColor.nullable().optional(),
+	iconColor: HexColor.nullable().optional(),
+	userBubbleColor: HexColor.nullable().optional(),
 	active: z.boolean().optional().default(false)
 })
 
@@ -16,6 +21,9 @@ export const UpdateIntegrationSchema = z.object({
 	agentName: z.string().min(1).nullable().optional(),
 	scope: z.array(z.string()).optional(),
 	description: z.string().nullable().optional(),
+	buttonColor: HexColor.nullable().optional(),
+	iconColor: HexColor.nullable().optional(),
+	userBubbleColor: HexColor.nullable().optional(),
 	active: z.boolean().optional()
 })
 
@@ -27,6 +35,9 @@ export interface IntegrationEntity {
 	agentName?: string | null
 	scope: string[]
 	description?: string | null
+	buttonColor?: string | null
+	iconColor?: string | null
+	userBubbleColor?: string | null
 	active: boolean
 	createdAt: string
 	updatedAt: string
@@ -39,6 +50,9 @@ export interface CreateIntegrationDTO {
 	agentName?: string | null
 	scope?: string[]
 	description?: string | null
+	buttonColor?: string | null
+	iconColor?: string | null
+	userBubbleColor?: string | null
 	active?: boolean
 }
 
@@ -48,6 +62,9 @@ export interface UpdateIntegrationDTO {
 	agentName?: string | null
 	scope?: string[]
 	description?: string | null
+	buttonColor?: string | null
+	iconColor?: string | null
+	userBubbleColor?: string | null
 	active?: boolean
 }
 

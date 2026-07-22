@@ -17,10 +17,18 @@ interface Integration {
   agentName?: string | null
   scope: string[]
   description?: string | null
+  buttonColor?: string | null
+  iconColor?: string | null
+  userBubbleColor?: string | null
   active: boolean
   createdAt: string
   updatedAt: string
 }
+
+// Colores por defecto del widget (índigo de marca). Se usan cuando la integración no define uno propio.
+const DEFAULT_BUTTON_COLOR = '#4f46e5'
+const DEFAULT_ICON_COLOR = '#ffffff'
+const DEFAULT_USER_BUBBLE_COLOR = '#4f46e5'
 
 interface Agent {
   id: string
@@ -79,6 +87,9 @@ const emptyForm = () => ({
   agentSlug: '',
   scope: [] as string[],
   description: '',
+  buttonColor: DEFAULT_BUTTON_COLOR,
+  iconColor: DEFAULT_ICON_COLOR,
+  userBubbleColor: DEFAULT_USER_BUBBLE_COLOR,
   active: true
 })
 
@@ -99,6 +110,9 @@ function openEdit(item: Integration) {
     agentSlug: item.agentSlug ?? '',
     scope: [...(item.scope ?? [])],
     description: item.description ?? '',
+    buttonColor: item.buttonColor ?? DEFAULT_BUTTON_COLOR,
+    iconColor: item.iconColor ?? DEFAULT_ICON_COLOR,
+    userBubbleColor: item.userBubbleColor ?? DEFAULT_USER_BUBBLE_COLOR,
     active: item.active
   }
   formErrors.value = []
@@ -126,6 +140,9 @@ async function save() {
     agentName: agent?.name ?? null,
     scope: form.value.scope,
     description: form.value.description.trim() || null,
+    buttonColor: form.value.buttonColor || null,
+    iconColor: form.value.iconColor || null,
+    userBubbleColor: form.value.userBubbleColor || null,
     active: form.value.active
   }
 
@@ -350,6 +367,36 @@ onMounted(async () => {
           <label class="block text-sm text-base-content mb-1">Descripción</label>
           <input v-model="form.description" type="text" placeholder="Asistente para clientes del sitio público"
             class="w-full bg-base-200 border border-base-content/20 rounded-lg px-3 py-2 text-base-content text-sm focus:outline-none focus:border-indigo-500" />
+        </div>
+
+        <!-- Apariencia: colores del widget -->
+        <div>
+          <label class="block text-sm text-base-content mb-2">Apariencia del widget</label>
+          <div class="space-y-3">
+            <div v-for="c in [
+              { key: 'buttonColor', label: 'Botón' },
+              { key: 'iconColor', label: 'Icono del chat' },
+              { key: 'userBubbleColor', label: 'Mensajes del usuario' }
+            ]" :key="c.key" class="flex items-center gap-3">
+              <input type="color" v-model="(form as any)[c.key]"
+                class="w-9 h-9 shrink-0 rounded-lg bg-base-200 border border-base-content/20 cursor-pointer p-0.5" />
+              <input type="text" v-model="(form as any)[c.key]" placeholder="#4f46e5"
+                class="w-28 bg-base-200 border border-base-content/20 rounded-lg px-3 py-2 text-base-content font-mono text-sm focus:outline-none focus:border-indigo-500" />
+              <span class="text-sm text-base-content/70">{{ c.label }}</span>
+            </div>
+          </div>
+
+          <!-- Vista previa -->
+          <div class="mt-3 flex items-center gap-3">
+            <div class="w-11 h-11 rounded-full shadow flex items-center justify-center"
+              :style="{ backgroundColor: form.buttonColor }">
+              <span class="mdi mdi-chat-processing text-xl" :style="{ color: form.iconColor }"></span>
+            </div>
+            <div class="px-3 py-2 rounded-2xl rounded-tr-sm text-sm text-white"
+              :style="{ backgroundColor: form.userBubbleColor }">
+              Mensaje de ejemplo
+            </div>
+          </div>
         </div>
 
         <div class="flex items-center gap-3">
