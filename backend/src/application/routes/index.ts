@@ -16,6 +16,7 @@ import { registerMcpCredentialRoutes } from './mcp-credential.route.js'
 import { registerMcpServerRoutes } from './mcp-server.route.js'
 import { registerOAuthRoutes } from './oauth.route.js'
 import { registerPresetQnaRoutes } from './preset-qna.route.js'
+import { registerProyectoRoutes } from './proyecto.route.js'
 import { registerPublicChatRoutes } from './public-chat.route.js'
 import { registerReleaseNotesRoutes } from './release-notes.route.js'
 import { registerRoleRoutes } from './role.route.js'
@@ -25,7 +26,7 @@ import { registerTokenAuditRoutes } from './token-audit.route.js'
 import { registerTraceabilityRoutes } from './traceability.route.js'
 import { registerTraceabilityParticipantRoutes } from './traceability-participant.route.js'
 import { registerUserRoutes } from './user.route.js'
-import { registerWebhookRoutes } from './webhook.route.js'
+import { registerWebhookRoutes, registerWebhookTriggerRoutes } from './webhook.route.js'
 
 /**
  * Initializes the registry by calling all registration functions.
@@ -42,6 +43,7 @@ export function initializeRegistry(): void {
 	registerChatRoutes()
 	registerPublicChatRoutes()
 	registerPresetQnaRoutes()
+	registerProyectoRoutes()
 	registerMcpCredentialRoutes()
 	registerSkillRoutes()
 	registerTraceabilityRoutes()
@@ -60,4 +62,8 @@ export function initializeRegistry(): void {
 	registerTokenAuditRoutes()
 	registerSystemRoutes()
 	registerClarifyRoutes()
+
+	// Los endpoints públicos de webhooks usan `/api/:group/:slug`, así que van al final
+	// para no capturar rutas propias de la API.
+	registerWebhookTriggerRoutes()
 }

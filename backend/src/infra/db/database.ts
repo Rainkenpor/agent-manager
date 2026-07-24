@@ -12,6 +12,8 @@ import {
 	EventListenerEntity,
 	GovernanceEntity,
 	GovernanceSuggestionEntity,
+	HistoriaComentarioEntity,
+	HistoriaUsuarioEntity,
 	HookAssignmentEntity,
 	HookServerEntity,
 	IntegrationEntity,
@@ -24,6 +26,9 @@ import {
 	PermissionEntity,
 	PresetQnaEntity,
 	ProviderConfigEntity,
+	ProyectoEntity,
+	ProyectoParticipanteEntity,
+	ProyectoServicioEntity,
 	RoleAgentEntity,
 	RoleEntity,
 	RoleMcpEntity,
@@ -45,7 +50,8 @@ import {
 	TraceabilityTemplateEntity,
 	UserEntity,
 	UserRoleEntity,
-	WebhookEntity
+	WebhookEntity,
+	WebhookGroupEntity
 } from './entities.js'
 
 const entities = [
@@ -73,6 +79,11 @@ const entities = [
 	RoleSkillEntity,
 	GovernanceEntity,
 	GovernanceSuggestionEntity,
+	ProyectoEntity,
+	ProyectoServicioEntity,
+	HistoriaUsuarioEntity,
+	HistoriaComentarioEntity,
+	ProyectoParticipanteEntity,
 	TraceabilityTemplateEntity,
 	TemplateStageEntity,
 	TemplateStagePredecessorEntity,
@@ -88,6 +99,7 @@ const entities = [
 	HookAssignmentEntity,
 	EventListenerEntity,
 	TokenAuditEntity,
+	WebhookGroupEntity,
 	WebhookEntity,
 	PresetQnaEntity,
 	IntegrationEntity

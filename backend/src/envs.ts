@@ -26,6 +26,9 @@ const AGENT_MODEL = process.env.AGENT_MODEL || ''
 const AGENT_BASE_URL = process.env.AGENT_BASE_URL || null
 const AGENT_KEY = process.env.AGENT_KEY || ''
 
+// Nombre del servidor MCP externo con capacidad de escritura a repos (git_read_file / git_write)
+const GIT_MCP_SERVER_NAME = process.env.GIT_MCP_SERVER_NAME || 'git'
+
 // Azure AD OAuth
 const AZURE_CLIENT_ID = process.env.AZURE_CLIENT_ID || ''
 const AZURE_CLIENT_SECRET = process.env.AZURE_CLIENT_SECRET || ''
@@ -64,6 +67,8 @@ export const envs = {
 	AGENT_BASE_URL,
 	AGENT_KEY,
 	AGENT_MODEL,
+
+	GIT_MCP_SERVER_NAME,
 
 	AZURE_CLIENT_ID,
 	AZURE_CLIENT_SECRET,

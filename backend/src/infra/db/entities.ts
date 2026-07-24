@@ -1,5 +1,5 @@
 import 'reflect-metadata'
-import { Column, Entity, Index, PrimaryColumn } from 'typeorm'
+import { Column, Entity, Index, PrimaryColumn, Unique } from 'typeorm'
 
 @Entity('users')
 export class UserEntity {
@@ -936,12 +936,39 @@ export class HookAssignmentEntity {
 	createdAt!: string
 }
 
-@Entity('webhooks')
-export class WebhookEntity {
+@Entity('webhook_groups')
+export class WebhookGroupEntity {
 	@PrimaryColumn({ type: 'text' })
 	id!: string
 
 	@Column({ type: 'text', unique: true })
+	name!: string
+
+	@Column({ type: 'text', nullable: true })
+	description!: string | null
+
+	@Column({ type: 'boolean', default: true })
+	active!: boolean
+
+	@Column({ name: 'created_at', type: 'text' })
+	createdAt!: string
+
+	@Column({ name: 'updated_at', type: 'text' })
+	updatedAt!: string
+}
+
+@Entity('webhooks')
+@Unique(['groupId', 'name'])
+export class WebhookEntity {
+	@PrimaryColumn({ type: 'text' })
+	id!: string
+
+	// Nullable en la columna para que el sync de esquema no rompa las filas previas a los grupos;
+	// `ensureDefaultWebhookGroup()` las asigna al grupo "default" en el arranque.
+	@Column({ name: 'group_id', type: 'text', nullable: true })
+	groupId!: string
+
+	@Column({ type: 'text' })
 	name!: string
 
 	@Column({ type: 'text', nullable: true })
@@ -961,6 +988,9 @@ export class WebhookEntity {
 
 	@Column({ name: 'extra_data', type: 'simple-json', nullable: true })
 	extraData!: Record<string, string> | null
+
+	@Column({ type: 'simple-json', nullable: true })
+	contract!: unknown | null
 
 	@Column({ name: 'auth_enabled', type: 'boolean', default: true })
 	authEnabled!: boolean

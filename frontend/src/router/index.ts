@@ -76,6 +76,18 @@ const router = createRouter({
 					meta: { resource: 'traceability' }
 				},
 				{
+					path: 'proyectos',
+					name: 'proyectos',
+					component: () => import('@/views/ProyectosView.vue'),
+					meta: { resource: 'proyectos' }
+				},
+				{
+					path: 'proyectos/:id',
+					name: 'proyecto-detail',
+					component: () => import('@/views/ProyectoDetailView.vue'),
+					meta: { resource: 'proyectos' }
+				},
+				{
 					path: 'admin',
 					name: 'admin',
 					component: () => import('@/views/AdminView.vue'),

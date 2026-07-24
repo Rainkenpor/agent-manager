@@ -12,12 +12,14 @@ import type {
 	IMcpUserCredentialRepository,
 	IPermissionRepository,
 	IPresetQnaRepository,
+	IProyectoRepository,
 	IRoleRepository,
 	ISkillRepository,
 	ITokenAuditRepository,
 	ITraceabilityParticipantRepository,
 	ITraceabilityRepository,
 	IUserRepository,
+	IWebhookGroupRepository,
 	IWebhookRepository
 } from '@domain/repositories/index.js'
 import {
@@ -33,12 +35,14 @@ import {
 	McpUserCredentialRepository,
 	PermissionRepository,
 	PresetQnaRepository,
+	ProyectoRepository,
 	RoleRepository,
 	SkillRepository,
 	TokenAuditRepository,
 	TraceabilityParticipantRepository,
 	TraceabilityRepository,
 	UserRepository,
+	WebhookGroupRepository,
 	WebhookRepository
 } from '@infra/repository/index.js'
 import { EventListenerExecutorService } from '@infra/service/event-listener-executor.service.js'
@@ -47,7 +51,11 @@ import { mcpExternalManager } from '@infra/service/mcp-external.js'
 import { TraceabilityAgentTriggerService } from '@infra/service/traceability-agent-trigger.service.js'
 import { WebhookExecutorService } from '@infra/service/webhook-executor.service.js'
 import {
+	AddComentarioUseCase,
+	AddParticipanteUseCase,
+	AddServicioUseCase,
 	AppendMessageImagesUseCase,
+	ApplyRepoFilesUseCase,
 	AssignPermissionUseCase,
 	AssignRoleUseCase,
 	AssignStageUserUseCase,
@@ -58,23 +66,16 @@ import {
 	CreateAgentUseCase,
 	// Chat Use Cases
 	CreateConversationUseCase,
-	CreatePublicConversationUseCase,
-	CreateIntegrationConversationUseCase,
-	IntegrationChatAnswerUseCase,
 	CreateDocumentUseCase,
-	// Preset Q&A Use Cases
-	DeletePresetQnaUseCase,
-	GeneratePresetQnaUseCase,
-	ListPresetQnaUseCase,
-	MatchPresetQnaUseCase,
-	PublicChatAnswerUseCase,
-	RefreshPresetQnaUseCase,
-	SuggestPresetQnaUseCase,
 	// Event Listener Use Cases
 	CreateEventListenerUseCase,
 	CreateGovernanceSuggestionUseCase,
 	CreateGovernanceUseCase,
+	CreateHistoriaUseCase,
+	CreateIntegrationConversationUseCase,
 	CreateLinkUseCase,
+	CreateProyectoUseCase,
+	CreatePublicConversationUseCase,
 	// Skill Use Cases
 	CreateSkillUseCase,
 	CreateTaskUseCase,
@@ -90,8 +91,13 @@ import {
 	DeleteEventListenerUseCase,
 	DeleteGovernanceSuggestionUseCase,
 	DeleteGovernanceUseCase,
+	DeleteHistoriaUseCase,
 	DeleteLinkUseCase,
 	DeleteMcpCredentialUseCase,
+	// Preset Q&A Use Cases
+	DeletePresetQnaUseCase,
+	DeleteProyectoUseCase,
+	DeleteServicioUseCase,
 	DeleteSkillUseCase,
 	DeleteTaskUseCase,
 	DeleteTemplateStageUseCase,
@@ -99,6 +105,7 @@ import {
 	DeleteTraceabilityUseCase,
 	DuplicateAgentUseCase,
 	ExportConfigUseCase,
+	GeneratePresetQnaUseCase,
 	GetAgentUseCase,
 	GetCodexUsageUseCase,
 	GetConversationUseCase,
@@ -107,10 +114,14 @@ import {
 	GetEventListenerUseCase,
 	GetGovernanceSuggestionUseCase,
 	GetGovernanceUseCase,
+	GetHistoriaUseCase,
 	GetLinksByStageUseCase,
 	// MCP Credential Use Cases
 	GetMcpCredentialsUseCase,
 	GetMyStagesUseCase,
+	GetOrCreateProyectoChatUseCase,
+	GetProyectoContextUseCase,
+	GetProyectoUseCase,
 	GetSkillUseCase,
 	GetSystemMetricsUseCase,
 	GetTasksByStageUseCase,
@@ -122,26 +133,40 @@ import {
 	GetTraceabilityUseCase,
 	GetUsersByRoleWithEffortUseCase,
 	ImportConfigUseCase,
+	IntegrationChatAnswerUseCase,
 	// Agent Group Use Cases
 	ListAgentGroupsUseCase,
 	ListAgentsUseCase,
+	ListComentariosUseCase,
 	ListConversationsUseCase,
 	ListEventListenersUseCase,
 	ListGovernanceSuggestionsUseCase,
 	ListGovernanceUseCase,
+	ListHistoriasUseCase,
+	ListMisProyectosUseCase,
 	ListMyTraceabilityInvitationsUseCase,
+	ListParticipantesUseCase,
+	ListPresetQnaUseCase,
+	ListProyectosUseCase,
+	ListServiciosUseCase,
 	ListSkillsUseCase,
 	// Traceability Use Cases
 	ListTemplatesUseCase,
 	ListTraceabilitiesUseCase,
 	ListTraceabilityParticipantsUseCase,
 	LoginUseCase,
+	MatchPresetQnaUseCase,
 	OpenOrCreateChatForTraceabilityUseCase,
+	OpenParticipanteChatUseCase,
+	PublicChatAnswerUseCase,
+	RefreshPresetQnaUseCase,
+	RemoveParticipanteUseCase,
 	RemoveTraceabilityShareUseCase,
 	ShareTraceabilityUseCase,
 	StreamAgentLogsUseCase,
 	StreamAiAssistUseCase,
 	StreamMessageUseCase,
+	SuggestPresetQnaUseCase,
 	TaskConversationsUseCase,
 	TruncateMessagesUseCase,
 	UpdateAgentGroupUseCase,
@@ -149,12 +174,17 @@ import {
 	UpdateDocumentUseCase,
 	UpdateEventListenerUseCase,
 	UpdateGovernanceUseCase,
+	UpdateHistoriaStatusUseCase,
+	UpdateHistoriaUseCase,
+	UpdateProyectoUseCase,
+	UpdateServicioUseCase,
 	UpdateSkillUseCase,
 	UpdateTaskUseCase,
 	UpdateTemplateStageUseCase,
 	UpdateTemplateUseCase,
 	UpdateTraceabilityUseCase,
-	UpsertMcpCredentialUseCase
+	UpsertMcpCredentialUseCase,
+	VerifyRepoFilesUseCase
 } from './use-cases/index.js'
 import { GetSkillsAllowedForUserUseCase } from './use-cases/skill/get-skills-allowed-user.js'
 
@@ -244,6 +274,35 @@ export class Container {
 	private _updateGovernanceUseCase?: UpdateGovernanceUseCase
 	private _deleteGovernanceUseCase?: DeleteGovernanceUseCase
 
+	// Proyecto Repository & Use Cases
+	private readonly _proyectoRepository: IProyectoRepository
+	private _listProyectosUseCase?: ListProyectosUseCase
+	private _getProyectoUseCase?: GetProyectoUseCase
+	private _createProyectoUseCase?: CreateProyectoUseCase
+	private _updateProyectoUseCase?: UpdateProyectoUseCase
+	private _deleteProyectoUseCase?: DeleteProyectoUseCase
+	private _listServiciosUseCase?: ListServiciosUseCase
+	private _addServicioUseCase?: AddServicioUseCase
+	private _updateServicioUseCase?: UpdateServicioUseCase
+	private _deleteServicioUseCase?: DeleteServicioUseCase
+	private _listHistoriasUseCase?: ListHistoriasUseCase
+	private _getHistoriaUseCase?: GetHistoriaUseCase
+	private _createHistoriaUseCase?: CreateHistoriaUseCase
+	private _updateHistoriaUseCase?: UpdateHistoriaUseCase
+	private _updateHistoriaStatusUseCase?: UpdateHistoriaStatusUseCase
+	private _deleteHistoriaUseCase?: DeleteHistoriaUseCase
+	private _listComentariosUseCase?: ListComentariosUseCase
+	private _addComentarioUseCase?: AddComentarioUseCase
+	private _getProyectoContextUseCase?: GetProyectoContextUseCase
+	private _verifyRepoFilesUseCase?: VerifyRepoFilesUseCase
+	private _applyRepoFilesUseCase?: ApplyRepoFilesUseCase
+	private _getOrCreateProyectoChatUseCase?: GetOrCreateProyectoChatUseCase
+	private _listParticipantesUseCase?: ListParticipantesUseCase
+	private _addParticipanteUseCase?: AddParticipanteUseCase
+	private _removeParticipanteUseCase?: RemoveParticipanteUseCase
+	private _openParticipanteChatUseCase?: OpenParticipanteChatUseCase
+	private _listMisProyectosUseCase?: ListMisProyectosUseCase
+
 	// Governance Suggestion Repository & Use Cases
 	private readonly _governanceSuggestionRepository: IGovernanceSuggestionRepository
 	private _createGovernanceSuggestionUseCase?: CreateGovernanceSuggestionUseCase
@@ -266,6 +325,7 @@ export class Container {
 
 	// Webhook Repository & Executor
 	private readonly _webhookRepository: IWebhookRepository
+	private readonly _webhookGroupRepository: IWebhookGroupRepository
 	private _webhookExecutor?: WebhookExecutorService
 
 	// Integration Repository & Use Cases
@@ -349,11 +409,13 @@ export class Container {
 		this._mcpUserCredentialRepository = new McpUserCredentialRepository()
 		this._skillRepository = new SkillRepository()
 		this._governanceRepository = new GovernanceRepository()
+		this._proyectoRepository = new ProyectoRepository()
 		this._governanceSuggestionRepository = new GovernanceSuggestionRepository()
 		this._traceabilityRepository = new TraceabilityRepository()
 		this._traceabilityParticipantRepository = new TraceabilityParticipantRepository()
 		this._hookServerRepository = new HookServerRepository()
 		this._webhookRepository = new WebhookRepository()
+		this._webhookGroupRepository = new WebhookGroupRepository()
 		this._integrationRepository = new IntegrationRepository()
 		this._eventListenerRepository = new EventListenerRepository()
 		this.tokenAuditRepository = new TokenAuditRepository()
@@ -1017,6 +1079,10 @@ export class Container {
 		return this._webhookRepository
 	}
 
+	get webhookGroupRepository(): IWebhookGroupRepository {
+		return this._webhookGroupRepository
+	}
+
 	get webhookExecutor(): WebhookExecutorService {
 		if (!this._webhookExecutor) {
 			this._webhookExecutor = new WebhookExecutorService()
@@ -1065,6 +1131,145 @@ export class Container {
 	get deleteGovernanceUseCase(): DeleteGovernanceUseCase {
 		if (!this._deleteGovernanceUseCase) this._deleteGovernanceUseCase = new DeleteGovernanceUseCase(this._governanceRepository)
 		return this._deleteGovernanceUseCase
+	}
+
+	// ==========================================
+	// PROYECTO USE CASES
+	// ==========================================
+
+	get proyectoRepository(): IProyectoRepository {
+		return this._proyectoRepository
+	}
+
+	get listProyectosUseCase(): ListProyectosUseCase {
+		if (!this._listProyectosUseCase) this._listProyectosUseCase = new ListProyectosUseCase(this._proyectoRepository)
+		return this._listProyectosUseCase
+	}
+
+	get getProyectoUseCase(): GetProyectoUseCase {
+		if (!this._getProyectoUseCase) this._getProyectoUseCase = new GetProyectoUseCase(this._proyectoRepository)
+		return this._getProyectoUseCase
+	}
+
+	get createProyectoUseCase(): CreateProyectoUseCase {
+		if (!this._createProyectoUseCase) this._createProyectoUseCase = new CreateProyectoUseCase(this._proyectoRepository)
+		return this._createProyectoUseCase
+	}
+
+	get updateProyectoUseCase(): UpdateProyectoUseCase {
+		if (!this._updateProyectoUseCase) this._updateProyectoUseCase = new UpdateProyectoUseCase(this._proyectoRepository)
+		return this._updateProyectoUseCase
+	}
+
+	get deleteProyectoUseCase(): DeleteProyectoUseCase {
+		if (!this._deleteProyectoUseCase) this._deleteProyectoUseCase = new DeleteProyectoUseCase(this._proyectoRepository)
+		return this._deleteProyectoUseCase
+	}
+
+	get listServiciosUseCase(): ListServiciosUseCase {
+		if (!this._listServiciosUseCase) this._listServiciosUseCase = new ListServiciosUseCase(this._proyectoRepository)
+		return this._listServiciosUseCase
+	}
+
+	get addServicioUseCase(): AddServicioUseCase {
+		if (!this._addServicioUseCase) this._addServicioUseCase = new AddServicioUseCase(this._proyectoRepository)
+		return this._addServicioUseCase
+	}
+
+	get updateServicioUseCase(): UpdateServicioUseCase {
+		if (!this._updateServicioUseCase) this._updateServicioUseCase = new UpdateServicioUseCase(this._proyectoRepository)
+		return this._updateServicioUseCase
+	}
+
+	get deleteServicioUseCase(): DeleteServicioUseCase {
+		if (!this._deleteServicioUseCase) this._deleteServicioUseCase = new DeleteServicioUseCase(this._proyectoRepository)
+		return this._deleteServicioUseCase
+	}
+
+	get listHistoriasUseCase(): ListHistoriasUseCase {
+		if (!this._listHistoriasUseCase) this._listHistoriasUseCase = new ListHistoriasUseCase(this._proyectoRepository)
+		return this._listHistoriasUseCase
+	}
+
+	get getHistoriaUseCase(): GetHistoriaUseCase {
+		if (!this._getHistoriaUseCase) this._getHistoriaUseCase = new GetHistoriaUseCase(this._proyectoRepository)
+		return this._getHistoriaUseCase
+	}
+
+	get createHistoriaUseCase(): CreateHistoriaUseCase {
+		if (!this._createHistoriaUseCase) this._createHistoriaUseCase = new CreateHistoriaUseCase(this._proyectoRepository)
+		return this._createHistoriaUseCase
+	}
+
+	get updateHistoriaUseCase(): UpdateHistoriaUseCase {
+		if (!this._updateHistoriaUseCase) this._updateHistoriaUseCase = new UpdateHistoriaUseCase(this._proyectoRepository)
+		return this._updateHistoriaUseCase
+	}
+
+	get updateHistoriaStatusUseCase(): UpdateHistoriaStatusUseCase {
+		if (!this._updateHistoriaStatusUseCase) this._updateHistoriaStatusUseCase = new UpdateHistoriaStatusUseCase(this._proyectoRepository)
+		return this._updateHistoriaStatusUseCase
+	}
+
+	get deleteHistoriaUseCase(): DeleteHistoriaUseCase {
+		if (!this._deleteHistoriaUseCase) this._deleteHistoriaUseCase = new DeleteHistoriaUseCase(this._proyectoRepository)
+		return this._deleteHistoriaUseCase
+	}
+
+	get listComentariosUseCase(): ListComentariosUseCase {
+		if (!this._listComentariosUseCase) this._listComentariosUseCase = new ListComentariosUseCase(this._proyectoRepository)
+		return this._listComentariosUseCase
+	}
+
+	get addComentarioUseCase(): AddComentarioUseCase {
+		if (!this._addComentarioUseCase) this._addComentarioUseCase = new AddComentarioUseCase(this._proyectoRepository)
+		return this._addComentarioUseCase
+	}
+
+	get getProyectoContextUseCase(): GetProyectoContextUseCase {
+		if (!this._getProyectoContextUseCase) this._getProyectoContextUseCase = new GetProyectoContextUseCase(this._proyectoRepository)
+		return this._getProyectoContextUseCase
+	}
+
+	get verifyRepoFilesUseCase(): VerifyRepoFilesUseCase {
+		if (!this._verifyRepoFilesUseCase) this._verifyRepoFilesUseCase = new VerifyRepoFilesUseCase(this._proyectoRepository)
+		return this._verifyRepoFilesUseCase
+	}
+
+	get applyRepoFilesUseCase(): ApplyRepoFilesUseCase {
+		if (!this._applyRepoFilesUseCase) this._applyRepoFilesUseCase = new ApplyRepoFilesUseCase(this._proyectoRepository)
+		return this._applyRepoFilesUseCase
+	}
+
+	get getOrCreateProyectoChatUseCase(): GetOrCreateProyectoChatUseCase {
+		if (!this._getOrCreateProyectoChatUseCase)
+			this._getOrCreateProyectoChatUseCase = new GetOrCreateProyectoChatUseCase(this._proyectoRepository)
+		return this._getOrCreateProyectoChatUseCase
+	}
+
+	get listParticipantesUseCase(): ListParticipantesUseCase {
+		if (!this._listParticipantesUseCase) this._listParticipantesUseCase = new ListParticipantesUseCase(this._proyectoRepository)
+		return this._listParticipantesUseCase
+	}
+
+	get addParticipanteUseCase(): AddParticipanteUseCase {
+		if (!this._addParticipanteUseCase) this._addParticipanteUseCase = new AddParticipanteUseCase(this._proyectoRepository)
+		return this._addParticipanteUseCase
+	}
+
+	get removeParticipanteUseCase(): RemoveParticipanteUseCase {
+		if (!this._removeParticipanteUseCase) this._removeParticipanteUseCase = new RemoveParticipanteUseCase(this._proyectoRepository)
+		return this._removeParticipanteUseCase
+	}
+
+	get openParticipanteChatUseCase(): OpenParticipanteChatUseCase {
+		if (!this._openParticipanteChatUseCase) this._openParticipanteChatUseCase = new OpenParticipanteChatUseCase(this._proyectoRepository)
+		return this._openParticipanteChatUseCase
+	}
+
+	get listMisProyectosUseCase(): ListMisProyectosUseCase {
+		if (!this._listMisProyectosUseCase) this._listMisProyectosUseCase = new ListMisProyectosUseCase(this._proyectoRepository)
+		return this._listMisProyectosUseCase
 	}
 
 	// ==========================================

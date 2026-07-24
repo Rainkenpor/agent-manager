@@ -1,7 +1,9 @@
 import { timingSafeEqual } from 'node:crypto'
 import { registry } from '@applicationService/registry.service.js'
-import { CreateWebhookSchema, UpdateWebhookSchema, WebhookMethods } from '@domain/entities/webhook.entity.js'
+import { CreateWebhookSchema, UpdateWebhookSchema, type WebhookContractField, WebhookMethods } from '@domain/entities/webhook.entity.js'
+import { CreateWebhookGroupSchema, UpdateWebhookGroupSchema } from '@domain/entities/webhook-group.entity.js'
 import { logger } from '@infra/service/logger.service.js'
+import { deriveMcpToolContract, validateAgainstContract } from '@infra/service/webhook-contract.service.js'
 import { z } from 'zod'
 import { container } from '../container.js'
 import { type OpenAiChatRequest, WebhookLlmCompletionUseCase } from '../use-cases/webhook/llm-completion.use-case.js'
@@ -22,8 +24,21 @@ function providedSecret(req: { header: (name: string) => string | undefined }): 
 	return undefined
 }
 
+/**
+ * El nombre del grupo es el primer segmento del endpoint público (`/api/<grupo>/<webhook>`),
+ * así que no puede coincidir con el primer segmento de ninguna ruta ya registrada de la API.
+ */
+function reservedGroupNames(): Set<string> {
+	const segments = registry
+		.getRoutes()
+		.filter((r) => r.path.startsWith('/api/'))
+		.map((r) => r.path.split('/')[2])
+		.filter((s): s is string => !!s && !s.startsWith(':'))
+	return new Set(segments)
+}
+
 async function handleLlmTrigger(
-	webhook: Awaited<ReturnType<typeof container.webhookRepository.findByName>>,
+	webhook: Awaited<ReturnType<typeof container.webhookRepository.findById>>,
 	req: any,
 	res: any,
 	signal?: AbortSignal
@@ -58,57 +73,85 @@ async function handleLlmTrigger(
 	}
 }
 
+/** Deriva el contrato de entrada cuando el destino es una tool MCP; para los demás destinos no hay contrato. */
+async function contractFor(body: {
+	targetType?: string
+	targetName?: string
+	extraData?: Record<string, string>
+}): Promise<WebhookContractField[] | null> {
+	if (body.targetType !== 'mcp_tool') return null
+	const mcpServerName = body.extraData?.mcpServerName
+	if (!mcpServerName || !body.targetName) return null
+	return deriveMcpToolContract(mcpServerName, body.targetName)
+}
+
 export function registerWebhookRoutes(): void {
-	// ── Public trigger endpoint ───────────────────────────────────────────────────
+	// ── Grupos ────────────────────────────────────────────────────────────────────
 
-	const triggerHandler = async ({ input, context: { req, res, signal } }: any) => {
-		const webhook = await container.webhookRepository.findByName(input.slug)
-		// Same 404 for missing, inactive or wrong method to avoid leaking existence
-		if (!webhook?.active || webhook.method !== req.method) {
-			return res.status(404).json({ error: 'Webhook not found' })
+	registry.register({
+		useBy: ['server'],
+		method: 'GET',
+		path: '/api/webhook-groups',
+		inputSchema: {},
+		requiresAuth: true,
+		requiredPermission: { resource: 'webhooks', action: 'read' },
+		handler: async () => {
+			const groups = await container.webhookGroupRepository.findAll()
+			return { success: true, data: groups }
 		}
+	})
 
-		if (webhook.authEnabled && !secretMatches(providedSecret(req), webhook.secret)) {
-			return res.status(401).json({ error: 'Invalid or missing X-Webhook-Secret' })
-		}
-
-		if (webhook.targetType === 'llm') {
-			return handleLlmTrigger(webhook, req, res, signal)
-		}
-
-		const payload: Record<string, unknown> = req.method === 'GET' || req.method === 'DELETE' ? { ...req.query } : (req.body ?? {})
-
-		setImmediate(() => {
-			container.webhookExecutor.execute(webhook, payload).catch((err) => {
-				logger.error(`Webhook "${webhook.name}": ${err?.message}`)
-			})
-		})
-
-		return res.status(202).json({ success: true, message: 'Accepted', webhook: webhook.name })
-	}
-
-	for (const method of WebhookMethods) {
-		registry.register({
-			useBy: ['server'],
-			method,
-			path: '/api/webhooks/trigger/:slug',
-			inputSchema: z.object({ slug: z.string() }).shape,
-			requiresAuth: false,
-			handler: triggerHandler
-		})
-	}
-
-	// Alias compatible con SDKs de OpenAI: baseURL = <API>/webhooks/trigger/:slug → añade /chat/completions
 	registry.register({
 		useBy: ['server'],
 		method: 'POST',
-		path: '/api/webhooks/trigger/:slug/chat/completions',
-		inputSchema: z.object({ slug: z.string() }).shape,
-		requiresAuth: false,
-		handler: triggerHandler
+		path: '/api/webhook-groups',
+		inputSchema: CreateWebhookGroupSchema.shape,
+		requiresAuth: true,
+		requiredPermission: { resource: 'webhooks', action: 'create' },
+		handler: async ({ input, context: { res } }) => {
+			if (reservedGroupNames().has(input.name)) {
+				return res.status(400).json({ error: `"${input.name}" es un nombre reservado por la API` })
+			}
+			const existing = await container.webhookGroupRepository.findByName(input.name)
+			if (existing) return res.status(400).json({ error: `El grupo "${input.name}" ya existe` })
+			const group = await container.webhookGroupRepository.create(input)
+			return res.status(201).json({ success: true, data: group })
+		}
 	})
 
-	// ── CRUD ──────────────────────────────────────────────────────────────────────
+	registry.register({
+		useBy: ['server'],
+		method: 'PUT',
+		path: '/api/webhook-groups/:id',
+		inputSchema: { ...UpdateWebhookGroupSchema.shape, id: z.string() },
+		requiresAuth: true,
+		requiredPermission: { resource: 'webhooks', action: 'update' },
+		handler: async ({ input, context: { res } }) => {
+			const { id, ...data } = input
+			const group = await container.webhookGroupRepository.findById(id)
+			if (!group) return res.status(404).json({ error: 'Grupo no encontrado' })
+			return { success: true, data: await container.webhookGroupRepository.update(id, data) }
+		}
+	})
+
+	registry.register({
+		useBy: ['server'],
+		method: 'DELETE',
+		path: '/api/webhook-groups/:id',
+		inputSchema: z.object({ id: z.string() }).shape,
+		requiresAuth: true,
+		requiredPermission: { resource: 'webhooks', action: 'delete' },
+		handler: async ({ input, context: { res } }) => {
+			const webhooks = await container.webhookRepository.findByGroupId(input.id)
+			if (webhooks.length > 0) {
+				return res.status(400).json({ error: `El grupo tiene ${webhooks.length} webhook(s); elimínalos primero` })
+			}
+			await container.webhookGroupRepository.delete(input.id)
+			return { success: true, message: 'Grupo eliminado' }
+		}
+	})
+
+	// ── Webhooks ──────────────────────────────────────────────────────────────────
 
 	registry.register({
 		useBy: ['server'],
@@ -146,9 +189,12 @@ export function registerWebhookRoutes(): void {
 		requiredPermission: { resource: 'webhooks', action: 'create' },
 		handler: async ({ context: { req, res } }) => {
 			try {
-				const existing = await container.webhookRepository.findByName(req.body.name)
-				if (existing) return res.status(400).json({ error: `Webhook "${req.body.name}" already exists` })
-				const webhook = await container.webhookRepository.create(req.body)
+				const group = await container.webhookGroupRepository.findById(req.body.groupId)
+				if (!group) return res.status(400).json({ error: 'El grupo indicado no existe' })
+				const existing = await container.webhookRepository.findByGroupIdAndName(group.id, req.body.name)
+				if (existing) return res.status(400).json({ error: `El webhook "${req.body.name}" ya existe en el grupo "${group.name}"` })
+				const contract = await contractFor(req.body)
+				const webhook = await container.webhookRepository.create({ ...req.body, contract })
 				return res.status(201).json({ success: true, data: webhook })
 			} catch (error: any) {
 				return res.status(400).json({ error: error.message })
@@ -165,7 +211,33 @@ export function registerWebhookRoutes(): void {
 		requiredPermission: { resource: 'webhooks', action: 'update' },
 		handler: async ({ context: { req, res } }) => {
 			try {
-				const webhook = await container.webhookRepository.update(req.params.id as string, req.body)
+				const current = await container.webhookRepository.findById(req.params.id as string)
+				if (!current) return res.status(404).json({ error: 'Webhook not found' })
+
+				const groupId = req.body.groupId ?? current.groupId
+				if (req.body.groupId) {
+					const group = await container.webhookGroupRepository.findById(groupId)
+					if (!group) return res.status(400).json({ error: 'El grupo indicado no existe' })
+					const clash = await container.webhookRepository.findByGroupIdAndName(groupId, current.name)
+					if (clash && clash.id !== current.id) {
+						return res.status(400).json({ error: `El webhook "${current.name}" ya existe en el grupo "${group.name}"` })
+					}
+				}
+
+				// El destino sólo se re-evalúa si viene en el request; si no cambia, el contrato guardado sigue vigente.
+				const targetChanged = req.body.targetType !== undefined || req.body.targetName !== undefined || req.body.extraData !== undefined
+				const contract = targetChanged
+					? await contractFor({
+							targetType: req.body.targetType ?? current.targetType,
+							targetName: req.body.targetName ?? current.targetName,
+							extraData: req.body.extraData ?? current.extraData ?? undefined
+						})
+					: undefined
+
+				const webhook = await container.webhookRepository.update(req.params.id as string, {
+					...req.body,
+					...(contract !== undefined ? { contract } : {})
+				})
 				return { success: true, data: webhook }
 			} catch (error: any) {
 				return res.status(400).json({ error: error.message })
@@ -188,5 +260,68 @@ export function registerWebhookRoutes(): void {
 				return res.status(400).json({ error: error.message })
 			}
 		}
+	})
+}
+
+/**
+ * Endpoints públicos: `/api/<grupo>/<webhook>`.
+ * Debe registrarse al final del registry para que los `:group`/`:slug` no capturen rutas propias de la API.
+ */
+export function registerWebhookTriggerRoutes(): void {
+	const triggerHandler = async ({ input, context: { req, res, signal } }: any) => {
+		const group = await container.webhookGroupRepository.findByName(input.group)
+		const webhook = group?.active ? await container.webhookRepository.findByGroupIdAndName(group.id, input.slug) : null
+		// Same 404 for missing, inactive or wrong method to avoid leaking existence
+		if (!webhook?.active || webhook.method !== req.method) {
+			return res.status(404).json({ error: 'Webhook not found' })
+		}
+
+		if (webhook.authEnabled && !secretMatches(providedSecret(req), webhook.secret)) {
+			return res.status(401).json({ error: 'Invalid or missing X-Webhook-Secret' })
+		}
+
+		if (webhook.targetType === 'llm') {
+			return handleLlmTrigger(webhook, req, res, signal)
+		}
+
+		const raw: Record<string, unknown> = req.method === 'GET' || req.method === 'DELETE' ? { ...req.query } : (req.body ?? {})
+
+		let payload = raw
+		if (webhook.contract?.length) {
+			const { errors, value } = validateAgainstContract(webhook.contract, raw)
+			if (errors.length > 0) {
+				return res.status(400).json({ error: 'Validation error', details: errors })
+			}
+			payload = value
+		}
+
+		setImmediate(() => {
+			container.webhookExecutor.execute(webhook, payload).catch((err) => {
+				logger.error(`Webhook "${group?.name}/${webhook.name}": ${err?.message}`)
+			})
+		})
+
+		return res.status(202).json({ success: true, message: 'Accepted', webhook: `${group?.name}/${webhook.name}` })
+	}
+
+	for (const method of WebhookMethods) {
+		registry.register({
+			useBy: ['server'],
+			method,
+			path: '/api/:group/:slug',
+			inputSchema: z.object({ group: z.string(), slug: z.string() }).shape,
+			requiresAuth: false,
+			handler: triggerHandler
+		})
+	}
+
+	// Alias compatible con SDKs de OpenAI: baseURL = <API>/<grupo>/<webhook> → añade /chat/completions
+	registry.register({
+		useBy: ['server'],
+		method: 'POST',
+		path: '/api/:group/:slug/chat/completions',
+		inputSchema: z.object({ group: z.string(), slug: z.string() }).shape,
+		requiresAuth: false,
+		handler: triggerHandler
 	})
 }

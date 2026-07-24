@@ -39,6 +39,8 @@ async function startServers() {
 	console.log('📦 Initializing database...', envs.SERVER_DB_DIALECT)
 	const { AppDataSource } = await import('./infra/db/database.js')
 	await AppDataSource.initialize()
+	const { ensureDefaultWebhookGroup } = await import('./infra/db/ensure-default-webhook-group.js')
+	await ensureDefaultWebhookGroup()
 	console.log('✅ Database initialized')
 	console.log('')
 

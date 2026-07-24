@@ -76,6 +76,57 @@ const agentsMap = computed(() => {
 const activeConversation = ref<Conversation | null>(null)
 const messages = ref<DisplayMessage[]>([])
 
+// ── Modo Proyectos (chat por interesado) ────────────────────────────────
+const sidebarMode = ref<'chats' | 'proyectos'>('chats')
+const misProyectos = ref<any[]>([])
+const selectedProyecto = ref<any | null>(null)
+const proyectoParticipantes = ref<any[]>([])
+const loadingProyectos = ref(false)
+
+async function loadMisProyectos() {
+  loadingProyectos.value = true
+  try {
+    const r = await api.getMisProyectos()
+    misProyectos.value = r.data ?? []
+  } catch {
+    misProyectos.value = []
+  } finally {
+    loadingProyectos.value = false
+  }
+}
+
+function switchSidebarMode(mode: 'chats' | 'proyectos') {
+  sidebarMode.value = mode
+  if (mode === 'proyectos' && misProyectos.value.length === 0) loadMisProyectos()
+}
+
+async function selectProyecto(p: any) {
+  selectedProyecto.value = p
+  proyectoParticipantes.value = []
+  try {
+    const r = await api.getParticipantes(p.id)
+    proyectoParticipantes.value = r.data ?? []
+  } catch (e: any) {
+    error.value = e.message
+  }
+}
+
+function participanteName(p: any): string {
+  const name = [p.firstName, p.lastName].filter(Boolean).join(' ').trim()
+  return name || p.username || p.email || p.userId
+}
+
+async function openParticipanteConv(userId: string) {
+  if (!selectedProyecto.value) return
+  try {
+    const r = await api.openParticipanteChat(selectedProyecto.value.id, userId)
+    if (!r.success || !r.data) throw new Error(r.error || 'No se pudo abrir el chat')
+    await openConversation({ id: r.data.id, title: r.data.title, agentId: r.data.agentId, createdAt: '', updatedAt: '' })
+  } catch (e: any) {
+    error.value = e.message
+  }
+}
+
 // ── Imágenes de tools MCP ──────────────────────────────────────────────
 const lightboxImage = ref<string | null>(null)
 const IMAGE_MARKER_RE = /\n?<!--am:images:([A-Za-z0-9+/=]+)-->\s*$/
@@ -157,7 +208,7 @@ const editingMessageId = ref<string | null>(null)
 const editingContent = ref('')
 
 type tasksStatus = 'pending' | 'in_progress' | 'completed' | 'failed'
-const tasks = ref<{ chatId: string, id: string, name: string, description?: string, status: tasksStatus }[]>([])
+const tasks = ref<{ chatId: string; id: string; name: string; description?: string; status: tasksStatus }[]>([])
 const showTask = ref<boolean>(true)
 
 const messagesContainer = ref<HTMLElement | null>(null)
@@ -678,7 +729,7 @@ async function sendMessage() {
         } else if (event.type === 'task_create') {
           tasks.value.push({ ...event, chatId: activeConversation.value.id, status: 'pending' })
         } else if (event.type === 'task_update') {
-          const task = tasks.value.filter(f => f.id === event.id)
+          const task = tasks.value.filter((f) => f.id === event.id)
           if (!task || task.length === 0) throw new Error('No se encontro el task en el chat')
           task[0].status = event.status
         } else if (event.type === 'error') {
@@ -829,7 +880,6 @@ function renderInlineMarkdown(text: string): string {
     .replace(/>/g, '&gt;')
     .replace(/^#{1,6}\s+(.+?)\s*$/gm, '<strong>$1</strong>')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-
 }
 
 function renderMarkdown(text: string): string {
@@ -892,11 +942,7 @@ function renderMarkdown(text: string): string {
         code.push(lines[j++])
       }
       if (j < lines.length) {
-        const escaped = code
-          .join('\n')
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
+        const escaped = code.join('\n').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
         const label = lang
           ? `<span style="position:absolute;top:6px;right:10px;font-size:0.7em;color:#94a3b8;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;text-transform:lowercase">${lang.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>`
           : ''
@@ -1132,14 +1178,65 @@ onMounted(fetchInitialData)
 
     <!-- Sidebar: conversation list -->
     <div class="w-52 shrink-0 flex flex-col border-r border-base-300 bg-base-100">
-      <div class="px-4 py-4 border-b border-base-300 flex items-center justify-between">
+      <div class="flex border-b border-base-300">
+        <button class="flex-1 py-2.5 text-xs font-semibold border-b-2 transition-colors"
+          :class="sidebarMode === 'chats' ? 'border-primary text-primary' : 'border-transparent text-base-content/50 hover:text-base-content'"
+          @click="switchSidebarMode('chats')">
+          <i class="mdi mdi-chat" /> Chats
+        </button>
+        <button class="flex-1 py-2.5 text-xs font-semibold border-b-2 transition-colors"
+          :class="sidebarMode === 'proyectos' ? 'border-primary text-primary' : 'border-transparent text-base-content/50 hover:text-base-content'"
+          @click="switchSidebarMode('proyectos')">
+          <i class="mdi mdi-folder-multiple" /> Proyectos
+        </button>
+      </div>
+      <div v-if="sidebarMode === 'chats'" class="px-4 py-4 border-b border-base-300 flex items-center justify-between">
         <button class="btn btn-info btn-outline btn-sm" @click="openNewChatModal">
           + Nuevo Chat
         </button>
       </div>
 
+      <!-- Projects mode -->
+      <div v-if="sidebarMode === 'proyectos'" class="flex-1 overflow-y-auto">
+        <div v-if="loadingProyectos" class="flex justify-center py-8">
+          <span class="loading loading-spinner loading-sm text-primary" />
+        </div>
+        <div v-else-if="misProyectos.length === 0" class="px-4 py-8 text-center text-base-content/50 text-sm">
+          No participas en proyectos
+        </div>
+        <template v-else>
+          <div v-for="p in misProyectos" :key="p.id" class="border-b border-base-300/60">
+            <button class="w-full text-left px-4 py-3 hover:bg-base-200/50 transition-colors"
+              :class="selectedProyecto?.id === p.id ? 'bg-base-200' : ''" @click="selectProyecto(p)">
+              <p class="text-sm font-medium text-base-content truncate">{{ p.name }}</p>
+              <p v-if="p.programmingLanguage" class="text-xs text-base-content/50 truncate">{{ p.programmingLanguage }}
+              </p>
+            </button>
+            <!-- Participantes del proyecto seleccionado -->
+            <div v-if="selectedProyecto?.id === p.id" class="pb-2">
+              <div class="px-4 py-1 text-[11px] uppercase tracking-wider text-base-content/40">Interesados</div>
+              <p v-if="proyectoParticipantes.length === 0" class="px-4 py-2 text-xs text-base-content/50">
+                Sin interesados. Agrégalos en el detalle del proyecto.
+              </p>
+              <button v-for="part in proyectoParticipantes" :key="part.id"
+                class="w-full flex items-center gap-2 px-4 py-2 hover:bg-primary/5 transition-colors text-left"
+                @click="openParticipanteConv(part.userId)">
+                <span
+                  class="w-6 h-6 rounded-full bg-primary/15 text-primary flex items-center justify-center text-[10px] font-bold shrink-0">
+                  {{ (participanteName(part)[0] || '?').toUpperCase() }}
+                </span>
+                <span class="min-w-0 flex-1">
+                  <span class="block text-xs font-medium text-base-content truncate">{{ participanteName(part) }}</span>
+                  <span v-if="part.role" class="block text-[10px] text-base-content/50 truncate">{{ part.role }}</span>
+                </span>
+              </button>
+            </div>
+          </div>
+        </template>
+      </div>
+
       <!-- Conversation list -->
-      <div class="flex-1 overflow-y-auto">
+      <div v-else class="flex-1 overflow-y-auto">
         <!-- Traceability invitations -->
         <div v-if="invitations.length > 0" class="border-b border-base-300">
           <div
@@ -1600,7 +1697,8 @@ onMounted(fetchInitialData)
           <!-- Barra de progreso -->
           <div class="h-1 w-full bg-base-content/10 relative">
             <div class="h-full bg-success transition-all duration-500 ease-out"
-              :style="{ width: (visibleTasks.filter(t => t.status === 'completed').length / visibleTasks.length * 100) + '%' }"></div>
+              :style="{ width: (visibleTasks.filter(t => t.status === 'completed').length / visibleTasks.length * 100) + '%' }">
+            </div>
             <span class="absolute right-8 -top-1 px-0.5 bg-base-100 text-[12px] ">
               {{visibleTasks.filter(t => t.status === 'completed').length}}/{{ visibleTasks.length }}
             </span>

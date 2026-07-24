@@ -93,7 +93,12 @@ async function seedDefaultPermissions() {
 		// Preguntas y respuestas preestablecidas (FAQ del chat público)
 		{ resource: 'preset_qna', action: 'read', description: 'Ver respuestas preestablecidas' },
 		{ resource: 'preset_qna', action: 'update', description: 'Actualizar respuestas preestablecidas con el agente' },
-		{ resource: 'preset_qna', action: 'delete', description: 'Eliminar respuestas preestablecidas' }
+		{ resource: 'preset_qna', action: 'delete', description: 'Eliminar respuestas preestablecidas' },
+		// Proyectos
+		{ resource: 'proyectos', action: 'create', description: 'Crear proyectos' },
+		{ resource: 'proyectos', action: 'read', description: 'Ver proyectos, servicios e historias de usuario' },
+		{ resource: 'proyectos', action: 'update', description: 'Actualizar proyectos, servicios e historias de usuario' },
+		{ resource: 'proyectos', action: 'delete', description: 'Eliminar proyectos' }
 	]
 
 	for (const perm of defaultPermissions) {

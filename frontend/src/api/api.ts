@@ -370,6 +370,14 @@ export const updateWebhook = (id: string, data: any) =>
 	request<{ success: boolean; data: any }>(`/webhooks/${id}`, { method: 'PUT', body: JSON.stringify(data) })
 export const deleteWebhook = (id: string) => request<{ success: boolean }>(`/webhooks/${id}`, { method: 'DELETE' })
 
+// Webhook groups
+export const getWebhookGroups = () => request<{ success: boolean; data: any[] }>('/webhook-groups')
+export const createWebhookGroup = (data: any) =>
+	request<{ success: boolean; data: any }>('/webhook-groups', { method: 'POST', body: JSON.stringify(data) })
+export const updateWebhookGroup = (id: string, data: any) =>
+	request<{ success: boolean; data: any }>(`/webhook-groups/${id}`, { method: 'PUT', body: JSON.stringify(data) })
+export const deleteWebhookGroup = (id: string) => request<{ success: boolean }>(`/webhook-groups/${id}`, { method: 'DELETE' })
+
 // Integrations (admin)
 export const getIntegrations = () => request<{ success: boolean; data: any[] }>('/integrations')
 export const createIntegration = (data: any) =>

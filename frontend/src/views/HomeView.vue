@@ -20,31 +20,32 @@ const agentsCount = ref<number | null>(null)
 const mcpsCount = ref<number | null>(null)
 const skillsCount = ref<number | null>(null)
 const suggestionsCount = ref<number | null>(null)
+const proyectosCount = ref<number | null>(null)
 const conversations = ref<any[]>([])
 const statsLoading = ref(false)
 
 // ── Computed ──────────────────────────────────────────────────────────────────
 
 const greeting = computed(() => {
-  const h = new Date().getHours()
-  if (h < 6) return 'Buenas noches'
-  if (h < 12) return 'Buenos días'
-  if (h < 19) return 'Buenas tardes'
-  return 'Buenas noches'
+	const h = new Date().getHours()
+	if (h < 6) return 'Buenas noches'
+	if (h < 12) return 'Buenos días'
+	if (h < 19) return 'Buenas tardes'
+	return 'Buenas noches'
 })
 
 const userName = computed(() => {
-  const u: any = auth.user
-  return u?.fullName || u?.name || u?.username || 'usuario'
+	const u: any = auth.user
+	return u?.fullName || u?.name || u?.username || 'usuario'
 })
 
 const today = computed(() => {
-  return new Date().toLocaleDateString('es-ES', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric'
-  })
+	return new Date().toLocaleDateString('es-ES', {
+		weekday: 'long',
+		day: 'numeric',
+		month: 'long',
+		year: 'numeric'
+	})
 })
 
 const latestVersion = computed(() => releaseNotes.value[0]?.version ?? null)
@@ -54,109 +55,121 @@ const recentConversations = computed(() => conversations.value.slice(0, 5))
 // ── Data fetching ─────────────────────────────────────────────────────────────
 
 async function fetchReleaseNotes() {
-  releaseNotesLoading.value = true
-  try {
-    const res = await api.getReleaseNotes()
-    releaseNotes.value = res.data ?? []
-  } catch (e: any) {
-    toast.error(e.message)
-  } finally {
-    releaseNotesLoading.value = false
-  }
+	releaseNotesLoading.value = true
+	try {
+		const res = await api.getReleaseNotes()
+		releaseNotes.value = res.data ?? []
+	} catch (e: any) {
+		toast.error(e.message)
+	} finally {
+		releaseNotesLoading.value = false
+	}
 }
 
 async function fetchStats() {
-  statsLoading.value = true
-  const tasks: Array<Promise<unknown>> = []
+	statsLoading.value = true
+	const tasks: Array<Promise<unknown>> = []
 
-  if (auth.hasResourceAccess('agents')) {
-    tasks.push(
-      api
-        .getAgents()
-        .then((r) => {
-          agentsCount.value = r.data?.length ?? 0
-        })
-        .catch(() => {
-          agentsCount.value = 0
-        })
-    )
-  }
-  if (auth.hasResourceAccess('mcp_servers') || auth.hasResourceAccess('mcps')) {
-    tasks.push(
-      api
-        .getMcpServers()
-        .then((r) => {
-          mcpsCount.value = r.data?.length ?? 0
-        })
-        .catch(() => {
-          mcpsCount.value = 0
-        })
-    )
-  }
-  if (auth.hasResourceAccess('skills')) {
-    tasks.push(
-      api
-        .getSkills()
-        .then((r) => {
-          skillsCount.value = r.data?.length ?? 0
-        })
-        .catch(() => {
-          skillsCount.value = 0
-        })
-    )
-  }
-  if (auth.hasResourceAccess('governance_suggestion')) {
-    tasks.push(
-      api
-        .getGovernanceSuggestions()
-        .then((r) => {
-          suggestionsCount.value = r.data?.length ?? 0
-        })
-        .catch(() => {
-          suggestionsCount.value = 0
-        })
-    )
-  }
-  tasks.push(
-    api
-      .getConversations()
-      .then((r) => {
-        conversations.value = r.data ?? []
-      })
-      .catch(() => {
-        conversations.value = []
-      })
-  )
+	if (auth.hasResourceAccess('agents')) {
+		tasks.push(
+			api
+				.getAgents()
+				.then((r) => {
+					agentsCount.value = r.data?.length ?? 0
+				})
+				.catch(() => {
+					agentsCount.value = 0
+				})
+		)
+	}
+	if (auth.hasResourceAccess('mcp_servers') || auth.hasResourceAccess('mcps')) {
+		tasks.push(
+			api
+				.getMcpServers()
+				.then((r) => {
+					mcpsCount.value = r.data?.length ?? 0
+				})
+				.catch(() => {
+					mcpsCount.value = 0
+				})
+		)
+	}
+	if (auth.hasResourceAccess('skills')) {
+		tasks.push(
+			api
+				.getSkills()
+				.then((r) => {
+					skillsCount.value = r.data?.length ?? 0
+				})
+				.catch(() => {
+					skillsCount.value = 0
+				})
+		)
+	}
+	if (auth.hasResourceAccess('governance_suggestion')) {
+		tasks.push(
+			api
+				.getGovernanceSuggestions()
+				.then((r) => {
+					suggestionsCount.value = r.data?.length ?? 0
+				})
+				.catch(() => {
+					suggestionsCount.value = 0
+				})
+		)
+	}
+	if (auth.hasResourceAccess('proyectos')) {
+		tasks.push(
+			api
+				.getProyectos()
+				.then((r) => {
+					proyectosCount.value = r.data?.length ?? 0
+				})
+				.catch(() => {
+					proyectosCount.value = 0
+				})
+		)
+	}
+	tasks.push(
+		api
+			.getConversations()
+			.then((r) => {
+				conversations.value = r.data ?? []
+			})
+			.catch(() => {
+				conversations.value = []
+			})
+	)
 
-  await Promise.all(tasks)
-  statsLoading.value = false
+	await Promise.all(tasks)
+	statsLoading.value = false
 }
 
 function toggleNote(version: string) {
-  expandedNote.value = expandedNote.value === version ? null : version
+	expandedNote.value = expandedNote.value === version ? null : version
 }
 
 function go(path: string) {
-  router.push(path)
+	router.push(path)
 }
 
 function formatRelative(iso: string | undefined): string {
-  if (!iso) return ''
-  const d = new Date(iso)
-  const diff = Date.now() - d.getTime()
-  const min = Math.floor(diff / 60000)
-  if (min < 1) return 'ahora'
-  if (min < 60) return `hace ${min} min`
-  const hr = Math.floor(min / 60)
-  if (hr < 24) return `hace ${hr} h`
-  const day = Math.floor(hr / 24)
-  if (day < 30) return `hace ${day} d`
-  return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
+	if (!iso) return ''
+	const d = new Date(iso)
+	const diff = Date.now() - d.getTime()
+	const min = Math.floor(diff / 60000)
+	if (min < 1) return 'ahora'
+	if (min < 60) return `hace ${min} min`
+	const hr = Math.floor(min / 60)
+	if (hr < 24) return `hace ${hr} h`
+	const day = Math.floor(hr / 24)
+	if (day < 30) return `hace ${day} d`
+	return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
 }
 
 onMounted(() => {
-  fetchReleaseNotes()
-  fetchStats()
+	fetchReleaseNotes()
+	fetchStats()
 })
 </script>
 
@@ -264,6 +277,20 @@ onMounted(() => {
           </li>
         </ul>
       </div>
+
+      <!-- Proyectos (1x1) -->
+      <button
+        v-if="auth.hasResourceAccess('proyectos')"
+        class="rounded-xl p-5 bg-base-300 border border-base-300 flex flex-col justify-between text-left hover:bg-base-200/60 transition-colors"
+        @click="go('/proyectos')"
+      >
+        <div class="flex items-center gap-2">
+          <span class="text-base">📁</span>
+          <h3 class="text-sm font-semibold text-base-content">Proyectos</h3>
+        </div>
+        <p class="text-3xl font-bold text-base-content mt-2">{{ proyectosCount ?? '—' }}</p>
+        <p class="text-xs text-base-content/50">Gestionar proyectos →</p>
+      </button>
 
     </div>
   </PageLayout>
