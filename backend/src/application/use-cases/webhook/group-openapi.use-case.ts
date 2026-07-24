@@ -14,7 +14,12 @@ export interface WebhookGroupOpenApiResult {
 }
 
 export class WebhookGroupOpenApiUseCase {
-	async execute(groupName: string, serverUrl: string): Promise<WebhookGroupOpenApiResult> {
+	/**
+	 * `origin` queda vacío cuando el proxy inverso no informa el protocolo: en ese caso el
+	 * `server` del documento es relativo, para que el visor lo resuelva contra el origen de la
+	 * página y no se rompa por mixed content.
+	 */
+	async execute(groupName: string, origin: string): Promise<WebhookGroupOpenApiResult> {
 		const group = await container.webhookGroupRepository.findByName(groupName)
 		if (!group?.active) return { success: false, error: `Grupo "${groupName}" no encontrado` }
 
@@ -22,9 +27,11 @@ export class WebhookGroupOpenApiUseCase {
 		const paths: Record<string, Record<string, unknown>> = {}
 
 		for (const webhook of webhooks) {
-			const path = `/api/${group.name}/${webhook.name}`
+			const path = `/${webhook.name}`
 			paths[path] = { ...(paths[path] ?? {}), [webhook.method.toLowerCase()]: this.operation(group, webhook) }
 		}
+
+		const serverUrl = `${origin}/api/${group.name}`
 
 		return {
 			success: true,
@@ -35,7 +42,7 @@ export class WebhookGroupOpenApiUseCase {
 					version: '1.0.0',
 					description: group.description ?? `Endpoints del grupo "${group.name}".`
 				},
-				servers: [{ url: serverUrl }],
+				servers: [{ url: serverUrl, description: `Grupo "${group.name}"` }],
 				components: {
 					securitySchemes: {
 						webhookSecret: {

@@ -288,10 +288,15 @@ function scalarPage(groupName: string, specUrl: string): string {
 </html>`
 }
 
-/** Origen público de la petición, respetando el proxy inverso. */
+/**
+ * Origen público de la petición según lo que informe el proxy inverso. Devuelve cadena vacía
+ * cuando el proxy no manda el protocolo: asumir `http` produciría mixed content en un sitio HTTPS,
+ * así que en ese caso se prefiere una URL relativa.
+ */
 function requestOrigin(req: any): string {
-	const proto = (req.headers['x-forwarded-proto'] as string)?.split(',')[0]?.trim() || req.protocol
-	return `${proto}://${req.get('host')}`
+	const forwardedProto = (req.headers['x-forwarded-proto'] as string)?.split(',')[0]?.trim()
+	const proto = forwardedProto || (req.secure ? 'https' : '')
+	return proto ? `${proto}://${req.get('host')}` : ''
 }
 
 /**
@@ -333,7 +338,8 @@ export function registerWebhookTriggerRoutes(): void {
 				return null
 			}
 			res.setHeader('Content-Type', 'text/html; charset=utf-8')
-			res.send(scalarPage(input.group, `${requestOrigin(req)}/api/${input.group}/openapi.json`))
+			// URL relativa: el navegador la resuelve con el protocolo y host de la propia página.
+			res.send(scalarPage(input.group, `/api/${input.group}/openapi.json`))
 			return null
 		}
 	})
