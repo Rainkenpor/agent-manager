@@ -6,6 +6,7 @@ import { logger } from '@infra/service/logger.service.js'
 import { deriveMcpToolContract, validateAgainstContract } from '@infra/service/webhook-contract.service.js'
 import { z } from 'zod'
 import { container } from '../container.js'
+import { WebhookGroupOpenApiUseCase } from '../use-cases/webhook/group-openapi.use-case.js'
 import { type OpenAiChatRequest, WebhookLlmCompletionUseCase } from '../use-cases/webhook/llm-completion.use-case.js'
 
 function secretMatches(provided: string | undefined, expected: string | null | undefined): boolean {
@@ -264,10 +265,79 @@ export function registerWebhookRoutes(): void {
 }
 
 /**
- * Endpoints públicos: `/api/<grupo>/<webhook>`.
+ * Página de referencia Scalar. El bundle standalone se sirve desde CDN; se soportan las dos
+ * formas de arranque porque la API del bundle cambió entre versiones mayores.
+ */
+function scalarPage(groupName: string, specUrl: string): string {
+	return `<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Webhooks · ${groupName}</title>
+	</head>
+	<body>
+		<div id="app"></div>
+		<script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+		<script>
+			const config = { url: ${JSON.stringify(specUrl)} }
+			if (window.Scalar?.createApiReference) window.Scalar.createApiReference('#app', config)
+			else window.Scalar?.createScalarReferences?.(document.getElementById('app'), config)
+		</script>
+	</body>
+</html>`
+}
+
+/** Origen público de la petición, respetando el proxy inverso. */
+function requestOrigin(req: any): string {
+	const proto = (req.headers['x-forwarded-proto'] as string)?.split(',')[0]?.trim() || req.protocol
+	return `${proto}://${req.get('host')}`
+}
+
+/**
+ * Endpoints públicos: `/api/<grupo>/<webhook>`, más la documentación del grupo en `/api/<grupo>`.
  * Debe registrarse al final del registry para que los `:group`/`:slug` no capturen rutas propias de la API.
  */
 export function registerWebhookTriggerRoutes(): void {
+	const openApiUseCase = new WebhookGroupOpenApiUseCase()
+
+	// Documento OpenAPI del grupo
+	registry.register({
+		useBy: ['server'],
+		method: 'GET',
+		path: '/api/:group/openapi.json',
+		inputSchema: z.object({ group: z.string() }).shape,
+		requiresAuth: false,
+		handler: async ({ input, context: { req, res } }) => {
+			const result = await openApiUseCase.execute(input.group, requestOrigin(req))
+			if (!result.success) {
+				res.status(404).json({ error: result.error })
+				return null
+			}
+			res.json(result.data)
+			return null
+		}
+	})
+
+	// Referencia Scalar del grupo
+	registry.register({
+		useBy: ['server'],
+		method: 'GET',
+		path: '/api/:group',
+		inputSchema: z.object({ group: z.string() }).shape,
+		requiresAuth: false,
+		handler: async ({ input, context: { req, res } }) => {
+			const result = await openApiUseCase.execute(input.group, requestOrigin(req))
+			if (!result.success) {
+				res.status(404).json({ error: result.error })
+				return null
+			}
+			res.setHeader('Content-Type', 'text/html; charset=utf-8')
+			res.send(scalarPage(input.group, `${requestOrigin(req)}/api/${input.group}/openapi.json`))
+			return null
+		}
+	})
+
 	const triggerHandler = async ({ input, context: { req, res, signal } }: any) => {
 		const group = await container.webhookGroupRepository.findByName(input.group)
 		const webhook = group?.active ? await container.webhookRepository.findByGroupIdAndName(group.id, input.slug) : null

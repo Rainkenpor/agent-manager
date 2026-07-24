@@ -570,6 +570,11 @@ onMounted(async () => {
           </div>
 
           <div class="flex items-center gap-2 shrink-0">
+            <a :href="groupBaseUrl(group)" target="_blank" rel="noopener"
+              title="Ver la documentación (Scalar) de los endpoints del grupo"
+              class="p-1.5 rounded-lg text-base-content/60 hover:text-base-content hover:bg-base-100 transition-colors">
+              <span class="mdi mdi-book-open-page-variant-outline text-lg"></span>
+            </a>
             <button v-if="canCreate" @click="openCreate(group.id)" title="Agregar webhook a este grupo"
               class="p-1.5 rounded-lg text-indigo-400 hover:bg-indigo-500/10 transition-colors">
               <span class="mdi mdi-plus text-lg"></span>
