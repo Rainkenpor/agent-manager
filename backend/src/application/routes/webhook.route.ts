@@ -4,6 +4,7 @@ import { CreateWebhookSchema, UpdateWebhookSchema, type WebhookContractField, We
 import { CreateWebhookGroupSchema, UpdateWebhookGroupSchema } from '@domain/entities/webhook-group.entity.js'
 import { logger } from '@infra/service/logger.service.js'
 import { deriveMcpToolContract, validateAgainstContract } from '@infra/service/webhook-contract.service.js'
+import { parseToolResult } from '@infra/service/webhook-executor.service.js'
 import { z } from 'zod'
 import { container } from '../container.js'
 import { WebhookGroupOpenApiUseCase } from '../use-cases/webhook/group-openapi.use-case.js'
@@ -370,13 +371,27 @@ export function registerWebhookTriggerRoutes(): void {
 			payload = value
 		}
 
+		const reference = `${group?.name}/${webhook.name}`
+
+		// Las tools MCP responden en línea: el llamador necesita el dato que devuelven.
+		if (webhook.targetType === 'mcp_tool') {
+			try {
+				const result = await container.webhookExecutor.execute(webhook, payload)
+				return res.json({ success: true, webhook: reference, data: parseToolResult(result) })
+			} catch (err: any) {
+				logger.error(`Webhook "${reference}": ${err?.message}`)
+				return res.status(502).json({ error: err?.message ?? 'Error ejecutando la tool', webhook: reference })
+			}
+		}
+
+		// Los agentes siguen ejecutándose en background: su duración no cabe en el ciclo de la petición.
 		setImmediate(() => {
 			container.webhookExecutor.execute(webhook, payload).catch((err) => {
-				logger.error(`Webhook "${group?.name}/${webhook.name}": ${err?.message}`)
+				logger.error(`Webhook "${reference}": ${err?.message}`)
 			})
 		})
 
-		return res.status(202).json({ success: true, message: 'Accepted', webhook: `${group?.name}/${webhook.name}` })
+		return res.status(202).json({ success: true, message: 'Accepted', webhook: reference })
 	}
 
 	for (const method of WebhookMethods) {

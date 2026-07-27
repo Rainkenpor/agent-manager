@@ -126,22 +126,56 @@ export class WebhookGroupOpenApiUseCase {
 			}
 		}
 
-		return {
-			'202': {
-				description: 'Aceptado. La ejecución ocurre en background.',
-				content: {
-					'application/json': {
-						schema: {
-							type: 'object',
-							properties: {
-								success: { type: 'boolean' },
-								message: { type: 'string' },
-								webhook: { type: 'string' }
+		const completion =
+			webhook.targetType === 'mcp_tool'
+				? {
+						'200': {
+							description: 'Resultado devuelto por la herramienta.',
+							content: {
+								'application/json': {
+									schema: {
+										type: 'object',
+										properties: {
+											success: { type: 'boolean' },
+											webhook: { type: 'string' },
+											data: { description: 'Lo que devolvió la herramienta: JSON si lo es, texto en caso contrario.' }
+										}
+									}
+								}
+							}
+						},
+						'502': {
+							description: 'La herramienta falló al ejecutarse.',
+							content: {
+								'application/json': {
+									schema: {
+										type: 'object',
+										properties: { error: { type: 'string' }, webhook: { type: 'string' } }
+									}
+								}
 							}
 						}
 					}
-				}
-			},
+				: {
+						'202': {
+							description: 'Aceptado. El agente se ejecuta en background.',
+							content: {
+								'application/json': {
+									schema: {
+										type: 'object',
+										properties: {
+											success: { type: 'boolean' },
+											message: { type: 'string' },
+											webhook: { type: 'string' }
+										}
+									}
+								}
+							}
+						}
+					}
+
+		return {
+			...completion,
 			'400': {
 				description: 'El payload no cumple el contrato.',
 				content: {
