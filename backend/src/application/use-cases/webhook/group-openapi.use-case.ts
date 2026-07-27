@@ -49,7 +49,9 @@ export class WebhookGroupOpenApiUseCase {
 							type: 'apiKey',
 							in: 'header',
 							name: 'X-Webhook-Secret',
-							description: 'Token secreto del webhook. También se acepta como `Authorization: Bearer <secret>`.'
+							description: group.authEnabled
+								? `Secret del grupo "${group.name}": el mismo para todos sus endpoints. También se acepta como \`Authorization: Bearer <secret>\`.`
+								: 'Token secreto del webhook. También se acepta como `Authorization: Bearer <secret>`.'
 						}
 					}
 				},
@@ -59,15 +61,16 @@ export class WebhookGroupOpenApiUseCase {
 	}
 
 	private operation(group: WebhookGroupEntity, webhook: WebhookEntity): Record<string, unknown> {
+		const requiresSecret = group.authEnabled || webhook.authEnabled
 		const operation: Record<string, unknown> = {
 			tags: [group.name],
 			summary: webhook.name,
 			description: this.describe(webhook),
 			operationId: `${group.name}_${webhook.name}_${webhook.method.toLowerCase()}`,
-			responses: this.responses(webhook)
+			responses: this.responses(webhook, requiresSecret)
 		}
 
-		if (webhook.authEnabled) operation.security = [{ webhookSecret: [] }]
+		if (requiresSecret) operation.security = [{ webhookSecret: [] }]
 
 		if (webhook.targetType === 'llm') {
 			operation.requestBody = { required: true, content: { 'application/json': { schema: OPENAI_REQUEST_SCHEMA } } }
@@ -113,12 +116,12 @@ export class WebhookGroupOpenApiUseCase {
 		return [webhook.description, target].filter(Boolean).join('\n\n')
 	}
 
-	private responses(webhook: WebhookEntity): Record<string, unknown> {
+	private responses(webhook: WebhookEntity, requiresSecret: boolean): Record<string, unknown> {
 		if (webhook.targetType === 'llm') {
 			return {
 				'200': { description: 'Respuesta del modelo (o stream SSE si `stream: true`).' },
 				'400': { description: 'Request inválido.' },
-				...(webhook.authEnabled ? { '401': { description: 'Secret inválido o ausente.' } } : {}),
+				...(requiresSecret ? { '401': { description: 'Secret inválido o ausente.' } } : {}),
 				'404': { description: 'El webhook no existe, está inactivo o el método no corresponde.' }
 			}
 		}
@@ -153,7 +156,7 @@ export class WebhookGroupOpenApiUseCase {
 					}
 				}
 			},
-			...(webhook.authEnabled ? { '401': { description: 'Secret inválido o ausente.' } } : {}),
+			...(requiresSecret ? { '401': { description: 'Secret inválido o ausente.' } } : {}),
 			'404': { description: 'El webhook no existe, está inactivo o el método no corresponde.' }
 		}
 	}

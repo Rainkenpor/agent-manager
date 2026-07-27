@@ -947,6 +947,12 @@ export class WebhookGroupEntity {
 	@Column({ type: 'text', nullable: true })
 	description!: string | null
 
+	@Column({ name: 'auth_enabled', type: 'boolean', default: false })
+	authEnabled!: boolean
+
+	@Column({ type: 'text', nullable: true })
+	secret!: string | null
+
 	@Column({ type: 'boolean', default: true })
 	active!: boolean
 

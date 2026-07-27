@@ -352,7 +352,9 @@ export function registerWebhookTriggerRoutes(): void {
 			return res.status(404).json({ error: 'Webhook not found' })
 		}
 
-		if (webhook.authEnabled && !secretMatches(providedSecret(req), webhook.secret)) {
+		// El secret del grupo, cuando está activo, es el único válido para todos sus webhooks.
+		const expectedSecret = group.authEnabled ? group.secret : webhook.authEnabled ? webhook.secret : null
+		if (expectedSecret && !secretMatches(providedSecret(req), expectedSecret)) {
 			return res.status(401).json({ error: 'Invalid or missing X-Webhook-Secret' })
 		}
 

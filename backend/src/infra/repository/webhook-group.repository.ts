@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto'
 import { AppDataSource } from '@infra/db/database.js'
 import { WebhookGroupEntity } from '@infra/db/entities.js'
 import { v4 as uuidv4 } from 'uuid'
@@ -30,10 +31,13 @@ export class WebhookGroupRepository implements IWebhookGroupRepository {
 
 	async create(data: CreateWebhookGroupDTO): Promise<WebhookGroupDomain> {
 		const now = new Date().toISOString()
+		const authEnabled = data.authEnabled ?? true
 		const entity = this.repo.create({
 			id: uuidv4(),
 			name: data.name,
 			description: data.description ?? null,
+			authEnabled,
+			secret: authEnabled ? randomBytes(24).toString('hex') : null,
 			active: data.active ?? true,
 			createdAt: now,
 			updatedAt: now
@@ -46,6 +50,15 @@ export class WebhookGroupRepository implements IWebhookGroupRepository {
 		const updateData: Partial<WebhookGroupEntity> = { updatedAt: new Date().toISOString() }
 		if (data.description !== undefined) updateData.description = data.description
 		if (data.active !== undefined) updateData.active = data.active
+		if (data.authEnabled !== undefined) {
+			updateData.authEnabled = data.authEnabled
+			if (data.authEnabled) {
+				const current = await this.repo.findOneBy({ id })
+				if (current && !current.secret) {
+					updateData.secret = randomBytes(24).toString('hex')
+				}
+			}
+		}
 		await this.repo.update(id, updateData)
 		return this.mapGroup(await this.repo.findOneByOrFail({ id }))
 	}
@@ -59,6 +72,8 @@ export class WebhookGroupRepository implements IWebhookGroupRepository {
 			id: e.id,
 			name: e.name,
 			description: e.description,
+			authEnabled: e.authEnabled,
+			secret: e.secret,
 			active: e.active,
 			createdAt: e.createdAt,
 			updatedAt: e.updatedAt

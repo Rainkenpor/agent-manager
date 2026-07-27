@@ -23,6 +23,8 @@ interface WebhookGroup {
   id: string
   name: string
   description?: string | null
+  authEnabled: boolean
+  secret?: string | null
   active: boolean
 }
 
@@ -100,18 +102,23 @@ const showGroupModal = ref(false)
 const editingGroup = ref<WebhookGroup | null>(null)
 const savingGroup = ref(false)
 const groupErrors = ref<string[]>([])
-const groupForm = ref({ name: '', description: '', active: true })
+const groupForm = ref({ name: '', description: '', authEnabled: true, active: true })
 
 function openCreateGroup() {
   editingGroup.value = null
-  groupForm.value = { name: '', description: '', active: true }
+  groupForm.value = { name: '', description: '', authEnabled: true, active: true }
   groupErrors.value = []
   showGroupModal.value = true
 }
 
 function openEditGroup(group: WebhookGroup) {
   editingGroup.value = group
-  groupForm.value = { name: group.name, description: group.description ?? '', active: group.active }
+  groupForm.value = {
+    name: group.name,
+    description: group.description ?? '',
+    authEnabled: group.authEnabled,
+    active: group.active
+  }
   groupErrors.value = []
   showGroupModal.value = true
 }
@@ -126,7 +133,11 @@ async function saveGroup() {
 
   savingGroup.value = true
   try {
-    const payload = { description: groupForm.value.description.trim() || undefined, active: groupForm.value.active }
+    const payload = {
+      description: groupForm.value.description.trim() || undefined,
+      authEnabled: groupForm.value.authEnabled,
+      active: groupForm.value.active
+    }
     if (editingGroup.value) {
       const res = await api.updateWebhookGroup(editingGroup.value.id, payload)
       if (!res.success) throw new Error((res as any).error)
@@ -240,6 +251,8 @@ const toolGroups = computed(() => {
 })
 
 const selectedToolCount = computed(() => Object.values(form.value.tools).filter(Boolean).length)
+
+const selectedGroupHasSecret = computed(() => groups.value.find((g) => g.id === form.value.groupId)?.authEnabled === true)
 
 /** Aplana el inputSchema (JSON Schema) de la tool en los campos del contrato del endpoint. */
 function contractFromSchema(schema: any): ContractField[] {
@@ -558,11 +571,27 @@ onMounted(async () => {
               <span class="text-xs bg-base-200 text-base-content/70 px-2 py-0.5 rounded">
                 {{ (webhooksByGroup[group.id] ?? []).length }} webhook(s)
               </span>
+              <span v-if="group.authEnabled" title="Todos sus webhooks se llaman con el secret del grupo"
+                class="mdi mdi-key-outline text-amber-300 text-sm"></span>
             </div>
             <p v-if="group.description" class="text-sm text-base-content/60 mt-1 ml-9 truncate">{{ group.description }}</p>
             <div class="flex items-center gap-2 text-xs mt-2 ml-9">
               <code class="bg-base-200 px-2 py-1 rounded text-base-content/80 truncate">{{ groupBaseUrl(group) }}/…</code>
               <button @click="copyText(groupBaseUrl(group), 'URL base')" title="Copiar URL base"
+                class="text-base-content/50 hover:text-base-content transition-colors">
+                <span class="mdi mdi-content-copy"></span>
+              </button>
+            </div>
+            <div v-if="group.authEnabled && group.secret" class="flex items-center gap-2 text-xs mt-1.5 ml-9">
+              <span class="text-base-content/50">Secret del grupo:</span>
+              <code class="bg-base-200 px-2 py-1 rounded text-base-content/80 truncate">
+                {{ revealedSecrets.has(group.id) ? group.secret : '••••••••••••••••' }}
+              </code>
+              <button @click="toggleSecret(group.id)" :title="revealedSecrets.has(group.id) ? 'Ocultar' : 'Mostrar'"
+                class="text-base-content/50 hover:text-base-content transition-colors">
+                <span class="mdi" :class="revealedSecrets.has(group.id) ? 'mdi-eye-off-outline' : 'mdi-eye-outline'"></span>
+              </button>
+              <button @click="copyText(group.secret, 'Secret del grupo')" title="Copiar secret"
                 class="text-base-content/50 hover:text-base-content transition-colors">
                 <span class="mdi mdi-content-copy"></span>
               </button>
@@ -615,7 +644,7 @@ onMounted(async () => {
                   <h4 class="font-semibold text-base-content truncate">{{ item.name }}</h4>
                   <span class="text-xs font-mono bg-base-200 text-base-content px-2 py-0.5 rounded">{{ item.method
                     }}</span>
-                  <span v-if="item.authEnabled" title="Requiere X-Webhook-Secret"
+                  <span v-if="group.authEnabled || item.authEnabled" title="Requiere X-Webhook-Secret"
                     class="mdi mdi-lock-outline text-amber-300 text-sm"></span>
                 </div>
                 <p v-if="item.description" class="text-sm text-base-content/60 mb-1 truncate">{{ item.description }}</p>
@@ -651,7 +680,10 @@ onMounted(async () => {
                       <span class="mdi mdi-content-copy"></span>
                     </button>
                   </div>
-                  <div v-if="item.authEnabled && item.secret" class="flex items-center gap-2 text-xs">
+                  <p v-if="group.authEnabled" class="text-xs text-base-content/50">
+                    <span class="mdi mdi-key-outline mr-1"></span>Se llama con el secret del grupo.
+                  </p>
+                  <div v-else-if="item.authEnabled && item.secret" class="flex items-center gap-2 text-xs">
                     <span class="text-base-content/50">Secret:</span>
                     <code class="bg-base-200 px-2 py-1 rounded text-base-content/80 truncate">
                       {{ revealedSecrets.has(item.id) ? item.secret : '••••••••••••••••' }}
@@ -757,6 +789,23 @@ onMounted(async () => {
           <label class="block text-sm text-base-content mb-1">Descripción</label>
           <input v-model="groupForm.description" type="text" placeholder="Endpoints del sistema de pedidos"
             class="w-full bg-base-200 border border-base-content/20 rounded-lg px-3 py-2 text-base-content text-sm focus:outline-none focus:border-indigo-500" />
+        </div>
+
+        <div class="space-y-2">
+          <div class="flex items-center gap-3">
+            <input id="wg-auth" v-model="groupForm.authEnabled" type="checkbox"
+              class="w-4 h-4 rounded accent-indigo-500" />
+            <label for="wg-auth" class="text-sm text-base-content cursor-pointer">Secret del grupo</label>
+          </div>
+          <p v-if="groupForm.authEnabled" class="text-xs text-base-content/50 ml-7">
+            Se genera un único token secreto para todo el grupo: todos sus webhooks se llaman con él en el header
+            <code class="bg-base-200 px-1 rounded">X-Webhook-Secret</code>.
+            <span class="text-amber-300">Reemplaza a los secrets individuales de sus webhooks, que dejan de ser
+              aceptados.</span>
+          </p>
+          <p v-else class="text-xs text-base-content/50 ml-7">
+            Sin secret de grupo, cada webhook se autentica con su propio secret.
+          </p>
         </div>
 
         <div class="flex items-center gap-3">
@@ -993,14 +1042,22 @@ onMounted(async () => {
 
         <!-- Toggles -->
         <div class="space-y-2">
-          <div class="flex items-center gap-3">
-            <input id="wh-auth" v-model="form.authEnabled" type="checkbox" class="w-4 h-4 rounded accent-indigo-500" />
-            <label for="wh-auth" class="text-sm text-base-content cursor-pointer">Requiere autenticación</label>
-          </div>
-          <p v-if="form.authEnabled" class="text-xs text-base-content/50 ml-7">
-            Se generará un token secreto; el llamador deberá enviarlo en el header
-            <code class="bg-base-200 px-1 rounded">X-Webhook-Secret</code>.
+          <p v-if="selectedGroupHasSecret" class="text-xs text-base-content/60">
+            <span class="mdi mdi-key-outline mr-1 text-amber-300"></span>
+            El grupo <code class="bg-base-200 px-1 rounded">{{ groups.find(g => g.id === form.groupId)?.name }}</code>
+            tiene secret propio: este webhook se llama con el secret del grupo.
           </p>
+          <template v-else>
+            <div class="flex items-center gap-3">
+              <input id="wh-auth" v-model="form.authEnabled" type="checkbox"
+                class="w-4 h-4 rounded accent-indigo-500" />
+              <label for="wh-auth" class="text-sm text-base-content cursor-pointer">Requiere autenticación</label>
+            </div>
+            <p v-if="form.authEnabled" class="text-xs text-base-content/50 ml-7">
+              Se generará un token secreto; el llamador deberá enviarlo en el header
+              <code class="bg-base-200 px-1 rounded">X-Webhook-Secret</code>.
+            </p>
+          </template>
           <div class="flex items-center gap-3">
             <input id="wh-active" v-model="form.active" type="checkbox" class="w-4 h-4 rounded accent-indigo-500" />
             <label for="wh-active" class="text-sm text-base-content cursor-pointer">Activo</label>

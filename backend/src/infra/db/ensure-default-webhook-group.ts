@@ -22,6 +22,9 @@ export async function ensureDefaultWebhookGroup(): Promise<void> {
 				id: randomUUID(),
 				name: DEFAULT_WEBHOOK_GROUP,
 				description: 'Grupo asignado automáticamente a los webhooks creados antes de existir los grupos',
+				// Sin secret de grupo: los webhooks migrados siguen respondiendo con su propio secret.
+				authEnabled: false,
+				secret: null,
 				active: true,
 				createdAt: now,
 				updatedAt: now
