@@ -268,7 +268,9 @@ export function registerWebhookRoutes(): void {
  * Página de referencia Scalar. El bundle standalone se sirve desde CDN; se soportan las dos
  * formas de arranque porque la API del bundle cambió entre versiones mayores.
  */
-function scalarPage(groupName: string, specUrl: string): string {
+function scalarPage(groupName: string): string {
+	const specUrl = `/api/${groupName}/openapi.json`
+	const serverPath = `/api/${groupName}`
 	return `<!doctype html>
 <html>
 	<head>
@@ -280,23 +282,19 @@ function scalarPage(groupName: string, specUrl: string): string {
 		<div id="app"></div>
 		<script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
 		<script>
-			const config = { url: ${JSON.stringify(specUrl)} }
+			// El origen se resuelve en el navegador: el proxy inverso no informa el protocolo real
+			// y cualquier URL absoluta armada en el servidor terminaría en http (mixed content).
+			const origin = window.location.origin
+			const config = {
+				url: origin + ${JSON.stringify(specUrl)},
+				baseServerURL: origin,
+				servers: [{ url: origin + ${JSON.stringify(serverPath)} }]
+			}
 			if (window.Scalar?.createApiReference) window.Scalar.createApiReference('#app', config)
 			else window.Scalar?.createScalarReferences?.(document.getElementById('app'), config)
 		</script>
 	</body>
 </html>`
-}
-
-/**
- * Origen público de la petición según lo que informe el proxy inverso. Devuelve cadena vacía
- * cuando el proxy no manda el protocolo: asumir `http` produciría mixed content en un sitio HTTPS,
- * así que en ese caso se prefiere una URL relativa.
- */
-function requestOrigin(req: any): string {
-	const forwardedProto = (req.headers['x-forwarded-proto'] as string)?.split(',')[0]?.trim()
-	const proto = forwardedProto || (req.secure ? 'https' : '')
-	return proto ? `${proto}://${req.get('host')}` : ''
 }
 
 /**
@@ -313,8 +311,8 @@ export function registerWebhookTriggerRoutes(): void {
 		path: '/api/:group/openapi.json',
 		inputSchema: z.object({ group: z.string() }).shape,
 		requiresAuth: false,
-		handler: async ({ input, context: { req, res } }) => {
-			const result = await openApiUseCase.execute(input.group, requestOrigin(req))
+		handler: async ({ input, context: { res } }) => {
+			const result = await openApiUseCase.execute(input.group)
 			if (!result.success) {
 				res.status(404).json({ error: result.error })
 				return null
@@ -331,15 +329,14 @@ export function registerWebhookTriggerRoutes(): void {
 		path: '/api/:group',
 		inputSchema: z.object({ group: z.string() }).shape,
 		requiresAuth: false,
-		handler: async ({ input, context: { req, res } }) => {
-			const result = await openApiUseCase.execute(input.group, requestOrigin(req))
+		handler: async ({ input, context: { res } }) => {
+			const result = await openApiUseCase.execute(input.group)
 			if (!result.success) {
 				res.status(404).json({ error: result.error })
 				return null
 			}
 			res.setHeader('Content-Type', 'text/html; charset=utf-8')
-			// URL relativa: el navegador la resuelve con el protocolo y host de la propia página.
-			res.send(scalarPage(input.group, `/api/${input.group}/openapi.json`))
+			res.send(scalarPage(input.group))
 			return null
 		}
 	})

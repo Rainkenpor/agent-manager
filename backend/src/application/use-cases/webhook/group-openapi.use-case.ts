@@ -15,11 +15,11 @@ export interface WebhookGroupOpenApiResult {
 
 export class WebhookGroupOpenApiUseCase {
 	/**
-	 * `origin` queda vacío cuando el proxy inverso no informa el protocolo: en ese caso el
-	 * `server` del documento es relativo, para que el visor lo resuelva contra el origen de la
-	 * página y no se rompa por mixed content.
+	 * El `server` del documento es siempre relativo: el proxy inverso no informa el protocolo real
+	 * (manda `x-forwarded-proto: http` sobre un sitio HTTPS), así que cualquier URL absoluta armada
+	 * aquí terminaría bloqueada por mixed content. El visor lo resuelve contra el origen de la página.
 	 */
-	async execute(groupName: string, origin: string): Promise<WebhookGroupOpenApiResult> {
+	async execute(groupName: string): Promise<WebhookGroupOpenApiResult> {
 		const group = await container.webhookGroupRepository.findByName(groupName)
 		if (!group?.active) return { success: false, error: `Grupo "${groupName}" no encontrado` }
 
@@ -31,7 +31,7 @@ export class WebhookGroupOpenApiUseCase {
 			paths[path] = { ...(paths[path] ?? {}), [webhook.method.toLowerCase()]: this.operation(group, webhook) }
 		}
 
-		const serverUrl = `${origin}/api/${group.name}`
+		const serverUrl = `/api/${group.name}`
 
 		return {
 			success: true,
