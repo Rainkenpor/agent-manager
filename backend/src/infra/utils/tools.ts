@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import nodePath from 'node:path'
 import { registry } from '@applicationService/registry.service.js'
-import type { IAgentServiceExecute, ToolCallbacks } from '@domain/entities/agent.entity.js'
+import type { DelegatableAgent, IAgentServiceExecute, ToolCallbacks } from '@domain/entities/agent.entity.js'
 import type { NextFunction, Request, Response } from 'express'
 import { type ZodRawShape, z } from 'zod'
 import { agentLogger } from '../service/logger.service.js'
@@ -165,11 +165,57 @@ async function callRegisteredTool(toolName: string, params: Record<string, unkno
 	}
 }
 
+export const DELEGATION_TOOL_PREFIX = 'agent_'
+
+const MAX_DESCRIBED_TOOLS = 40
+
+/**
+ * El router elige a quién delegar sólo con lo que lee en la descripción de la tool, así que
+ * además del perfil del agente se listan sus capacidades reales.
+ */
+function describeAgent(agent: DelegatableAgent): string {
+	const lines = [`Agente de plataforma: ${agent.name}.${agent.description ? ` ${agent.description}` : ''}`]
+
+	const tools = agent.tools ?? []
+	if (tools.length > 0) {
+		lines.push('Capacidades:')
+		for (const tool of tools.slice(0, MAX_DESCRIBED_TOOLS)) {
+			lines.push(`- ${tool.name}${tool.description ? `: ${tool.description.slice(0, 160)}` : ''}`)
+		}
+		if (tools.length > MAX_DESCRIBED_TOOLS) lines.push(`- …y ${tools.length - MAX_DESCRIBED_TOOLS} capacidades más`)
+	}
+
+	return lines.join('\n')
+}
+
+/** Tools de delegación: un `agent_<slug>` por cada agente que el usuario tiene permitido */
+function buildDelegationTools(agents: DelegatableAgent[]): Tool[] {
+	return agents.map((agent) => ({
+		type: 'function' as const,
+		function: {
+			name: `${DELEGATION_TOOL_PREFIX}${agent.slug}`,
+			description: describeAgent(agent),
+			parameters: {
+				type: 'object',
+				properties: {
+					instruction: {
+						type: 'string',
+						description:
+							'Instrucción autocontenida para el agente. Debe incluir todo el contexto necesario: el agente no ve la conversación.'
+					}
+				},
+				required: ['instruction']
+			}
+		}
+	}))
+}
+
 /** Tool definitions for function-calling */
 export function buildToolDefinitions(
 	mcpExternal?: typeof mcpExternalManager,
 	allowedTools?: Set<string>,
-	toolsCallbacks?: ToolCallbacks
+	toolsCallbacks?: ToolCallbacks,
+	delegatableAgents?: DelegatableAgent[]
 ): Tool[] {
 	const mcpRoutes = registry.getRoutes().filter((r) => r.useBy?.includes('mcp'))
 
@@ -230,18 +276,59 @@ export function buildToolDefinitions(
 
 	const externalMcpTools: Tool[] = mcpExternal ? (mcpExternal.getTools() as Tool[]) : []
 
+	// La autorización de los agentes delegables ya se resolvió por rol al construir la lista,
+	// por eso no pasan por el filtro de allowedTools.
+	const delegationTools = buildDelegationTools(delegatableAgents ?? [])
+
 	if (allowedTools && allowedTools.size > 0) {
 		const filterBaseTools = baseTools.filter((t) => allowedTools.has(t.function.name))
 		const filteredMcp = mcpTools.filter((t) => allowedTools.has(`agent-manager_${t.function.name}`))
 		const filteredExternal = externalMcpTools.filter((t) => allowedTools.has(t.function.name))
-		return [...filterBaseTools, ...filteredMcp, ...filteredExternal]
+		return [...delegationTools, ...filterBaseTools, ...filteredMcp, ...filteredExternal]
 	}
 
-	if (!allowedTools || allowedTools.size === 0) {
-		return []
+	return delegationTools
+}
+
+/**
+ * Delega la instrucción en otro agente de plataforma y devuelve su respuesta como resultado de tool.
+ * Las acciones internas del subagente se reportan al chat etiquetadas con su agentId.
+ */
+async function delegateToAgent(
+	agent: DelegatableAgent,
+	instruction: string,
+	callId: string,
+	originalParams: IAgentServiceExecute
+): Promise<string> {
+	const { MCPAgentService } = await import('../service/mcp-agent.service.js')
+	const parent = originalParams.toolsCallbacks
+
+	await parent?.onAgentStart?.({ callId, id: agent.id, slug: agent.slug, name: agent.name, instruction })
+
+	const nestedCallbacks: ToolCallbacks | undefined = parent && {
+		...parent,
+		onToolCall: (toolName, toolArgs, meta) => parent.onToolCall(toolName, toolArgs, { ...meta, agentId: agent.id })
 	}
 
-	return [...baseTools, ...mcpTools, ...externalMcpTools]
+	const chunks: string[] = []
+	try {
+		for await (const chunk of MCPAgentService.asyncCall(agent, {
+			instruction,
+			toolsCallbacks: nestedCallbacks,
+			userId: originalParams.userId,
+			signal: originalParams.signal,
+			auditSourceType: 'chat'
+		})) {
+			// Los marcadores de tool (<<id::name>>) son ruido para el agente que delega
+			if (!chunk.startsWith('<<')) chunks.push(chunk)
+		}
+	} catch (err) {
+		await parent?.onAgentEnd?.(callId, false)
+		return `Error del agente '${agent.slug}': ${err instanceof Error ? err.message : String(err)}`
+	}
+
+	await parent?.onAgentEnd?.(callId, true)
+	return chunks.join('').trim()
 }
 
 /** Execute a single tool call and return a string result */
@@ -249,51 +336,73 @@ export async function executeToolCall(
 	newAgentService: () => any,
 	toolName: string,
 	args: Record<string, unknown>,
+	originalParams: IAgentServiceExecute,
+	callId?: string
+): Promise<string> {
+	const resolvedCallId = callId ?? `${toolName}-${Date.now()}`
+
+	if (toolName.startsWith(DELEGATION_TOOL_PREFIX) && originalParams.delegatableAgents?.length) {
+		const slug = toolName.slice(DELEGATION_TOOL_PREFIX.length)
+		const agent = originalParams.delegatableAgents.find((a) => a.slug === slug)
+		if (!agent) return `Agente no disponible: ${slug}`
+		return await delegateToAgent(agent, String(args.instruction ?? ''), resolvedCallId, originalParams)
+	}
+
+	try {
+		originalParams.toolsCallbacks?.onToolCall(toolName, args, { callId: resolvedCallId }) // Notificar a callbacks de herramienta invocada, si existe
+		const result = await runTool(newAgentService, toolName, args, originalParams)
+		await originalParams.toolsCallbacks?.onToolResult?.(resolvedCallId, true)
+		return result
+	} catch (err) {
+		await originalParams.toolsCallbacks?.onToolResult?.(resolvedCallId, false)
+		return `Error in tool '${toolName}': ${err instanceof Error ? err.message : String(err)}`
+	}
+}
+
+async function runTool(
+	newAgentService: () => any,
+	toolName: string,
+	args: Record<string, unknown>,
 	originalParams: IAgentServiceExecute
 ): Promise<string> {
-	try {
-		originalParams.toolsCallbacks?.onToolCall(toolName, args) // Notificar a callbacks de herramienta invocada, si existe
-		switch (toolName) {
-			case 'spawn_subagent': {
-				const subType = args.agent_type as string
-				agentLogger.info(`[InternalAgent] Spawning sub-agent: ${subType}`)
-				const newAgentFactory = newAgentService()
-				if (typeof newAgentFactory !== 'function') {
-					return `Error: spawn_subagent requires a newAgentService factory bound via .bind()`
-				}
-				const subService = newAgentFactory()
-				const subResult = await subService.executeAgent({
-					agentType: subType as IAgentServiceExecute['agentSlug'],
-					query: args.query as string,
-					artifacts: args.artifacts as { name: string; content: string }[] | undefined
-				})
-				return `Sub-agent '${subType}' completed.\n${typeof subResult === 'string' ? subResult : ''}`
+	switch (toolName) {
+		case 'spawn_subagent': {
+			const subType = args.agent_type as string
+			agentLogger.info(`[InternalAgent] Spawning sub-agent: ${subType}`)
+			const newAgentFactory = newAgentService()
+			if (typeof newAgentFactory !== 'function') {
+				return `Error: spawn_subagent requires a newAgentService factory bound via .bind()`
 			}
-			default:
-				// Primero intenta herramientas externas MCP, luego las registradas en el registry. Las herramientas externas tienen prioridad si hay nombres coincidentes, asumiendo que son más específicas para el contexto de agentes.
-				if (mcpExternalManager?.isMcpTool(toolName)) {
-					const onToolImage = originalParams.toolsCallbacks?.onToolImage
-					const parsed = parseMcpToolId(toolName)
-					const onImage = onToolImage
-						? (image: { mimeType: string; data: string }) => {
-								void onToolImage({
-									serverName: parsed?.serverName ?? '',
-									serverId: parsed ? mcpExternalManager.getServerDbId(parsed.serverName) : undefined,
-									toolName: parsed?.toolName ?? toolName,
-									args,
-									mimeType: image.mimeType,
-									data: image.data
-								})
-							}
-						: undefined
-					const data = await mcpExternalManager.callTool(toolName, args, originalParams.userId, onImage)
-					return data
-				}
-
-				// Si no es una herramienta externa, intenta llamar a una herramienta registrada en el registry de la aplicación. Esto permite que las herramientas definidas en el código sean accesibles para los agentes.
-				return await callRegisteredTool(toolName, args, originalParams.userId)
+			const subService = newAgentFactory()
+			const subResult = await subService.executeAgent({
+				agentType: subType as IAgentServiceExecute['agentSlug'],
+				query: args.query as string,
+				artifacts: args.artifacts as { name: string; content: string }[] | undefined
+			})
+			return `Sub-agent '${subType}' completed.\n${typeof subResult === 'string' ? subResult : ''}`
 		}
-	} catch (err) {
-		return `Error in tool '${toolName}': ${err instanceof Error ? err.message : String(err)}`
+		default:
+			// Primero intenta herramientas externas MCP, luego las registradas en el registry. Las herramientas externas tienen prioridad si hay nombres coincidentes, asumiendo que son más específicas para el contexto de agentes.
+			if (mcpExternalManager?.isMcpTool(toolName)) {
+				const onToolImage = originalParams.toolsCallbacks?.onToolImage
+				const parsed = parseMcpToolId(toolName)
+				const onImage = onToolImage
+					? (image: { mimeType: string; data: string }) => {
+							void onToolImage({
+								serverName: parsed?.serverName ?? '',
+								serverId: parsed ? mcpExternalManager.getServerDbId(parsed.serverName) : undefined,
+								toolName: parsed?.toolName ?? toolName,
+								args,
+								mimeType: image.mimeType,
+								data: image.data
+							})
+						}
+					: undefined
+				const data = await mcpExternalManager.callTool(toolName, args, originalParams.userId, onImage)
+				return data
+			}
+
+			// Si no es una herramienta externa, intenta llamar a una herramienta registrada en el registry de la aplicación. Esto permite que las herramientas definidas en el código sean accesibles para los agentes.
+			return await callRegisteredTool(toolName, args, originalParams.userId)
 	}
 }

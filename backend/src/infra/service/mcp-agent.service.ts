@@ -1,8 +1,8 @@
-import type { GovernanceData, IAgentServiceExecute, ToolCallbacks } from '@domain/entities/agent.entity.js'
+import { registry } from '@application/services/registry.service'
+import type { DelegatableAgent, GovernanceData, IAgentServiceExecute, ToolCallbacks } from '@domain/entities/agent.entity.js'
 import { systemPromptChat } from '../../const'
 import { AgentService } from './agent.service'
 import { agentLogger } from './logger.service.js'
-import { registry } from '@application/services/registry.service'
 
 export class MCPAgentService {
 	static async call(
@@ -66,6 +66,7 @@ export class MCPAgentService {
 			userId?: string
 			signal?: AbortSignal
 			auditSourceType?: 'chat' | 'agent' | 'tool'
+			delegatableAgents?: DelegatableAgent[]
 		}
 	): AsyncGenerator<any> {
 		try {
@@ -96,6 +97,7 @@ export class MCPAgentService {
 				agentSlug: agentEntity.data.slug,
 				query: args.instruction,
 				allowedTools,
+				delegatableAgents: args.delegatableAgents,
 				history: args.history || [],
 				userId: args.userId,
 				signal: args.signal,

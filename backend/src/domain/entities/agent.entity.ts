@@ -27,8 +27,31 @@ export interface ToolImageInfo {
 	data: string
 }
 
+export interface ToolCallMeta {
+	callId?: string
+	agentId?: string
+}
+
+export interface DelegatableAgentTool {
+	name: string
+	description: string
+}
+
+/** Agente al que el router puede delegar, expuesto al LLM como tool `agent_<slug>` */
+export interface DelegatableAgent {
+	id: string
+	name: string
+	slug: string
+	description: string | null
+	/** Capacidades del agente — el router las necesita para elegir a quién delegar */
+	tools?: DelegatableAgentTool[]
+}
+
 export interface ToolCallbacks {
-	onToolCall: (toolName: string, args: any) => Promise<void>
+	onToolCall: (toolName: string, args: any, meta?: ToolCallMeta) => Promise<void>
+	onToolResult?: (callId: string, ok: boolean) => Promise<void>
+	onAgentStart?: (info: { callId: string; id: string; slug: string; name: string; instruction: string }) => Promise<void>
+	onAgentEnd?: (callId: string, ok: boolean) => Promise<void>
 	onToolImage?: (info: ToolImageInfo) => Promise<void>
 	credentialCallbacks: {
 		getCredentials: (mcpServerId: string) => Promise<Record<string, string>>
@@ -51,6 +74,7 @@ export interface IAgentServiceExecute {
 	query: string
 	history?: Array<{ role: 'user' | 'assistant'; content: string }>
 	allowedTools?: Set<string> // Lista de herramientas permitidas para este agente
+	delegatableAgents?: DelegatableAgent[] // Agentes a los que se puede delegar como tool `agent_<slug>`
 	maxOutputTokens?: number // Límite de tokens de salida (max_tokens) para la llamada al LLM
 	artifacts?: { name: string; content: string }[]
 	stream?: boolean // Indica si la respuesta debe ser en formato stream

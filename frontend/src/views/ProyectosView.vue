@@ -38,7 +38,7 @@ async function load() {
 }
 
 function openCreate() {
-	form.value = { name: '', description: '', clarifyProjectId: '', status: 'active' }
+	form.value = { name: '', description: '', status: 'active' }
 	showModal.value = true
 }
 
@@ -81,7 +81,7 @@ onMounted(load)
 </script>
 
 <template>
-  <PageLayout title="Proyectos" description="Gestiona proyectos, sus servicios, gobernanza e historias de usuario">
+  <PageLayout title="Proyectos" description="Gestiona proyectos, su configuración y su información en JSON">
     <template #actions>
       <button v-if="canManage" class="btn btn-primary btn-sm" @click="openCreate">
         <i class="mdi mdi-plus" /> Nuevo proyecto
@@ -110,8 +110,7 @@ onMounted(load)
         </div>
         <p class="text-sm text-base-content/60 mt-1 line-clamp-2">{{ p.description || 'Sin descripción' }}</p>
         <div class="flex flex-wrap gap-2 mt-3 text-xs text-base-content/50">
-          <span v-if="p.programmingLanguage"><i class="mdi mdi-code-tags" /> {{ p.programmingLanguage }}</span>
-          <span v-if="p.clarifyProjectId"><i class="mdi mdi-link-variant" /> Clarify</span>
+          <span><i class="mdi mdi-clipboard-text-outline" /> {{ (p.data?.historiasUsuario?.length ?? 0) }} historia(s)</span>
         </div>
       </button>
     </div>
@@ -125,10 +124,6 @@ onMounted(load)
         <div>
           <label class="text-sm text-base-content/70">Descripción</label>
           <textarea v-model="form.description" class="textarea textarea-bordered w-full" rows="2" />
-        </div>
-        <div>
-          <label class="text-sm text-base-content/70">ID de proyecto en Clarify (opcional)</label>
-          <input v-model="form.clarifyProjectId" class="input input-bordered w-full" placeholder="Ej. PRJ-123" />
         </div>
       </div>
       <template #footer>
@@ -144,7 +139,7 @@ onMounted(load)
     <ConfirmDialog
       v-if="deleting"
       title="Eliminar proyecto"
-      :message="`¿Eliminar el proyecto '${deleting.name}'? Se eliminarán sus servicios e historias de usuario.`"
+      :message="`¿Eliminar el proyecto '${deleting.name}'? Se eliminará también su información en JSON.`"
       :loading="deleteLoading"
       @confirm="doDelete"
       @cancel="deleting = null"

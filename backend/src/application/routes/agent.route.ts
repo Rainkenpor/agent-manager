@@ -1,5 +1,6 @@
 import { listAvailableAgentTools } from '@applicationService/agent-tools.service.js'
 import { registry } from '@applicationService/registry.service.js'
+import { listChatAgentsForUser } from '@applicationService/user-agents.service.js'
 import { z } from 'zod'
 import { container } from '../container.js'
 
@@ -74,39 +75,7 @@ export function registerAgentRoutes(): void {
 		requiredPermission: { resource: 'agents', action: 'read' },
 		handler: async ({ context: { req } }) => {
 			const userId = (req.user as any)?.id as string
-			const userRoles = await container.userRepository.getRoles(userId)
-			// Collect all agents assigned to the user's roles that are useByChat
-			const seen = new Set<string>()
-			const result: Array<{ id: string; name: string; slug: string; description: string | null }> = []
-			if (userRoles.length === 0) {
-				// No roles — return all active useByChat agents
-				const all = await container.listAgentsUseCase.execute()
-				if (!all.success) return { success: true as const, data: [] }
-				const agentList = (all.data ?? []).filter((a: any) => a.isActive && a.useByChat)
-				return {
-					success: true as const,
-					data: agentList.map((a: any) => ({ id: a.id, name: a.name, slug: a.slug, description: a.description ?? null }))
-				}
-			}
-			for (const role of userRoles) {
-				const roleAgents = await container.mcpServerRepository.getAgentsByRole(role.id)
-				for (const agent of roleAgents) {
-					if (!seen.has(agent.id)) {
-						seen.add(agent.id)
-						result.push({ id: agent.id, name: agent.name, slug: agent.slug, description: null })
-					}
-				}
-			}
-			// Filter to only active useByChat agents — fetch full agent to check flags
-			const filtered: typeof result = []
-			for (const a of result) {
-				const full = await container.getAgentUseCase.execute(a.id)
-				if (!full.success) continue
-				if (full.data.isActive) {
-					filtered.push({ id: a.id, name: a.name, slug: a.slug, description: full.data.description ?? null })
-				}
-			}
-			return { success: true as const, data: filtered }
+			return { success: true as const, data: await listChatAgentsForUser(userId) }
 		}
 	})
 

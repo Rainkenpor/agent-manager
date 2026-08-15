@@ -51,11 +51,8 @@ import { mcpExternalManager } from '@infra/service/mcp-external.js'
 import { TraceabilityAgentTriggerService } from '@infra/service/traceability-agent-trigger.service.js'
 import { WebhookExecutorService } from '@infra/service/webhook-executor.service.js'
 import {
-	AddComentarioUseCase,
 	AddParticipanteUseCase,
-	AddServicioUseCase,
 	AppendMessageImagesUseCase,
-	ApplyRepoFilesUseCase,
 	AssignPermissionUseCase,
 	AssignRoleUseCase,
 	AssignStageUserUseCase,
@@ -71,9 +68,9 @@ import {
 	CreateEventListenerUseCase,
 	CreateGovernanceSuggestionUseCase,
 	CreateGovernanceUseCase,
-	CreateHistoriaUseCase,
 	CreateIntegrationConversationUseCase,
 	CreateLinkUseCase,
+	CreateProyectoDataUseCase,
 	CreateProyectoUseCase,
 	CreatePublicConversationUseCase,
 	// Skill Use Cases
@@ -91,13 +88,12 @@ import {
 	DeleteEventListenerUseCase,
 	DeleteGovernanceSuggestionUseCase,
 	DeleteGovernanceUseCase,
-	DeleteHistoriaUseCase,
 	DeleteLinkUseCase,
 	DeleteMcpCredentialUseCase,
 	// Preset Q&A Use Cases
 	DeletePresetQnaUseCase,
+	DeleteProyectoDataUseCase,
 	DeleteProyectoUseCase,
-	DeleteServicioUseCase,
 	DeleteSkillUseCase,
 	DeleteTaskUseCase,
 	DeleteTemplateStageUseCase,
@@ -106,6 +102,7 @@ import {
 	DuplicateAgentUseCase,
 	ExportConfigUseCase,
 	GeneratePresetQnaUseCase,
+	GenerateTitleUseCase,
 	GetAgentUseCase,
 	GetCodexUsageUseCase,
 	GetConversationUseCase,
@@ -114,7 +111,6 @@ import {
 	GetEventListenerUseCase,
 	GetGovernanceSuggestionUseCase,
 	GetGovernanceUseCase,
-	GetHistoriaUseCase,
 	GetLinksByStageUseCase,
 	// MCP Credential Use Cases
 	GetMcpCredentialsUseCase,
@@ -137,18 +133,15 @@ import {
 	// Agent Group Use Cases
 	ListAgentGroupsUseCase,
 	ListAgentsUseCase,
-	ListComentariosUseCase,
 	ListConversationsUseCase,
 	ListEventListenersUseCase,
 	ListGovernanceSuggestionsUseCase,
 	ListGovernanceUseCase,
-	ListHistoriasUseCase,
 	ListMisProyectosUseCase,
 	ListMyTraceabilityInvitationsUseCase,
 	ListParticipantesUseCase,
 	ListPresetQnaUseCase,
 	ListProyectosUseCase,
-	ListServiciosUseCase,
 	ListSkillsUseCase,
 	// Traceability Use Cases
 	ListTemplatesUseCase,
@@ -159,9 +152,12 @@ import {
 	OpenOrCreateChatForTraceabilityUseCase,
 	OpenParticipanteChatUseCase,
 	PublicChatAnswerUseCase,
+	ReadProyectoDataUseCase,
 	RefreshPresetQnaUseCase,
 	RemoveParticipanteUseCase,
 	RemoveTraceabilityShareUseCase,
+	ReplaceProyectoDataSectionUseCase,
+	ReplaceProyectoDataUseCase,
 	ShareTraceabilityUseCase,
 	StreamAgentLogsUseCase,
 	StreamAiAssistUseCase,
@@ -174,17 +170,14 @@ import {
 	UpdateDocumentUseCase,
 	UpdateEventListenerUseCase,
 	UpdateGovernanceUseCase,
-	UpdateHistoriaStatusUseCase,
-	UpdateHistoriaUseCase,
+	UpdateProyectoDataUseCase,
 	UpdateProyectoUseCase,
-	UpdateServicioUseCase,
 	UpdateSkillUseCase,
 	UpdateTaskUseCase,
 	UpdateTemplateStageUseCase,
 	UpdateTemplateUseCase,
 	UpdateTraceabilityUseCase,
-	UpsertMcpCredentialUseCase,
-	VerifyRepoFilesUseCase
+	UpsertMcpCredentialUseCase
 } from './use-cases/index.js'
 import { GetSkillsAllowedForUserUseCase } from './use-cases/skill/get-skills-allowed-user.js'
 
@@ -244,6 +237,7 @@ export class Container {
 	private _createConversationUseCase?: CreateConversationUseCase
 	private _createPublicConversationUseCase?: CreatePublicConversationUseCase
 	private _listConversationsUseCase?: ListConversationsUseCase
+	private _generateTitleUseCase?: GenerateTitleUseCase
 	private _getConversationUseCase?: GetConversationUseCase
 	private _deleteConversationUseCase?: DeleteConversationUseCase
 	private _streamMessageUseCase?: StreamMessageUseCase
@@ -281,21 +275,13 @@ export class Container {
 	private _createProyectoUseCase?: CreateProyectoUseCase
 	private _updateProyectoUseCase?: UpdateProyectoUseCase
 	private _deleteProyectoUseCase?: DeleteProyectoUseCase
-	private _listServiciosUseCase?: ListServiciosUseCase
-	private _addServicioUseCase?: AddServicioUseCase
-	private _updateServicioUseCase?: UpdateServicioUseCase
-	private _deleteServicioUseCase?: DeleteServicioUseCase
-	private _listHistoriasUseCase?: ListHistoriasUseCase
-	private _getHistoriaUseCase?: GetHistoriaUseCase
-	private _createHistoriaUseCase?: CreateHistoriaUseCase
-	private _updateHistoriaUseCase?: UpdateHistoriaUseCase
-	private _updateHistoriaStatusUseCase?: UpdateHistoriaStatusUseCase
-	private _deleteHistoriaUseCase?: DeleteHistoriaUseCase
-	private _listComentariosUseCase?: ListComentariosUseCase
-	private _addComentarioUseCase?: AddComentarioUseCase
 	private _getProyectoContextUseCase?: GetProyectoContextUseCase
-	private _verifyRepoFilesUseCase?: VerifyRepoFilesUseCase
-	private _applyRepoFilesUseCase?: ApplyRepoFilesUseCase
+	private _readProyectoDataUseCase?: ReadProyectoDataUseCase
+	private _createProyectoDataUseCase?: CreateProyectoDataUseCase
+	private _updateProyectoDataUseCase?: UpdateProyectoDataUseCase
+	private _deleteProyectoDataUseCase?: DeleteProyectoDataUseCase
+	private _replaceProyectoDataUseCase?: ReplaceProyectoDataUseCase
+	private _replaceProyectoDataSectionUseCase?: ReplaceProyectoDataSectionUseCase
 	private _getOrCreateProyectoChatUseCase?: GetOrCreateProyectoChatUseCase
 	private _listParticipantesUseCase?: ListParticipantesUseCase
 	private _addParticipanteUseCase?: AddParticipanteUseCase
@@ -448,6 +434,10 @@ export class Container {
 		return this._chatRepository
 	}
 
+	get agentRepository(): IAgentRepository {
+		return this._agentRepository
+	}
+
 	// ==========================================
 	// AUTH & USER USE CASES
 	// ==========================================
@@ -586,6 +576,13 @@ export class Container {
 		return this._listConversationsUseCase
 	}
 
+	get generateTitleUseCase(): GenerateTitleUseCase {
+		if (!this._generateTitleUseCase) {
+			this._generateTitleUseCase = new GenerateTitleUseCase(this._chatRepository)
+		}
+		return this._generateTitleUseCase
+	}
+
 	get getConversationUseCase(): GetConversationUseCase {
 		if (!this._getConversationUseCase) {
 			this._getConversationUseCase = new GetConversationUseCase(this._chatRepository)
@@ -606,7 +603,8 @@ export class Container {
 				this._chatRepository,
 				this._agentRepository,
 				this._mcpUserCredentialRepository,
-				this.mcpServerRepository
+				this.mcpServerRepository,
+				this.generateTitleUseCase
 			)
 		}
 		return this._streamMessageUseCase
@@ -1166,79 +1164,40 @@ export class Container {
 		return this._deleteProyectoUseCase
 	}
 
-	get listServiciosUseCase(): ListServiciosUseCase {
-		if (!this._listServiciosUseCase) this._listServiciosUseCase = new ListServiciosUseCase(this._proyectoRepository)
-		return this._listServiciosUseCase
-	}
-
-	get addServicioUseCase(): AddServicioUseCase {
-		if (!this._addServicioUseCase) this._addServicioUseCase = new AddServicioUseCase(this._proyectoRepository)
-		return this._addServicioUseCase
-	}
-
-	get updateServicioUseCase(): UpdateServicioUseCase {
-		if (!this._updateServicioUseCase) this._updateServicioUseCase = new UpdateServicioUseCase(this._proyectoRepository)
-		return this._updateServicioUseCase
-	}
-
-	get deleteServicioUseCase(): DeleteServicioUseCase {
-		if (!this._deleteServicioUseCase) this._deleteServicioUseCase = new DeleteServicioUseCase(this._proyectoRepository)
-		return this._deleteServicioUseCase
-	}
-
-	get listHistoriasUseCase(): ListHistoriasUseCase {
-		if (!this._listHistoriasUseCase) this._listHistoriasUseCase = new ListHistoriasUseCase(this._proyectoRepository)
-		return this._listHistoriasUseCase
-	}
-
-	get getHistoriaUseCase(): GetHistoriaUseCase {
-		if (!this._getHistoriaUseCase) this._getHistoriaUseCase = new GetHistoriaUseCase(this._proyectoRepository)
-		return this._getHistoriaUseCase
-	}
-
-	get createHistoriaUseCase(): CreateHistoriaUseCase {
-		if (!this._createHistoriaUseCase) this._createHistoriaUseCase = new CreateHistoriaUseCase(this._proyectoRepository)
-		return this._createHistoriaUseCase
-	}
-
-	get updateHistoriaUseCase(): UpdateHistoriaUseCase {
-		if (!this._updateHistoriaUseCase) this._updateHistoriaUseCase = new UpdateHistoriaUseCase(this._proyectoRepository)
-		return this._updateHistoriaUseCase
-	}
-
-	get updateHistoriaStatusUseCase(): UpdateHistoriaStatusUseCase {
-		if (!this._updateHistoriaStatusUseCase) this._updateHistoriaStatusUseCase = new UpdateHistoriaStatusUseCase(this._proyectoRepository)
-		return this._updateHistoriaStatusUseCase
-	}
-
-	get deleteHistoriaUseCase(): DeleteHistoriaUseCase {
-		if (!this._deleteHistoriaUseCase) this._deleteHistoriaUseCase = new DeleteHistoriaUseCase(this._proyectoRepository)
-		return this._deleteHistoriaUseCase
-	}
-
-	get listComentariosUseCase(): ListComentariosUseCase {
-		if (!this._listComentariosUseCase) this._listComentariosUseCase = new ListComentariosUseCase(this._proyectoRepository)
-		return this._listComentariosUseCase
-	}
-
-	get addComentarioUseCase(): AddComentarioUseCase {
-		if (!this._addComentarioUseCase) this._addComentarioUseCase = new AddComentarioUseCase(this._proyectoRepository)
-		return this._addComentarioUseCase
-	}
-
 	get getProyectoContextUseCase(): GetProyectoContextUseCase {
 		if (!this._getProyectoContextUseCase) this._getProyectoContextUseCase = new GetProyectoContextUseCase(this._proyectoRepository)
 		return this._getProyectoContextUseCase
 	}
 
-	get verifyRepoFilesUseCase(): VerifyRepoFilesUseCase {
-		if (!this._verifyRepoFilesUseCase) this._verifyRepoFilesUseCase = new VerifyRepoFilesUseCase(this._proyectoRepository)
-		return this._verifyRepoFilesUseCase
+	get readProyectoDataUseCase(): ReadProyectoDataUseCase {
+		if (!this._readProyectoDataUseCase) this._readProyectoDataUseCase = new ReadProyectoDataUseCase(this._proyectoRepository)
+		return this._readProyectoDataUseCase
 	}
 
-	get applyRepoFilesUseCase(): ApplyRepoFilesUseCase {
-		if (!this._applyRepoFilesUseCase) this._applyRepoFilesUseCase = new ApplyRepoFilesUseCase(this._proyectoRepository)
-		return this._applyRepoFilesUseCase
+	get createProyectoDataUseCase(): CreateProyectoDataUseCase {
+		if (!this._createProyectoDataUseCase) this._createProyectoDataUseCase = new CreateProyectoDataUseCase(this._proyectoRepository)
+		return this._createProyectoDataUseCase
+	}
+
+	get updateProyectoDataUseCase(): UpdateProyectoDataUseCase {
+		if (!this._updateProyectoDataUseCase) this._updateProyectoDataUseCase = new UpdateProyectoDataUseCase(this._proyectoRepository)
+		return this._updateProyectoDataUseCase
+	}
+
+	get deleteProyectoDataUseCase(): DeleteProyectoDataUseCase {
+		if (!this._deleteProyectoDataUseCase) this._deleteProyectoDataUseCase = new DeleteProyectoDataUseCase(this._proyectoRepository)
+		return this._deleteProyectoDataUseCase
+	}
+
+	get replaceProyectoDataUseCase(): ReplaceProyectoDataUseCase {
+		if (!this._replaceProyectoDataUseCase) this._replaceProyectoDataUseCase = new ReplaceProyectoDataUseCase(this._proyectoRepository)
+		return this._replaceProyectoDataUseCase
+	}
+
+	get replaceProyectoDataSectionUseCase(): ReplaceProyectoDataSectionUseCase {
+		if (!this._replaceProyectoDataSectionUseCase)
+			this._replaceProyectoDataSectionUseCase = new ReplaceProyectoDataSectionUseCase(this._proyectoRepository)
+		return this._replaceProyectoDataSectionUseCase
 	}
 
 	get getOrCreateProyectoChatUseCase(): GetOrCreateProyectoChatUseCase {

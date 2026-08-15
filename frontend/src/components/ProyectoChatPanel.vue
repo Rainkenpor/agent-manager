@@ -84,7 +84,7 @@ async function send() {
 				await scrollToBottom()
 			}
 		}
-		// Las herramientas de HU persisten cambios: refrescar el proyecto.
+		// Las herramientas del JSON persisten cambios: refrescar el proyecto.
 		if (toolUsed) emit('changed')
 	} catch (e: any) {
 		if (e.name !== 'AbortError') {
@@ -113,7 +113,7 @@ onMounted(init)
     <template v-else>
       <div ref="scroller" class="flex-1 overflow-y-auto p-4 space-y-4">
         <p v-if="messages.length === 0" class="text-center text-base-content/50 text-sm py-10">
-          Pídele al agente crear, editar o eliminar historias de usuario del proyecto.
+          Pídele al agente consultar o modificar la información del proyecto: historias de usuario, arquitectura, proyectos relacionados o metadatos.
         </p>
         <div v-for="(m, i) in messages" :key="i" class="flex" :class="m.role === 'user' ? 'justify-end' : 'justify-start'">
           <div

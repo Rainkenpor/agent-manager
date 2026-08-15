@@ -1,10 +1,12 @@
 import { registry } from '@applicationService/registry.service.js'
 import { z } from 'zod'
+import { envs } from '../../envs.js'
 import { container } from '../container.js'
 
+// Sin título ni agente: el título se autogenera tras el primer intercambio y el enrutador decide el agente.
 const createConversationSchema = z.object({
-	title: z.string().min(1),
-	agentId: z.string().min(1)
+	title: z.string().optional(),
+	agentId: z.string().min(1).optional()
 })
 
 const sendMessageSchema = z.object({
@@ -82,9 +84,17 @@ export function registerChatRoutes(): void {
 		requiredPermission: { resource: 'chat', action: 'create' },
 		handler: async ({ input, context: { req } }) => {
 			const userId = (req as any).user?.id
+
+			let agentId = input.agentId
+			if (!agentId) {
+				const router = await container.agentRepository.findBySlug(envs.ROUTER_AGENT_SLUG)
+				if (!router) return { success: false as const, error: 'Agente enrutador no disponible' }
+				agentId = router.id
+			}
+
 			return await container.createConversationUseCase.execute({
-				title: input.title,
-				agentId: input.agentId,
+				title: input.title ?? '',
+				agentId,
 				userId
 			})
 		}

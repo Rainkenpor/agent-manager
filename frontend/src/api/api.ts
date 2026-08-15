@@ -152,7 +152,8 @@ export const oauthAuthorize = (data: {
 // Chat
 export const getConversations = () => request<{ success: boolean; data: any[] }>('/chat/conversations')
 export const getConversation = (id: string) => request<{ success: boolean; data: any }>(`/chat/conversations/${id}`)
-export const createConversation = (data: { title: string; agentId: string }) =>
+// Sin título ni agente: el nombre se autogenera tras el primer intercambio y el enrutador elige el agente.
+export const createConversation = (data: { title?: string; agentId?: string } = {}) =>
 	request<{ success: boolean; data: any }>('/chat/conversations', { method: 'POST', body: JSON.stringify(data) })
 export const deleteConversation = (id: string) => request<{ success: boolean }>(`/chat/conversations/${id}`, { method: 'DELETE' })
 export const deleteMessagesFrom = (conversationId: string, messageId: string) =>
@@ -719,51 +720,25 @@ export interface ProyectoStakeholder {
 	role: string
 	email?: string
 }
+export interface ProyectoData {
+	historiasUsuario: unknown[]
+	arquitectura: Record<string, unknown>
+	proyectosRelacionados: unknown[]
+	metadatos: Record<string, unknown>
+	[section: string]: unknown
+}
+export const PROYECTO_DATA_SECTIONS = ['historiasUsuario', 'arquitectura', 'proyectosRelacionados', 'metadatos'] as const
 export interface Proyecto {
 	id: string
 	name: string
 	description: string | null
-	clarifyProjectId: string | null
-	architecture: string | null
-	programmingLanguage: string | null
+	data: ProyectoData
 	stakeholders: ProyectoStakeholder[]
 	status: string
 	chatAgentId: string | null
 	createdBy: string | null
 	createdAt: string
 	updatedAt: string
-}
-export interface ProyectoServicio {
-	id: string
-	proyectoId: string
-	name: string
-	repoUrl: string
-	repoRef: string | null
-	governanceId: string | null
-	governanceType: string | null
-	agentMdStatus: 'ok' | 'outdated' | 'missing' | 'unknown'
-	claudeMdStatus: 'ok' | 'outdated' | 'missing' | 'unknown'
-	lastCheckedAt: string | null
-	createdAt: string
-	updatedAt: string
-}
-export interface HistoriaUsuario {
-	id: string
-	proyectoId: string
-	code: string | null
-	title: string
-	description: string | null
-	additionalInfo: Record<string, unknown> | null
-	status: 'pending' | 'in_progress' | 'done' | 'blocked'
-	createdAt: string
-	updatedAt: string
-}
-export interface HistoriaComentario {
-	id: string
-	historiaId: string
-	author: string
-	content: string
-	createdAt: string
 }
 
 type Res<T> = { success: boolean; data?: T; error?: string }
@@ -776,36 +751,13 @@ export const updateProyecto = (id: string, data: Partial<Proyecto>) =>
 	request<Res<Proyecto>>(`/proyectos/${id}`, { method: 'PUT', body: JSON.stringify({ id, ...data }) })
 export const deleteProyecto = (id: string) => request<Res<{ id: string }>>(`/proyectos/${id}`, { method: 'DELETE' })
 
-export const getServicios = (proyectoId: string) => request<Res<ProyectoServicio[]>>(`/proyectos/${proyectoId}/servicios`)
-export const createServicio = (proyectoId: string, data: Partial<ProyectoServicio>) =>
-	request<Res<ProyectoServicio>>(`/proyectos/${proyectoId}/servicios`, { method: 'POST', body: JSON.stringify({ proyectoId, ...data }) })
-export const updateServicio = (id: string, data: Partial<ProyectoServicio>) =>
-	request<Res<ProyectoServicio>>(`/proyectos/servicios/${id}`, { method: 'PUT', body: JSON.stringify({ id, ...data }) })
-export const deleteServicio = (id: string) => request<Res<{ id: string }>>(`/proyectos/servicios/${id}`, { method: 'DELETE' })
-
-export const getHistorias = (proyectoId: string) => request<Res<HistoriaUsuario[]>>(`/proyectos/${proyectoId}/historias`)
-export const createHistoria = (proyectoId: string, data: Partial<HistoriaUsuario>) =>
-	request<Res<HistoriaUsuario>>(`/proyectos/${proyectoId}/historias`, { method: 'POST', body: JSON.stringify({ proyectoId, ...data }) })
-export const updateHistoria = (id: string, data: Partial<HistoriaUsuario>) =>
-	request<Res<HistoriaUsuario>>(`/proyectos/historias/${id}`, { method: 'PUT', body: JSON.stringify({ id, ...data }) })
-export const deleteHistoria = (id: string) => request<Res<{ id: string }>>(`/proyectos/historias/${id}`, { method: 'DELETE' })
-
-export const getComentarios = (historiaId: string) => request<Res<HistoriaComentario[]>>(`/proyectos/historias/${historiaId}/comentarios`)
-export const addComentario = (historiaId: string, content: string) =>
-	request<Res<HistoriaComentario>>(`/proyectos/historias/${historiaId}/comentarios`, {
-		method: 'POST',
-		body: JSON.stringify({ id: historiaId, content })
-	})
-
-export const verifyRepos = (proyectoId: string, servicioId?: string) =>
-	request<Res<ProyectoServicio[]>>(`/proyectos/${proyectoId}/verify-repos`, {
-		method: 'POST',
-		body: JSON.stringify({ id: proyectoId, servicioId })
-	})
-export const applyRepos = (proyectoId: string, servicioId?: string) =>
-	request<Res<ProyectoServicio[]>>(`/proyectos/${proyectoId}/apply-repos`, {
-		method: 'POST',
-		body: JSON.stringify({ id: proyectoId, servicioId })
+export const getProyectoData = (id: string) => request<Res<ProyectoData>>(`/proyectos/${id}/data`)
+export const updateProyectoData = (id: string, data: ProyectoData) =>
+	request<Res<ProyectoData>>(`/proyectos/${id}/data`, { method: 'PUT', body: JSON.stringify({ id, data }) })
+export const updateProyectoDataSection = (id: string, section: string, value: unknown) =>
+	request<Res<{ proyectoId: string; section: string; value: unknown }>>(`/proyectos/${id}/data/${section}`, {
+		method: 'PUT',
+		body: JSON.stringify({ id, section, value })
 	})
 
 export const getOrCreateProyectoChat = (proyectoId: string) =>

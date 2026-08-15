@@ -1,19 +1,21 @@
-import type { ToolImageInfo } from '@domain/entities/agent.entity.js'
+import { listChatAgentsForUser } from '@applicationService/user-agents.service.js'
+import type { DelegatableAgent, ToolCallMeta, ToolImageInfo } from '@domain/entities/agent.entity.js'
+import { emptyProyectoData } from '@domain/entities/proyecto.entity.js'
 import type { IMcpServerRepository, IMcpUserCredentialRepository } from '@domain/repositories'
 import type { IAgentRepository } from '@domain/repositories/agent.repository.js'
 import type { IChatRepository } from '@domain/repositories/chat.repository.js'
 import { AppDataSource } from '@infra/db/database.js'
 import {
 	ConversationEntity,
-	HistoriaUsuarioEntity,
 	ProyectoEntity,
-	ProyectoServicioEntity,
 	TraceabilityEntity,
 	TraceabilityParticipantEntity,
 	TraceabilityParticipantStageChatEntity
 } from '@infra/db/entities.js'
 import { MCPAgentService } from '@infra/service/mcp-agent.service'
 import { stripImageMarker } from '@infra/utils/image-marker.js'
+import { envs } from '../../../envs.js'
+import type { GenerateTitleUseCase } from './generate-title.use-case.js'
 
 /** Si la conversación pertenece a un proyecto, arma un resumen para inyectarlo al contexto del agente. */
 async function resolveProyectoContext(conversationId: string): Promise<string | null> {
@@ -23,22 +25,16 @@ async function resolveProyectoContext(conversationId: string): Promise<string | 
 	const proyecto = await AppDataSource.getRepository(ProyectoEntity).findOneBy({ id: conv.proyectoId })
 	if (!proyecto) return null
 
-	const [servicios, historias] = await Promise.all([
-		AppDataSource.getRepository(ProyectoServicioEntity).find({ where: { proyectoId: proyecto.id }, order: { name: 'ASC' } }),
-		AppDataSource.getRepository(HistoriaUsuarioEntity).find({ where: { proyectoId: proyecto.id }, order: { createdAt: 'ASC' } })
-	])
+	const data = { ...emptyProyectoData(), ...(proyecto.data ?? {}) }
 
 	const lines = [
-		'Contexto del proyecto (usa proyectoId al crear/editar historias de usuario, y el id de cada HU al comentar o cambiar estado):',
+		'Contexto del proyecto. Usa este proyectoId con read_proyecto_data para consultar el JSON de información y con create/update/delete_proyecto_data para modificar segmentos (secciones: historiasUsuario, arquitectura, proyectosRelacionados, metadatos).',
 		`ProyectoId: ${proyecto.id}`,
-		`Nombre: ${proyecto.name}`
+		`Nombre: ${proyecto.name}`,
+		`Estado: ${proyecto.status}`
 	]
-	if (proyecto.architecture) lines.push(`Arquitectura: ${proyecto.architecture}`)
-	if (proyecto.programmingLanguage) lines.push(`Lenguaje: ${proyecto.programmingLanguage}`)
-	if (servicios.length) lines.push(`Servicios: ${servicios.map((s) => `${s.name} (gobernanza: ${s.governanceType ?? 'n/d'})`).join(', ')}`)
-	lines.push('Historias de usuario:')
-	if (historias.length === 0) lines.push('  (sin historias registradas)')
-	for (const h of historias) lines.push(`  - [${h.id}] (${h.status}) ${h.title}`)
+	if (proyecto.description) lines.push(`Descripción: ${proyecto.description}`)
+	lines.push('Información (JSON):', JSON.stringify(data, null, 2))
 
 	return lines.join('\n')
 }
@@ -59,9 +55,34 @@ async function resolveTraceabilityContext(conversationId: string): Promise<{ tra
 	return { traceabilityId: null, stageId: null }
 }
 
+/** Catálogo de agentes disponibles para el router, con sus capacidades, inyectado al system prompt. */
+function describeDelegatableAgents(agents: DelegatableAgent[]): string {
+	if (agents.length === 0) {
+		return 'Agentes disponibles: ninguno. No puedes delegar; explícale al usuario que su rol no tiene agentes asignados.'
+	}
+
+	const lines = ['Agentes disponibles para delegar (llámalos con la herramienta indicada):']
+	for (const agent of agents) {
+		lines.push(`\n### ${agent.name} — herramienta \`agent_${agent.slug}\``)
+		if (agent.description) lines.push(agent.description)
+		const tools = agent.tools ?? []
+		if (tools.length > 0) {
+			lines.push('Capacidades:')
+			for (const tool of tools) {
+				lines.push(`- ${tool.name}${tool.description ? `: ${tool.description}` : ''}`)
+			}
+		}
+	}
+	return lines.join('\n')
+}
+
 export type SseEvent =
 	| { type: 'chunk'; content: string }
-	| { type: 'tool'; name: string }
+	| { type: 'tool'; name: string; callId?: string; agentId?: string }
+	| { type: 'tool_result'; callId: string; status: 'completed' | 'failed' }
+	| { type: 'agent_start'; callId: string; agentId: string; slug: string; name: string; instruction: string }
+	| { type: 'agent_end'; callId: string; status: 'completed' | 'failed' }
+	| { type: 'title'; title: string }
 	| { type: 'tool_image'; serverId?: string; toolName: string; args: Record<string, unknown>; mimeType: string; data: string }
 	| {
 			type: 'done'
@@ -75,7 +96,8 @@ export class StreamMessageUseCase {
 		private readonly chatRepository: IChatRepository,
 		private readonly agentRepository: IAgentRepository,
 		private readonly credentialRepository: IMcpUserCredentialRepository,
-		private readonly mcpServerRepository: IMcpServerRepository
+		private readonly mcpServerRepository: IMcpServerRepository,
+		private readonly generateTitleUseCase: GenerateTitleUseCase
 	) {}
 
 	async execute(
@@ -108,8 +130,24 @@ export class StreamMessageUseCase {
 
 		const userId = conv.userId
 		const toolsCallbacks = {
-			onToolCall: async (toolName: string, args: any) => {
-				sendEvent({ type: 'tool', name: toolName })
+			onToolCall: async (toolName: string, args: any, meta?: ToolCallMeta) => {
+				sendEvent({ type: 'tool', name: toolName, callId: meta?.callId, agentId: meta?.agentId })
+			},
+			onToolResult: async (callId: string, ok: boolean) => {
+				sendEvent({ type: 'tool_result', callId, status: ok ? 'completed' : 'failed' })
+			},
+			onAgentStart: async (info: { callId: string; id: string; slug: string; name: string; instruction: string }) => {
+				sendEvent({
+					type: 'agent_start',
+					callId: info.callId,
+					agentId: info.id,
+					slug: info.slug,
+					name: info.name,
+					instruction: info.instruction
+				})
+			},
+			onAgentEnd: async (callId: string, ok: boolean) => {
+				sendEvent({ type: 'agent_end', callId, status: ok ? 'completed' : 'failed' })
 			},
 			onToolImage: async (info: ToolImageInfo) => {
 				sendEvent({
@@ -173,6 +211,13 @@ export class StreamMessageUseCase {
 		if (proyectoContext) contextLines.push(proyectoContext)
 		if (extraContext) contextLines.push(extraContext)
 
+		// El agente enrutador no resuelve: delega en los agentes que los roles del usuario le permiten.
+		// Los chats creados antes del enrutador conservan su agente y se ejecutan sin delegación.
+		const delegatableAgents: DelegatableAgent[] | undefined =
+			agent.slug === envs.ROUTER_AGENT_SLUG ? await listChatAgentsForUser(userId) : undefined
+
+		if (delegatableAgents) contextLines.push(describeDelegatableAgents(delegatableAgents))
+
 		for await (const chunk of MCPAgentService.asyncCall(
 			{ ...agent, addContext: `\n\n${contextLines.join('\n')}` },
 			{
@@ -181,7 +226,8 @@ export class StreamMessageUseCase {
 				toolsCallbacks,
 				userId,
 				signal,
-				auditSourceType: 'chat'
+				auditSourceType: 'chat',
+				delegatableAgents
 			}
 		)) {
 			allChunks.push(chunk)
@@ -201,6 +247,11 @@ export class StreamMessageUseCase {
 
 		const assistantMsg = await this.chatRepository.addMessage(conversationId, 'assistant', cleanText)
 		await this.chatRepository.touchConversation(conversationId)
+
+		if (!conv.title && history.length === 0) {
+			const title = await this.generateTitleUseCase.execute(conversationId, userContent, cleanText, userId)
+			if (title) sendEvent({ type: 'title', title })
+		}
 
 		sendEvent({ type: 'done', message: assistantMsg, responseTime: Date.now() - startTime })
 	}

@@ -4,52 +4,37 @@ export interface Stakeholder {
 	email?: string
 }
 
-export type RepoFileStatus = 'ok' | 'outdated' | 'missing' | 'unknown'
+export const PROYECTO_DATA_SECTIONS = ['historiasUsuario', 'arquitectura', 'proyectosRelacionados', 'metadatos'] as const
 
-export type HistoriaStatus = 'pending' | 'in_progress' | 'done' | 'blocked'
+export type ProyectoDataSection = (typeof PROYECTO_DATA_SECTIONS)[number]
 
-export interface ProyectoServicio {
-	id: string
-	proyectoId: string
-	name: string
-	repoUrl: string
-	repoRef: string | null
-	governanceId: string | null
-	governanceType: string | null
-	agentMdStatus: RepoFileStatus
-	claudeMdStatus: RepoFileStatus
-	lastCheckedAt: string | null
-	createdAt: string
-	updatedAt: string
+/** Documento libre del proyecto. Las cuatro secciones están garantizadas; se admiten secciones propias. */
+export interface ProyectoData {
+	historiasUsuario: unknown[]
+	arquitectura: Record<string, unknown>
+	proyectosRelacionados: unknown[]
+	metadatos: Record<string, unknown>
+	[section: string]: unknown
 }
 
-export interface HistoriaComentario {
-	id: string
-	historiaId: string
-	author: string
-	content: string
-	createdAt: string
-}
+export const emptyProyectoData = (): ProyectoData => ({
+	historiasUsuario: [],
+	arquitectura: {},
+	proyectosRelacionados: [],
+	metadatos: {}
+})
 
-export interface HistoriaUsuario {
-	id: string
-	proyectoId: string
-	code: string | null
-	title: string
-	description: string | null
-	additionalInfo: Record<string, unknown> | null
-	status: HistoriaStatus
-	createdAt: string
-	updatedAt: string
+/** Valor vacío por defecto de una sección: arreglo para las de tipo lista, objeto para el resto. */
+export function emptySection(section: string): unknown {
+	const defaults = emptyProyectoData()
+	return section in defaults ? defaults[section] : {}
 }
 
 export interface ProyectoRecord {
 	id: string
 	name: string
 	description: string | null
-	clarifyProjectId: string | null
-	architecture: string | null
-	programmingLanguage: string | null
+	data: ProyectoData
 	stakeholders: Stakeholder[]
 	status: string
 	chatAgentId: string | null
@@ -61,9 +46,7 @@ export interface ProyectoRecord {
 export interface CreateProyectoDTO {
 	name: string
 	description?: string | null
-	clarifyProjectId?: string | null
-	architecture?: string | null
-	programmingLanguage?: string | null
+	data?: ProyectoData
 	stakeholders?: Stakeholder[]
 	status?: string
 	chatAgentId?: string | null
@@ -74,57 +57,10 @@ export interface UpdateProyectoDTO {
 	id: string
 	name?: string
 	description?: string | null
-	clarifyProjectId?: string | null
-	architecture?: string | null
-	programmingLanguage?: string | null
+	data?: ProyectoData
 	stakeholders?: Stakeholder[]
 	status?: string
 	chatAgentId?: string | null
-}
-
-export interface CreateServicioDTO {
-	proyectoId: string
-	name: string
-	repoUrl: string
-	repoRef?: string | null
-	governanceId?: string | null
-	governanceType?: string | null
-}
-
-export interface UpdateServicioDTO {
-	id: string
-	name?: string
-	repoUrl?: string
-	repoRef?: string | null
-	governanceId?: string | null
-	governanceType?: string | null
-	agentMdStatus?: RepoFileStatus
-	claudeMdStatus?: RepoFileStatus
-	lastCheckedAt?: string | null
-}
-
-export interface CreateHistoriaDTO {
-	proyectoId: string
-	code?: string | null
-	title: string
-	description?: string | null
-	additionalInfo?: Record<string, unknown> | null
-	status?: HistoriaStatus
-}
-
-export interface UpdateHistoriaDTO {
-	id: string
-	code?: string | null
-	title?: string
-	description?: string | null
-	additionalInfo?: Record<string, unknown> | null
-	status?: HistoriaStatus
-}
-
-export interface CreateHistoriaComentarioDTO {
-	historiaId: string
-	author: string
-	content: string
 }
 
 export interface ProyectoParticipante {

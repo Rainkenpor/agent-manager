@@ -41,6 +41,8 @@ async function startServers() {
 	await AppDataSource.initialize()
 	const { ensureDefaultWebhookGroup } = await import('./infra/db/ensure-default-webhook-group.js')
 	await ensureDefaultWebhookGroup()
+	const { ensureRouterAgent } = await import('./infra/db/ensure-router-agent.js')
+	await ensureRouterAgent()
 	console.log('✅ Database initialized')
 	console.log('')
 

@@ -16,6 +16,7 @@ export interface IChatRepository {
 	appendMessageImages(id: string, images: PersistedImage[]): Promise<void>
 	getMessages(conversationId: string): Promise<MessageRecord[]>
 	touchConversation(id: string): Promise<void>
+	updateTitle(id: string, title: string): Promise<void>
 	updateDraft(id: string, draft: string): Promise<void>
 	deleteMessagesFrom(conversationId: string, fromMessageId: string): Promise<void>
 }

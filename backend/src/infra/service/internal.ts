@@ -854,7 +854,13 @@ export class InternalAgentService implements IAgentService {
 
 				agentLogger.info(`[${this.agentType}] → ${toolCall.function.name}(${JSON.stringify(toolArgs).slice(0, 200)})`)
 
-				const result = await executeToolCall(() => new InternalAgentService(), toolCall.function.name, toolArgs, originalParams)
+				const result = await executeToolCall(
+					() => new InternalAgentService(),
+					toolCall.function.name,
+					toolArgs,
+					originalParams,
+					toolCall.callId ?? toolCall.id
+				)
 
 				agentLogger.info(`[${this.agentType}] ← ${result.slice(0, 200).replace(/\n/g, '\\n').replace(/\r/g, '\\r')}`)
 
@@ -928,7 +934,13 @@ export class InternalAgentService implements IAgentService {
 
 				agentLogger.info(`[${this.agentType}] → ${toolCall.function.name}(${JSON.stringify(toolArgs).slice(0, 200)})`)
 
-				const result = await executeToolCall(() => new InternalAgentService(), toolCall.function.name, toolArgs, originalParams)
+				const result = await executeToolCall(
+					() => new InternalAgentService(),
+					toolCall.function.name,
+					toolArgs,
+					originalParams,
+					toolCall.callId ?? toolCall.id
+				)
 
 				agentLogger.info(`[${this.agentType}] ← ${result.slice(0, 200).replace(/\n/g, '\\n').replace(/\r/g, '\\r')}`)
 
@@ -946,7 +958,7 @@ export class InternalAgentService implements IAgentService {
 	// ── Public API ────────────────────────────────────────────────────────────
 
 	async executeAgent(params: IAgentServiceExecute): Promise<unknown> {
-		const { query, agentSlug: agentType, systemPrompt, allowedTools, toolsCallbacks } = params
+		const { query, agentSlug: agentType, systemPrompt, allowedTools, toolsCallbacks, delegatableAgents } = params
 
 		this.agentType = agentType
 
@@ -956,7 +968,7 @@ export class InternalAgentService implements IAgentService {
 
 		const { parsed, config } = await this.resolveProviderConfig()
 
-		const tools = buildToolDefinitions(mcpExternalManager, allowedTools ?? undefined, toolsCallbacks)
+		const tools = buildToolDefinitions(mcpExternalManager, allowedTools ?? undefined, toolsCallbacks, delegatableAgents)
 
 		const messages: MessageParam[] = [
 			{ role: 'system', content: systemPrompt || '' },
@@ -985,7 +997,7 @@ export class InternalAgentService implements IAgentService {
 
 	/** Streaming variant of executeAgent — yields content deltas and tool progress as they arrive */
 	async *executeAgentStream(params: IAgentServiceExecute): AsyncGenerator<string> {
-		const { query, agentSlug: agentType, artifacts, history, systemPrompt, allowedTools, toolsCallbacks } = params
+		const { query, agentSlug: agentType, artifacts, history, systemPrompt, allowedTools, toolsCallbacks, delegatableAgents } = params
 
 		this.agentType = agentType
 
@@ -995,7 +1007,7 @@ export class InternalAgentService implements IAgentService {
 
 		const { parsed, config } = await this.resolveProviderConfig()
 
-		const tools = buildToolDefinitions(mcpExternalManager, allowedTools ?? undefined, toolsCallbacks)
+		const tools = buildToolDefinitions(mcpExternalManager, allowedTools ?? undefined, toolsCallbacks, delegatableAgents)
 
 		let userContent = query
 		if (artifacts?.length) {

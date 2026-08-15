@@ -26,8 +26,8 @@ const AGENT_MODEL = process.env.AGENT_MODEL || ''
 const AGENT_BASE_URL = process.env.AGENT_BASE_URL || null
 const AGENT_KEY = process.env.AGENT_KEY || ''
 
-// Nombre del servidor MCP externo con capacidad de escritura a repos (git_read_file / git_write)
-const GIT_MCP_SERVER_NAME = process.env.GIT_MCP_SERVER_NAME || 'git'
+// Agente enrutador central del chat
+const ROUTER_AGENT_SLUG = process.env.ROUTER_AGENT_SLUG || 'router'
 
 // Azure AD OAuth
 const AZURE_CLIENT_ID = process.env.AZURE_CLIENT_ID || ''
@@ -68,7 +68,7 @@ export const envs = {
 	AGENT_KEY,
 	AGENT_MODEL,
 
-	GIT_MCP_SERVER_NAME,
+	ROUTER_AGENT_SLUG,
 
 	AZURE_CLIENT_ID,
 	AZURE_CLIENT_SECRET,

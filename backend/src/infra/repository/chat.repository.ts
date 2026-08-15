@@ -101,6 +101,10 @@ export class ChatRepository implements IChatRepository {
 		await this.convRepo.update(id, { updatedAt: new Date().toISOString() })
 	}
 
+	async updateTitle(id: string, title: string): Promise<void> {
+		await this.convRepo.update(id, { title })
+	}
+
 	async updateDraft(id: string, draft: string): Promise<void> {
 		await this.convRepo.update(id, { draft })
 	}
