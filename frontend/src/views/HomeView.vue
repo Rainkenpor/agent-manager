@@ -97,7 +97,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <PageLayout title="Dashboard">
+  <PageLayout>
     <!-- <template #actions>
       <button @click="fetchReleaseNotes"
         class="flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg bg-base-200 hover:bg-base-100 text-base-content transition-colors">
@@ -173,7 +173,7 @@ onMounted(() => {
               </span>
               <span v-if="note.date" class="text-xs text-base-content/40 font-mono shrink-0 hidden sm:inline">{{
                 note.date
-              }}</span>
+                }}</span>
               <i class="mdi mdi-play-circle text-lg shrink-0 text-base-content/25 transition-all duration-300
                   group-hover:text-indigo-400 group-hover:scale-110" />
             </button>

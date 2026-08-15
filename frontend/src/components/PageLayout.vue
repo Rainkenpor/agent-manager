@@ -11,7 +11,8 @@ defineProps<{
   <div class="flex flex-col h-full min-h-0">
 
     <!-- Header -->
-    <div class="flex items-center justify-between px-4 py-5 border-b border-base-300 shrink-0">
+    <div v-if="title || description || $slots.header"
+      class="flex items-center justify-between px-4 py-5 border-b border-base-300 shrink-0">
       <slot name="header">
         <div>
           <h1 v-if="title" class="text-2xl font-bold text-base-content">{{ title }}</h1>
