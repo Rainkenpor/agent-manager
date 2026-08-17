@@ -19,8 +19,8 @@
 import fs from 'node:fs'
 import nodePath from 'node:path'
 import type { IAgentService, IAgentServiceExecute } from '@domain/entities/agent.entity.js'
-import type { ProviderConfig } from '@domain/entities/provider-config.entity.js'
-import { isApiPayload } from '@domain/entities/provider-config.entity.js'
+import type { ProviderConfig, SamplingMode, SamplingParams } from '@domain/entities/provider-config.entity.js'
+import { isApiPayload, resolveSamplingParams } from '@domain/entities/provider-config.entity.js'
 import { container } from '../../application/container.js'
 import { envs } from '../../envs.js'
 import { buildToolDefinitions, executeToolCall } from '../utils/tools.js'
@@ -42,6 +42,8 @@ interface RequestConfig {
 	model: string
 	provider: 'copilot' | 'openai' | 'direct'
 	sessionId?: string
+	/** Parámetros de generación del provider activo. La API de Responses (codex) los ignora. */
+	sampling?: SamplingParams
 }
 
 interface ToolCallAccum {
@@ -259,14 +261,17 @@ export class InternalAgentService implements IAgentService {
 	 * in the database it takes precedence over AGENT_MODEL; otherwise fall back to
 	 * the env-based selection.
 	 */
-	private async resolveProviderConfig(): Promise<{ parsed: ParsedModel; config: RequestConfig }> {
+	private async resolveProviderConfig(mode?: SamplingMode): Promise<{ parsed: ParsedModel; config: RequestConfig }> {
 		const active = await providerAuthService.getActiveProvider()
+		// Los parámetros de generación son del provider activo, no del agente.
+		const sampling = resolveSamplingParams(active?.sampling, mode)
+
 		if (active) {
 			const config = await this.buildConfigFromActiveProvider(active)
-			return { parsed: { provider: config.provider, model: config.model }, config }
+			return { parsed: { provider: config.provider, model: config.model }, config: { ...config, sampling } }
 		}
 		const parsed = this.parseModel(envs.AGENT_MODEL)
-		return { parsed, config: await this.buildRequestConfig(parsed) }
+		return { parsed, config: { ...(await this.buildRequestConfig(parsed)), sampling } }
 	}
 
 	private async buildConfigFromActiveProvider(active: ProviderConfig): Promise<RequestConfig> {
@@ -825,7 +830,7 @@ export class InternalAgentService implements IAgentService {
 
 			const msg = await this.fetchCompletion(config, {
 				model: config.model,
-				temperature: 0.7,
+				...(config.sampling ?? {}),
 				...(originalParams.maxOutputTokens ? { max_tokens: originalParams.maxOutputTokens } : {}),
 				messages,
 				tools,
@@ -895,7 +900,7 @@ export class InternalAgentService implements IAgentService {
 
 			const body = {
 				model: config.model,
-				temperature: 0.2,
+				...(config.sampling ?? {}),
 				...(originalParams.maxOutputTokens ? { max_tokens: originalParams.maxOutputTokens } : {}),
 				messages,
 				tools,
@@ -966,7 +971,7 @@ export class InternalAgentService implements IAgentService {
 		agentLogger.info(`[${this.agentType}] model=${envs.AGENT_MODEL}`)
 		agentLogger.info(`[${this.agentType}] query=${query.slice(0, 120)}`)
 
-		const { parsed, config } = await this.resolveProviderConfig()
+		const { parsed, config } = await this.resolveProviderConfig(params.samplingMode)
 
 		const tools = buildToolDefinitions(mcpExternalManager, allowedTools ?? undefined, toolsCallbacks, delegatableAgents)
 
@@ -1005,7 +1010,7 @@ export class InternalAgentService implements IAgentService {
 		agentLogger.info(`[${this.agentType}] model=${envs.AGENT_MODEL}`)
 		// agentLogger.info(`[${this.agentType}] query=${query.slice(0, 120)}`)
 
-		const { parsed, config } = await this.resolveProviderConfig()
+		const { parsed, config } = await this.resolveProviderConfig(params.samplingMode)
 
 		const tools = buildToolDefinitions(mcpExternalManager, allowedTools ?? undefined, toolsCallbacks, delegatableAgents)
 

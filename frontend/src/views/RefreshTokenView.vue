@@ -39,6 +39,13 @@
           </div>
         </div>
 
+        <p v-if="codex?.isActive"
+          class="mb-3 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/25 text-xs text-amber-600">
+          <i class="mdi mdi-information-outline mr-1" />
+          Codex no admite parámetros de generación (temperature, top_p, top_k…). Para configurarlos, usa un provider por
+          API y márcalo como activo.
+        </p>
+
         <div class="grid sm:grid-cols-3 gap-2 mb-3 text-xs">
           <div><span class="text-base-content/50">Última validación:</span> {{ formatDate(codex?.lastValidatedAt ?? null) }}</div>
           <div><span class="text-base-content/50">Expira:</span> {{ formatDate(codex?.expiresAt ?? null) }}</div>

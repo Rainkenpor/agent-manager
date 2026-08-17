@@ -75,6 +75,7 @@ export interface IAgentServiceExecute {
 	history?: Array<{ role: 'user' | 'assistant'; content: string }>
 	allowedTools?: Set<string> // Lista de herramientas permitidas para este agente
 	delegatableAgents?: DelegatableAgent[] // Agentes a los que se puede delegar como tool `agent_<slug>`
+	samplingMode?: 'thinking' | 'instruct' // Perfil de generación del provider; por defecto el suyo
 	maxOutputTokens?: number // Límite de tokens de salida (max_tokens) para la llamada al LLM
 	artifacts?: { name: string; content: string }[]
 	stream?: boolean // Indica si la respuesta debe ser en formato stream

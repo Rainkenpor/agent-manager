@@ -428,6 +428,18 @@ export interface ProviderConfigSummary {
 	needsRefresh: boolean
 	baseURL: string | null
 	model: string | null
+	sampling: ProviderSampling
+}
+
+export type SamplingMode = 'thinking' | 'instruct'
+
+/** Mapa abierto: cada modelo expone sus propios parámetros (top_k, min_p, repetition_penalty…). */
+export type SamplingParams = Record<string, number | string | boolean>
+
+export interface ProviderSampling {
+	defaultMode: SamplingMode
+	thinking: SamplingParams
+	instruct: SamplingParams
 }
 
 export interface SaveApiProviderPayload {
@@ -436,6 +448,7 @@ export interface SaveApiProviderPayload {
 	baseURL: string
 	apiKey?: string
 	model: string
+	sampling?: Partial<ProviderSampling>
 }
 
 export const listProviders = () => request<{ success: boolean; data: ProviderConfigSummary[] }>('/config/providers')
@@ -444,6 +457,12 @@ export const saveApiProvider = (payload: SaveApiProviderPayload) =>
 	request<{ success: boolean; data: ProviderConfigSummary }>('/config/providers', {
 		method: 'POST',
 		body: JSON.stringify(payload)
+	})
+
+export const updateProviderSampling = (provider: string, sampling: Partial<ProviderSampling>) =>
+	request<{ success: boolean; data: ProviderConfigSummary }>(`/config/providers/${encodeURIComponent(provider)}/sampling`, {
+		method: 'PUT',
+		body: JSON.stringify(sampling)
 	})
 
 export const activateProvider = (provider: string) =>

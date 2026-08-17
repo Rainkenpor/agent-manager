@@ -18,12 +18,29 @@ const providerStartAuthSchema = z.object({
 	returnTo: z.string().url().optional()
 })
 
+// Mapa abierto: cada modelo expone sus propios parámetros de muestreo.
+const samplingParamsSchema = z.record(z.string(), z.union([z.number(), z.string(), z.boolean()]))
+
+const samplingSchema = z.object({
+	defaultMode: z.enum(['thinking', 'instruct']).optional(),
+	thinking: samplingParamsSchema.optional(),
+	instruct: samplingParamsSchema.optional()
+})
+
 const saveApiProviderSchema = z.object({
 	provider: z.string().min(1),
 	label: z.string().min(1),
 	baseURL: z.string().url(),
 	apiKey: z.string().min(1).optional(),
-	model: z.string().min(1)
+	model: z.string().min(1),
+	sampling: samplingSchema.optional()
+})
+
+const updateSamplingSchema = z.object({
+	provider: z.string().min(1),
+	defaultMode: z.enum(['thinking', 'instruct']).optional(),
+	thinking: samplingParamsSchema.optional(),
+	instruct: samplingParamsSchema.optional()
 })
 
 const providerParamSchema = z.object({
@@ -75,6 +92,20 @@ export function registerConfigRoutes(): void {
 		requiredPermission: { resource: 'users', action: 'update' },
 		handler: async ({ input }) => {
 			return { success: true, data: await providerAuthService.saveApiProvider(input as z.infer<typeof saveApiProviderSchema>) }
+		}
+	})
+
+	// Parámetros de generación: viven en el provider, no en cada agente
+	registry.register({
+		useBy: ['server'],
+		method: 'PUT',
+		path: '/api/config/providers/:provider/sampling',
+		inputSchema: updateSamplingSchema.shape,
+		requiresAuth: true,
+		requiredPermission: { resource: 'users', action: 'update' },
+		handler: async ({ input }) => {
+			const { provider, ...sampling } = input as z.infer<typeof updateSamplingSchema>
+			return { success: true, data: await providerAuthService.updateSampling(provider, sampling) }
 		}
 	})
 

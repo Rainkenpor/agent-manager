@@ -463,6 +463,10 @@ export class ProviderConfigEntity {
 	@Column({ type: 'text' })
 	payload!: string
 
+	/** Parámetros de generación (thinking / instruct). JSON; null usa los valores por defecto. */
+	@Column({ type: 'simple-json', nullable: true })
+	sampling!: Record<string, unknown> | null
+
 	@Column({ name: 'expires_at', type: 'text', nullable: true })
 	expiresAt!: string | null
 

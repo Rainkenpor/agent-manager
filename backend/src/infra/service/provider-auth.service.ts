@@ -6,10 +6,11 @@ import type {
 	ApiProviderPayload,
 	ProviderConfig,
 	ProviderName,
+	ProviderSampling,
 	ProviderTokenPayload,
 	ProviderType
 } from '../../domain/entities/provider-config.entity.js'
-import { isApiPayload } from '../../domain/entities/provider-config.entity.js'
+import { isApiPayload, normalizeSampling } from '../../domain/entities/provider-config.entity.js'
 import { envs } from '../../envs.js'
 import { ProviderConfigRepository } from '../repository/provider-config.repository.js'
 
@@ -36,6 +37,7 @@ export interface ProviderConfigSummary {
 	needsRefresh: boolean
 	baseURL: string | null
 	model: string | null
+	sampling: ProviderSampling
 }
 
 export interface SaveApiProviderDTO {
@@ -44,6 +46,7 @@ export interface SaveApiProviderDTO {
 	baseURL: string
 	apiKey?: string
 	model: string
+	sampling?: Partial<ProviderSampling>
 }
 
 function generateVerifier(): string {
@@ -221,8 +224,29 @@ export class ProviderAuthService {
 			updatedAt: record?.updatedAt ?? null,
 			needsRefresh: shouldRefresh(record),
 			baseURL: apiPayload?.baseURL ?? null,
-			model: apiPayload?.model ?? null
+			model: apiPayload?.model ?? null,
+			sampling: normalizeSampling(record?.sampling)
 		}
+	}
+
+	/** Los parámetros de generación viven en el provider; el agente ya no los define. */
+	async updateSampling(provider: ProviderName, sampling: Partial<ProviderSampling>): Promise<ProviderConfigSummary> {
+		const record = await this.repo.findByProvider(provider)
+		if (!record) {
+			throw new Error(`Provider '${provider}' is not configured.`)
+		}
+		await this.repo.upsert({
+			provider,
+			type: record.type,
+			label: record.label,
+			isActive: record.isActive,
+			payload: record.payload,
+			sampling: normalizeSampling({ ...record.sampling, ...sampling }),
+			expiresAt: record.expiresAt,
+			lastValidatedAt: record.lastValidatedAt
+		})
+		this.tokenCache.del(provider)
+		return this.getProviderSummary(provider)
 	}
 
 	async getProviderSummary(provider: ProviderName): Promise<ProviderConfigSummary> {
@@ -255,12 +279,11 @@ export class ProviderAuthService {
 			throw new Error('Provider identifier is required.')
 		}
 
+		const existing = await this.repo.findByProvider(provider)
+
 		// On edit a blank API key keeps the stored one; some providers have no key at all.
 		let apiKey = dto.apiKey?.trim() ?? ''
-		if (!apiKey) {
-			const existing = await this.repo.findByProvider(provider)
-			if (existing && isApiPayload(existing.payload)) apiKey = existing.payload.apiKey ?? ''
-		}
+		if (!apiKey && existing && isApiPayload(existing.payload)) apiKey = existing.payload.apiKey ?? ''
 
 		const payload: ApiProviderPayload = {
 			baseURL: dto.baseURL.trim(),
@@ -274,7 +297,8 @@ export class ProviderAuthService {
 			provider,
 			type: 'api',
 			label: dto.label.trim() || provider,
-			payload
+			payload,
+			sampling: dto.sampling ? normalizeSampling({ ...existing?.sampling, ...dto.sampling }) : (existing?.sampling ?? null)
 		})
 		this.tokenCache.del(provider)
 		return this.getProviderSummary(provider)

@@ -721,8 +721,6 @@ watch(newGroupName, (v) => {
         </span>
         <span class="bg-base-100 text-base-content/40 px-2.5 py-1 rounded-full text-xs font-mono">{{ detailAgent.model
         }}</span>
-        <span class="bg-base-100 text-base-content/40 px-2.5 py-1 rounded-full text-xs">T: {{ detailAgent.temperature
-        }}</span>
         <span v-if="detailAgent.maxOutputTokens"
           class="bg-base-100 text-base-content/40 px-2.5 py-1 rounded-full text-xs">Max tokens: {{
             detailAgent.maxOutputTokens }}</span>

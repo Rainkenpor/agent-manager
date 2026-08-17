@@ -5,9 +5,11 @@ import type {
 	ProviderConfig,
 	ProviderName,
 	ProviderPayload,
+	ProviderSampling,
 	ProviderType,
 	UpsertProviderConfigDTO
 } from '../../domain/entities/provider-config.entity.js'
+import { normalizeSampling } from '../../domain/entities/provider-config.entity.js'
 import type { IProviderConfigRepository } from '../../domain/repositories/provider-config.repository.js'
 import { envs } from '../../envs.js'
 import { decrypt, encrypt } from '../service/crypto.service.js'
@@ -32,6 +34,7 @@ function toDomain(entity: ProviderConfigEntity): ProviderConfig {
 		type: (entity.type as ProviderType) ?? 'codex',
 		isActive: Boolean(entity.isActive),
 		payload,
+		sampling: entity.sampling ? normalizeSampling(entity.sampling as Partial<ProviderSampling>) : null,
 		expiresAt: entity.expiresAt,
 		lastValidatedAt: entity.lastValidatedAt,
 		createdAt: entity.createdAt,
@@ -70,6 +73,7 @@ export class ProviderConfigRepository implements IProviderConfigRepository {
 				...(data.label !== undefined ? { label: data.label } : {}),
 				...(data.type !== undefined ? { type: data.type } : {}),
 				...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
+				...(data.sampling !== undefined ? { sampling: data.sampling as unknown as Record<string, unknown> } : {}),
 				expiresAt: data.expiresAt ?? null,
 				lastValidatedAt: data.lastValidatedAt ?? null,
 				updatedAt: now
@@ -85,6 +89,7 @@ export class ProviderConfigRepository implements IProviderConfigRepository {
 			type: data.type ?? 'codex',
 			isActive: data.isActive ?? false,
 			payload: encryptedPayload,
+			sampling: (data.sampling ?? null) as unknown as Record<string, unknown> | null,
 			expiresAt: data.expiresAt ?? null,
 			lastValidatedAt: data.lastValidatedAt ?? null,
 			createdAt: now,
