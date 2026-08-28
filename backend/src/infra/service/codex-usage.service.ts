@@ -35,7 +35,7 @@ function decodeJwtClaims(token: string): Record<string, any> {
 	}
 }
 
-function extractAccountId(idToken: string, accessToken: string): string {
+export function extractAccountId(idToken: string, accessToken: string): string {
 	const claims = decodeJwtClaims(idToken || accessToken)
 	return claims.chatgpt_account_id || claims['https://api.openai.com/auth']?.chatgpt_account_id || claims.organizations?.[0]?.id || ''
 }

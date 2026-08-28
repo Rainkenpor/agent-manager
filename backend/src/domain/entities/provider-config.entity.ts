@@ -56,6 +56,38 @@ export function resolveSamplingParams(sampling: ProviderSampling | null | undefi
 	return { ...normalized[mode ?? normalized.defaultMode] }
 }
 
+/** Nivel de esfuerzo de razonamiento que un modelo declara soportar. */
+export interface ReasoningEffortOption {
+	effort: string
+	description: string
+}
+
+/** Entrada del catálogo de modelos que publica el backend de Codex. */
+export interface CodexModel {
+	slug: string
+	displayName: string
+	description: string | null
+	defaultEffort: string | null
+	efforts: ReasoningEffortOption[]
+	contextWindow: number | null
+}
+
+/**
+ * Modelo y esfuerzo elegidos para el provider. Vive fuera del payload cifrado porque el refresh de
+ * token reconstruye ese payload desde la respuesta de OAuth y borraría cualquier campo añadido.
+ */
+export interface ProviderModelConfig {
+	model: string
+	reasoningEffort: string | null
+}
+
+export function normalizeModelConfig(raw: Partial<ProviderModelConfig> | null | undefined): ProviderModelConfig | null {
+	const model = typeof raw?.model === 'string' ? raw.model.trim() : ''
+	if (!model) return null
+	const effort = typeof raw?.reasoningEffort === 'string' ? raw.reasoningEffort.trim() : ''
+	return { model, reasoningEffort: effort || null }
+}
+
 export interface ProviderConfig {
 	id: string
 	provider: ProviderName
@@ -64,6 +96,7 @@ export interface ProviderConfig {
 	isActive: boolean
 	payload: ProviderPayload
 	sampling: ProviderSampling | null
+	modelConfig: ProviderModelConfig | null
 	expiresAt: string | null
 	lastValidatedAt: string | null
 	createdAt: string
@@ -77,6 +110,7 @@ export interface UpsertProviderConfigDTO {
 	isActive?: boolean
 	payload: ProviderPayload
 	sampling?: ProviderSampling | null
+	modelConfig?: ProviderModelConfig | null
 	expiresAt?: string | null
 	lastValidatedAt?: string | null
 }

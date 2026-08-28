@@ -44,6 +44,8 @@ interface RequestConfig {
 	sessionId?: string
 	/** Parámetros de generación del provider activo. La API de Responses (codex) los ignora. */
 	sampling?: SamplingParams
+	/** Esfuerzo de razonamiento elegido para el provider. Sólo aplica a la API de Responses (codex). */
+	reasoningEffort?: string
 }
 
 interface ToolCallAccum {
@@ -292,8 +294,11 @@ export class InternalAgentService implements IAgentService {
 			}
 		}
 
-		// codex — reuse the OpenAI Responses (Codex) branch; model comes from AGENT_MODEL
-		return this.buildRequestConfig({ provider: 'openai', model: this.parseModel(envs.AGENT_MODEL).model })
+		// codex — reuse the OpenAI Responses (Codex) branch; el modelo y el esfuerzo elegidos en
+		// Providers mandan sobre AGENT_MODEL, que queda sólo como respaldo.
+		const model = active.modelConfig?.model || this.parseModel(envs.AGENT_MODEL).model
+		const config = await this.buildRequestConfig({ provider: 'openai', model })
+		return { ...config, ...(active.modelConfig?.reasoningEffort ? { reasoningEffort: active.modelConfig.reasoningEffort } : {}) }
 	}
 
 	/**
@@ -367,7 +372,7 @@ export class InternalAgentService implements IAgentService {
 			instructions,
 			include: ['reasoning.encrypted_content'],
 			prompt_cache_key: config.sessionId,
-			reasoning: { effort: 'medium', summary: 'auto' },
+			reasoning: { effort: config.reasoningEffort ?? 'medium', summary: 'auto' },
 			tools: flatTools,
 			tool_choice: 'auto',
 			stream: true
@@ -968,10 +973,11 @@ export class InternalAgentService implements IAgentService {
 		this.agentType = agentType
 
 		agentLogger.info(`[${this.agentType}] ══════ START agent=${agentType} ══════`)
-		agentLogger.info(`[${this.agentType}] model=${envs.AGENT_MODEL}`)
-		agentLogger.info(`[${this.agentType}] query=${query.slice(0, 120)}`)
 
 		const { parsed, config } = await this.resolveProviderConfig(params.samplingMode)
+
+		agentLogger.info(`[${this.agentType}] model=${config.model}${config.reasoningEffort ? ` effort=${config.reasoningEffort}` : ''}`)
+		agentLogger.info(`[${this.agentType}] query=${query.slice(0, 120)}`)
 
 		const tools = buildToolDefinitions(mcpExternalManager, allowedTools ?? undefined, toolsCallbacks, delegatableAgents)
 
@@ -987,7 +993,7 @@ export class InternalAgentService implements IAgentService {
 			void tokenAuditService.record(container.tokenAuditRepository, {
 				userId: params.userId,
 				agentId: params.auditAgentId,
-				llmModel: envs.AGENT_MODEL,
+				llmModel: config.model,
 				sourceType: params.auditSourceType ?? 'agent',
 				source: params.auditAgentName ?? agentType,
 				inputText: `${systemPrompt ?? ''}\n${query}`,
@@ -1007,10 +1013,10 @@ export class InternalAgentService implements IAgentService {
 		this.agentType = agentType
 
 		agentLogger.info(`[${this.agentType}] ══════ START stream agent=${agentType} ══════`)
-		agentLogger.info(`[${this.agentType}] model=${envs.AGENT_MODEL}`)
-		// agentLogger.info(`[${this.agentType}] query=${query.slice(0, 120)}`)
 
 		const { parsed, config } = await this.resolveProviderConfig(params.samplingMode)
+
+		agentLogger.info(`[${this.agentType}] model=${config.model}${config.reasoningEffort ? ` effort=${config.reasoningEffort}` : ''}`)
 
 		const tools = buildToolDefinitions(mcpExternalManager, allowedTools ?? undefined, toolsCallbacks, delegatableAgents)
 
@@ -1036,7 +1042,7 @@ export class InternalAgentService implements IAgentService {
 			void tokenAuditService.record(container.tokenAuditRepository, {
 				userId: params.userId,
 				agentId: params.auditAgentId,
-				llmModel: envs.AGENT_MODEL,
+				llmModel: config.model,
 				sourceType: params.auditSourceType ?? 'chat',
 				source: params.auditAgentName ?? agentType,
 				inputText: `${systemPrompt ?? ''}\n${history?.map((h) => h.content).join('\n') ?? ''}\n${userContent}`,

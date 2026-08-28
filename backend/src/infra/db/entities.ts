@@ -467,6 +467,10 @@ export class ProviderConfigEntity {
 	@Column({ type: 'simple-json', nullable: true })
 	sampling!: Record<string, unknown> | null
 
+	/** Modelo y esfuerzo de razonamiento elegidos. JSON; null cae a AGENT_MODEL. */
+	@Column({ name: 'model_config', type: 'simple-json', nullable: true })
+	modelConfig!: Record<string, unknown> | null
+
 	@Column({ name: 'expires_at', type: 'text', nullable: true })
 	expiresAt!: string | null
 

@@ -52,6 +52,50 @@
           <div><span class="text-base-content/50">Refresh token:</span> {{ codex?.hasRefreshToken ? 'Disponible' : 'No disponible' }}</div>
         </div>
 
+        <!-- Modelo y esfuerzo de razonamiento -->
+        <div v-if="codex?.configured" class="mb-3 pt-3 border-t border-base-300">
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-xs font-semibold text-base-content/70 uppercase tracking-wide">Modelo y razonamiento</p>
+            <button @click="loadModels(true)" :disabled="modelsLoading"
+              class="text-xs text-base-content/60 hover:text-base-content disabled:text-base-content/30">
+              <i class="mdi mdi-reload mr-1" :class="{ 'animate-spin': modelsLoading }"></i>Recargar catálogo
+            </button>
+          </div>
+
+          <p v-if="modelsError" class="mb-2 text-xs text-amber-500">
+            <i class="mdi mdi-alert-outline mr-1"></i>{{ modelsError }}
+          </p>
+
+          <div class="grid sm:grid-cols-2 gap-3">
+            <label class="block">
+              <span class="block text-xs text-base-content/50 mb-1">Modelo</span>
+              <select v-model="selectedModel" :disabled="modelsLoading || !models.length"
+                class="w-full px-3 py-2 rounded-lg bg-base-100 border border-base-300 text-sm disabled:text-base-content/40">
+                <option value="">{{ modelsLoading ? 'Cargando…' : 'Sin seleccionar' }}</option>
+                <option v-for="m in models" :key="m.slug" :value="m.slug">{{ m.displayName }}</option>
+              </select>
+            </label>
+
+            <label class="block">
+              <span class="block text-xs text-base-content/50 mb-1">Esfuerzo de razonamiento</span>
+              <select v-model="selectedEffort" :disabled="!availableEfforts.length"
+                class="w-full px-3 py-2 rounded-lg bg-base-100 border border-base-300 text-sm disabled:text-base-content/40">
+                <option v-for="e in availableEfforts" :key="e.effort" :value="e.effort">{{ e.effort }} — {{ e.description }}</option>
+              </select>
+            </label>
+          </div>
+
+          <p v-if="activeModel?.description" class="mt-2 text-xs text-base-content/50">{{ activeModel.description }}</p>
+          <p v-if="activeModel?.contextWindow" class="mt-1 text-xs text-base-content/40">
+            Ventana de contexto: {{ activeModel.contextWindow.toLocaleString() }} tokens
+          </p>
+
+          <button @click="saveModel" :disabled="busy || !selectedModel || !modelChanged"
+            class="mt-3 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors bg-indigo-600 hover:bg-indigo-500 disabled:bg-base-200 disabled:text-base-content/50">
+            <i class="mdi mdi-content-save-outline mr-1"></i>Guardar modelo
+          </button>
+        </div>
+
         <div class="flex flex-wrap gap-2">
           <button @click="connectOpenAI" :disabled="busy"
             class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors bg-indigo-600 hover:bg-indigo-500 disabled:bg-base-200 disabled:text-base-content/50">
@@ -116,9 +160,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import type { ProviderConfigSummary } from '@/api/api'
+import type { CodexModel, ProviderConfigSummary } from '@/api/api'
 import * as api from '@/api/api'
 import PageLayout from '@/components/PageLayout.vue'
 import ProviderFormModal from '@/components/ProviderFormModal.vue'
@@ -138,6 +182,25 @@ const editing = ref<ProviderConfigSummary | null>(null)
 
 const codex = computed(() => providers.value.find((p) => p.type === 'codex'))
 const apiProviders = computed(() => providers.value.filter((p) => p.type === 'api'))
+
+const models = ref<CodexModel[]>([])
+const modelsLoading = ref(false)
+const modelsError = ref('')
+const selectedModel = ref('')
+const selectedEffort = ref('')
+
+const activeModel = computed(() => models.value.find((m) => m.slug === selectedModel.value) ?? null)
+const availableEfforts = computed(() => activeModel.value?.efforts ?? [])
+const modelChanged = computed(
+	() => selectedModel.value !== (codex.value?.model ?? '') || selectedEffort.value !== (codex.value?.reasoningEffort ?? '')
+)
+
+// Al cambiar de modelo el esfuerzo guardado puede no existir en el nuevo; se cae al que el modelo declara por defecto.
+watch(activeModel, (model) => {
+	if (!model) return
+	if (model.efforts.some((e) => e.effort === selectedEffort.value)) return
+	selectedEffort.value = model.defaultEffort ?? model.efforts[0]?.effort ?? ''
+})
 
 function formatDate(value: string | null) {
 	if (!value) return 'N/D'
@@ -161,10 +224,44 @@ async function loadProviders() {
 	try {
 		const res = await api.listProviders()
 		providers.value = res.data
+		selectedModel.value = codex.value?.model ?? ''
+		selectedEffort.value = codex.value?.reasoningEffort ?? ''
+		if (codex.value?.configured) await loadModels()
 	} catch (err: any) {
 		error.value = err.message
 	} finally {
 		loading.value = false
+	}
+}
+
+async function loadModels(force = false) {
+	if (models.value.length && !force) return
+	modelsLoading.value = true
+	modelsError.value = ''
+	try {
+		const res = await api.listCodexModels()
+		models.value = res.data
+	} catch (err: any) {
+		modelsError.value = `No fue posible cargar el catálogo de modelos: ${err.message}`
+	} finally {
+		modelsLoading.value = false
+	}
+}
+
+async function saveModel() {
+	const provider = codex.value?.provider
+	if (!provider) return
+	busy.value = true
+	error.value = ''
+	message.value = ''
+	try {
+		await api.updateProviderModel(provider, selectedModel.value, selectedEffort.value || null)
+		message.value = `Modelo guardado: ${selectedModel.value}${selectedEffort.value ? ` (esfuerzo ${selectedEffort.value})` : ''}.`
+		await loadProviders()
+	} catch (err: any) {
+		error.value = err.message
+	} finally {
+		busy.value = false
 	}
 }
 

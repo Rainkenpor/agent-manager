@@ -5,12 +5,13 @@ import NodeCache from 'node-cache'
 import type {
 	ApiProviderPayload,
 	ProviderConfig,
+	ProviderModelConfig,
 	ProviderName,
 	ProviderSampling,
 	ProviderTokenPayload,
 	ProviderType
 } from '../../domain/entities/provider-config.entity.js'
-import { isApiPayload, normalizeSampling } from '../../domain/entities/provider-config.entity.js'
+import { isApiPayload, normalizeModelConfig, normalizeSampling } from '../../domain/entities/provider-config.entity.js'
 import { envs } from '../../envs.js'
 import { ProviderConfigRepository } from '../repository/provider-config.repository.js'
 
@@ -37,6 +38,7 @@ export interface ProviderConfigSummary {
 	needsRefresh: boolean
 	baseURL: string | null
 	model: string | null
+	reasoningEffort: string | null
 	sampling: ProviderSampling
 }
 
@@ -224,9 +226,31 @@ export class ProviderAuthService {
 			updatedAt: record?.updatedAt ?? null,
 			needsRefresh: shouldRefresh(record),
 			baseURL: apiPayload?.baseURL ?? null,
-			model: apiPayload?.model ?? null,
+			model: apiPayload?.model ?? record?.modelConfig?.model ?? null,
+			reasoningEffort: record?.modelConfig?.reasoningEffort ?? null,
 			sampling: normalizeSampling(record?.sampling)
 		}
+	}
+
+	/** Modelo y esfuerzo de razonamiento del provider; sustituye a AGENT_MODEL cuando está definido. */
+	async updateModelConfig(provider: ProviderName, modelConfig: Partial<ProviderModelConfig>): Promise<ProviderConfigSummary> {
+		const record = await this.repo.findByProvider(provider)
+		if (!record) {
+			throw new Error(`Provider '${provider}' is not configured.`)
+		}
+		await this.repo.upsert({
+			provider,
+			type: record.type,
+			label: record.label,
+			isActive: record.isActive,
+			payload: record.payload,
+			sampling: record.sampling,
+			modelConfig: normalizeModelConfig({ ...record.modelConfig, ...modelConfig }),
+			expiresAt: record.expiresAt,
+			lastValidatedAt: record.lastValidatedAt
+		})
+		this.tokenCache.del(provider)
+		return this.getProviderSummary(provider)
 	}
 
 	/** Los parámetros de generación viven en el provider; el agente ya no los define. */

@@ -3,13 +3,14 @@ import { ProviderConfigEntity } from '@infra/db/entities.js'
 import { v4 as uuidv4 } from 'uuid'
 import type {
 	ProviderConfig,
+	ProviderModelConfig,
 	ProviderName,
 	ProviderPayload,
 	ProviderSampling,
 	ProviderType,
 	UpsertProviderConfigDTO
 } from '../../domain/entities/provider-config.entity.js'
-import { normalizeSampling } from '../../domain/entities/provider-config.entity.js'
+import { normalizeModelConfig, normalizeSampling } from '../../domain/entities/provider-config.entity.js'
 import type { IProviderConfigRepository } from '../../domain/repositories/provider-config.repository.js'
 import { envs } from '../../envs.js'
 import { decrypt, encrypt } from '../service/crypto.service.js'
@@ -35,6 +36,7 @@ function toDomain(entity: ProviderConfigEntity): ProviderConfig {
 		isActive: Boolean(entity.isActive),
 		payload,
 		sampling: entity.sampling ? normalizeSampling(entity.sampling as Partial<ProviderSampling>) : null,
+		modelConfig: normalizeModelConfig(entity.modelConfig as Partial<ProviderModelConfig> | null),
 		expiresAt: entity.expiresAt,
 		lastValidatedAt: entity.lastValidatedAt,
 		createdAt: entity.createdAt,
@@ -74,6 +76,7 @@ export class ProviderConfigRepository implements IProviderConfigRepository {
 				...(data.type !== undefined ? { type: data.type } : {}),
 				...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
 				...(data.sampling !== undefined ? { sampling: data.sampling as unknown as Record<string, unknown> } : {}),
+				...(data.modelConfig !== undefined ? { modelConfig: data.modelConfig as unknown as Record<string, unknown> } : {}),
 				expiresAt: data.expiresAt ?? null,
 				lastValidatedAt: data.lastValidatedAt ?? null,
 				updatedAt: now
@@ -90,6 +93,7 @@ export class ProviderConfigRepository implements IProviderConfigRepository {
 			isActive: data.isActive ?? false,
 			payload: encryptedPayload,
 			sampling: (data.sampling ?? null) as unknown as Record<string, unknown> | null,
+			modelConfig: (data.modelConfig ?? null) as unknown as Record<string, unknown> | null,
 			expiresAt: data.expiresAt ?? null,
 			lastValidatedAt: data.lastValidatedAt ?? null,
 			createdAt: now,

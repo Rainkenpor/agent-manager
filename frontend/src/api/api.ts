@@ -428,7 +428,22 @@ export interface ProviderConfigSummary {
 	needsRefresh: boolean
 	baseURL: string | null
 	model: string | null
+	reasoningEffort: string | null
 	sampling: ProviderSampling
+}
+
+export interface ReasoningEffortOption {
+	effort: string
+	description: string
+}
+
+export interface CodexModel {
+	slug: string
+	displayName: string
+	description: string | null
+	defaultEffort: string | null
+	efforts: ReasoningEffortOption[]
+	contextWindow: number | null
 }
 
 export type SamplingMode = 'thinking' | 'instruct'
@@ -463,6 +478,14 @@ export const updateProviderSampling = (provider: string, sampling: Partial<Provi
 	request<{ success: boolean; data: ProviderConfigSummary }>(`/config/providers/${encodeURIComponent(provider)}/sampling`, {
 		method: 'PUT',
 		body: JSON.stringify(sampling)
+	})
+
+export const listCodexModels = () => request<{ success: boolean; data: CodexModel[] }>('/config/providers/openai/models')
+
+export const updateProviderModel = (provider: string, model: string, reasoningEffort: string | null) =>
+	request<{ success: boolean; data: ProviderConfigSummary }>(`/config/providers/${encodeURIComponent(provider)}/model`, {
+		method: 'PUT',
+		body: JSON.stringify({ model, reasoningEffort })
 	})
 
 export const activateProvider = (provider: string) =>

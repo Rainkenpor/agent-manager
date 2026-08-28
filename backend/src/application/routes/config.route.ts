@@ -1,4 +1,5 @@
 import { registry } from '@applicationService/registry.service.js'
+import { codexModelsService } from '@infra/service/codex-models.service.js'
 import { providerAuthService } from '@infra/service/provider-auth.service.js'
 import { z } from 'zod'
 import { envs } from '../../envs.js'
@@ -45,6 +46,12 @@ const updateSamplingSchema = z.object({
 
 const providerParamSchema = z.object({
 	provider: z.string().min(1)
+})
+
+const updateModelConfigSchema = z.object({
+	provider: z.string().min(1),
+	model: z.string().min(1),
+	reasoningEffort: z.string().min(1).nullable().optional()
 })
 
 export function registerConfigRoutes(): void {
@@ -109,6 +116,20 @@ export function registerConfigRoutes(): void {
 		}
 	})
 
+	// Modelo y esfuerzo de razonamiento del provider
+	registry.register({
+		useBy: ['server'],
+		method: 'PUT',
+		path: '/api/config/providers/:provider/model',
+		inputSchema: updateModelConfigSchema.shape,
+		requiresAuth: true,
+		requiredPermission: { resource: 'users', action: 'update' },
+		handler: async ({ input }) => {
+			const { provider, ...modelConfig } = input as z.infer<typeof updateModelConfigSchema>
+			return { success: true, data: await providerAuthService.updateModelConfig(provider, modelConfig) }
+		}
+	})
+
 	registry.register({
 		useBy: ['server'],
 		method: 'POST',
@@ -142,6 +163,17 @@ export function registerConfigRoutes(): void {
 		requiredPermission: { resource: 'users', action: 'read' },
 		handler: async () => {
 			return { success: true, data: await providerAuthService.getProviderSummary('openai') }
+		}
+	})
+
+	registry.register({
+		useBy: ['server'],
+		method: 'GET',
+		path: '/api/config/providers/openai/models',
+		requiresAuth: true,
+		requiredPermission: { resource: 'users', action: 'read' },
+		handler: async () => {
+			return { success: true, data: await codexModelsService.listModels() }
 		}
 	})
 
