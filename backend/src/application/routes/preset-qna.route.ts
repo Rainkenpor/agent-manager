@@ -10,11 +10,11 @@ export function registerPresetQnaRoutes(): void {
 		useBy: ['server'],
 		method: 'GET',
 		path: '/api/preset-qna',
-		inputSchema: {},
+		inputSchema: { agentSlug: z.string().optional() },
 		requiresAuth: true,
 		requiredPermission: { resource: 'preset_qna', action: 'read' },
-		handler: async () => {
-			return await container.listPresetQnaUseCase.execute()
+		handler: async ({ input }) => {
+			return await container.listPresetQnaUseCase.execute(input.agentSlug)
 		}
 	})
 

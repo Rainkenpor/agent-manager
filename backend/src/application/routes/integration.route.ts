@@ -131,7 +131,7 @@ export function registerIntegrationRoutes(): void {
 		inputSchema: suggestSchema.shape,
 		requiresAuth: false,
 		handler: async ({ input }) => {
-			const data = await container.suggestPresetQnaUseCase.execute(input.q)
+			const data = await container.suggestPresetQnaUseCase.execute(input.q, 3)
 			return { success: true, data }
 		}
 	})

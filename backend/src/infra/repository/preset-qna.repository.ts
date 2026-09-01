@@ -25,8 +25,8 @@ export class PresetQnaRepository implements IPresetQnaRepository {
 		return this.toRecord(entity)
 	}
 
-	async findAll(): Promise<PresetQnaRecord[]> {
-		const rows = await this.repo.find({ order: { updatedAt: 'DESC' } })
+	async findAll(agentSlug?: string): Promise<PresetQnaRecord[]> {
+		const rows = await this.repo.find({ where: agentSlug ? { agentSlug } : {}, order: { updatedAt: 'DESC' } })
 		return rows.map((r) => this.toRecord(r))
 	}
 

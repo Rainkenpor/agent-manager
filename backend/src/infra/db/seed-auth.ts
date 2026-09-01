@@ -87,9 +87,6 @@ async function seedDefaultPermissions() {
 		{ resource: 'llm_tokens', action: 'read', description: 'Ver consumo de tokens LLM' },
 		// Métricas del sistema
 		{ resource: 'system_metrics', action: 'read', description: 'Ver uso de CPU y memoria del servidor' },
-		// Clarify (proyectos y documentos)
-		{ resource: 'clarify', action: 'read', description: 'Ver proyectos y documentos de Clarify' },
-		{ resource: 'clarify', action: 'create', description: 'Subir documentos a Clarify' },
 		// Preguntas y respuestas preestablecidas (FAQ del chat público)
 		{ resource: 'preset_qna', action: 'read', description: 'Ver respuestas preestablecidas' },
 		{ resource: 'preset_qna', action: 'update', description: 'Actualizar respuestas preestablecidas con el agente' },

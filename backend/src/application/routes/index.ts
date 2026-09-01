@@ -3,7 +3,6 @@ import { registerAgentGroupRoutes } from './agent-group.route.js'
 import { registerAiAssistRoutes } from './ai-assist.route.js'
 import { registerAuthRoutes } from './auth.route.js'
 import { registerChatRoutes } from './chat.route.js'
-import { registerClarifyRoutes } from './clarify.route.js'
 import { registerConfigRoutes } from './config.route.js'
 import { registerCredentialsRoutes } from './credential.route.js'
 import { registerEventListenerRoutes } from './event-listener.route.js'
@@ -61,7 +60,6 @@ export function initializeRegistry(): void {
 	registerReleaseNotesRoutes()
 	registerTokenAuditRoutes()
 	registerSystemRoutes()
-	registerClarifyRoutes()
 
 	// Los endpoints públicos de webhooks usan `/api/:group/:slug`, así que van al final
 	// para no capturar rutas propias de la API.

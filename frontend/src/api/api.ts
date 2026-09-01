@@ -688,45 +688,6 @@ export interface SystemMetrics {
 
 export const getSystemMetrics = () => request<{ success: boolean; data: SystemMetrics }>('/system/metrics')
 
-// Clarify (proyectos y documentos de documentación)
-export interface ClarifyProject {
-	id: string
-	slug: string
-	title: string
-	description: string | null
-	icon: string | null
-	active: boolean
-	group: string | null
-}
-
-export interface ClarifyDocument {
-	id: string
-	title: string
-	sourceType: 'pdf' | 'html' | 'link'
-	sourceUrl: string | null
-	filePath: string | null
-	originalFilename: string | null
-	mimeType: string | null
-	markdownContent: string | null
-	status: 'pending' | 'converting' | 'embedding' | 'ready' | 'error'
-	error: string | null
-	chunkConfigOverride: { chunkSize?: number; chunkOverlap?: number } | null
-	categoryIds: string[]
-	createdAt: string
-	updatedAt: string
-}
-
-export const getClarifyProjects = () => request<{ success: boolean; data: ClarifyProject[] }>('/clarify/projects')
-export const getClarifyDocuments = () => request<{ success: boolean; data: ClarifyDocument[] }>('/clarify/documents')
-export const getClarifyDocumentCategories = () => request<{ success: boolean; data: any[] }>('/clarify/document-categories')
-export const createClarifyDocument = (data: {
-	title: string
-	filename: string
-	mimeType?: string
-	fileBase64: string
-	categoryIds: string[]
-}) => request<{ success: boolean; data: ClarifyDocument }>('/clarify/documents', { method: 'POST', body: JSON.stringify(data) })
-
 // Preguntas/respuestas preestablecidas (FAQ del chat público)
 export interface PresetQnaGroup {
 	id: string
@@ -739,7 +700,8 @@ export interface PresetQnaGroup {
 	updatedAt: string
 }
 
-export const getPresetQna = () => request<{ success: boolean; data: PresetQnaGroup[] }>('/preset-qna')
+export const getPresetQna = (agentSlug?: string) =>
+	request<{ success: boolean; data: PresetQnaGroup[] }>(`/preset-qna${agentSlug ? `?agentSlug=${encodeURIComponent(agentSlug)}` : ''}`)
 export const refreshPresetQna = (id: string) =>
 	request<{ success: boolean; data?: PresetQnaGroup; error?: string }>(`/preset-qna/${id}/refresh`, { method: 'POST' })
 export const deletePresetQna = (id: string) => request<{ success: boolean; error?: string }>(`/preset-qna/${id}`, { method: 'DELETE' })

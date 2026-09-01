@@ -24,7 +24,6 @@ const allNavLinks: NavLink[] = [
   { to: '/chat', label: 'Chat', icon: 'mdi-chat', resources: ['chat'] },
   { to: '/agentes', label: 'Agentes', icon: 'mdi-robot', resources: ['agents', 'governance', 'governance_suggestion'] },
   { to: '/mcps', label: 'MCPs', icon: 'mdi-server', resources: ['mcp_servers', 'hook_servers', 'event_listeners'] },
-  { to: '/clarify', label: 'Clarify', icon: 'mdi-book-open-page-variant-outline', resources: ['clarify'], accessResource: 'clarify' },
   { to: '/traceability', label: 'Trazabilidad', icon: 'mdi-sitemap', resources: ['traceability'] },
   { to: '/proyectos', label: 'Proyectos', icon: 'mdi-folder-multiple', resources: ['proyectos'] },
   { to: '/config', label: 'Configuración', icon: 'mdi-cog-transfer', resources: ['users', 'roles', 'mcp_credentials'] }

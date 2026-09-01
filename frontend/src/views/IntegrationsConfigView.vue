@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import * as api from '@/api/api'
+import type { PresetQnaGroup } from '@/api/api'
 import AppModal from '@/components/AppModal.vue'
 import { useAuthStore } from '@/store/useAuth'
 import { useToastStore } from '@/store/useToast'
@@ -47,6 +48,7 @@ const SCOPE_OPTIONS = [
 const canCreate = computed(() => auth.hasPermission('integrations', 'create'))
 const canUpdate = computed(() => auth.hasPermission('integrations', 'update'))
 const canDelete = computed(() => auth.hasPermission('integrations', 'delete'))
+const canReadQna = computed(() => auth.hasResourceAccess('preset_qna'))
 
 const integrations = ref<Integration[]>([])
 const agents = ref<Agent[]>([])
@@ -205,6 +207,73 @@ async function copyText(text: string, label: string) {
   }
 }
 
+// ── Respuestas preestablecidas por integración ─────────────────────────────
+// Cada integración responde con su agente, y las respuestas se guardan por `agentSlug`.
+
+const expandedQnaId = ref<string | null>(null)
+const qnaByAgent = ref<Record<string, PresetQnaGroup[]>>({})
+const qnaLoading = ref(false)
+const refreshingQnaId = ref<string | null>(null)
+const deleteQnaTarget = ref<PresetQnaGroup | null>(null)
+const deletingQna = ref(false)
+
+async function toggleQna(item: Integration) {
+  if (expandedQnaId.value === item.id) {
+    expandedQnaId.value = null
+    return
+  }
+  expandedQnaId.value = item.id
+  if (!item.agentSlug || qnaByAgent.value[item.agentSlug]) return
+  qnaLoading.value = true
+  try {
+    const res = await api.getPresetQna(item.agentSlug)
+    qnaByAgent.value[item.agentSlug] = res.data ?? []
+  } catch (e: any) {
+    toast.error(e.message || 'No se pudieron cargar las respuestas')
+  } finally {
+    qnaLoading.value = false
+  }
+}
+
+async function refreshQna(agentSlug: string, group: PresetQnaGroup) {
+  refreshingQnaId.value = group.id
+  try {
+    const res = await api.refreshPresetQna(group.id)
+    if (!res.success) throw new Error((res as any).error)
+    if (res.data) {
+      const list = qnaByAgent.value[agentSlug] ?? []
+      const idx = list.findIndex((g) => g.id === group.id)
+      if (idx !== -1) list[idx] = res.data
+    }
+    toast.success('Respuesta actualizada por el agente')
+  } catch (e: any) {
+    toast.error(e.message || 'No se pudo actualizar la respuesta')
+  } finally {
+    refreshingQnaId.value = null
+  }
+}
+
+async function confirmDeleteQna() {
+  if (!deleteQnaTarget.value) return
+  const group = deleteQnaTarget.value
+  deletingQna.value = true
+  try {
+    await api.deletePresetQna(group.id)
+    const list = qnaByAgent.value[group.agentSlug]
+    if (list) qnaByAgent.value[group.agentSlug] = list.filter((g) => g.id !== group.id)
+    toast.success('Respuesta eliminada')
+    deleteQnaTarget.value = null
+  } catch (e: any) {
+    toast.error(e.message || 'No se pudo eliminar')
+  } finally {
+    deletingQna.value = false
+  }
+}
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
 async function fetchIntegrations() {
   loading.value = true
   try {
@@ -306,6 +375,11 @@ onMounted(async () => {
               <span class="mdi text-lg"
                 :class="item.active ? 'mdi-toggle-switch' : 'mdi-toggle-switch-off-outline'"></span>
             </button>
+            <button v-if="canReadQna && item.agentSlug" @click="toggleQna(item)" title="Respuestas preestablecidas"
+              class="p-1.5 rounded-lg transition-colors"
+              :class="expandedQnaId === item.id ? 'text-indigo-400 bg-indigo-500/10' : 'text-base-content/60 hover:text-base-content hover:bg-base-100'">
+              <span class="mdi mdi-comment-question-outline text-lg"></span>
+            </button>
             <button v-if="canUpdate" @click="openEdit(item)" title="Configurar"
               class="p-1.5 rounded-lg text-base-content/60 hover:text-base-content hover:bg-base-100 transition-colors">
               <span class="mdi mdi-pencil-outline text-lg"></span>
@@ -315,6 +389,56 @@ onMounted(async () => {
               <span class="mdi text-lg"
                 :class="deleting === item.id ? 'mdi-loading mdi-spin' : 'mdi-trash-can-outline'"></span>
             </button>
+          </div>
+        </div>
+
+        <!-- ── Respuestas preestablecidas del agente de esta integración ────── -->
+        <div v-if="expandedQnaId === item.id && item.agentSlug" class="mt-4 pt-4 border-t border-base-content/10">
+          <div v-if="qnaLoading && !qnaByAgent[item.agentSlug]" class="flex items-center gap-2 text-sm text-base-content/60 py-4">
+            <span class="mdi mdi-loading mdi-spin"></span> Cargando respuestas...
+          </div>
+          <p v-else-if="!(qnaByAgent[item.agentSlug] ?? []).length" class="text-sm text-base-content/50 italic py-4">
+            Aún no hay respuestas preestablecidas para esta integración. Se generan automáticamente cuando el chat responde preguntas nuevas.
+          </p>
+          <div v-else class="overflow-x-auto rounded-lg border border-base-content/10">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="bg-base-200 text-left text-xs uppercase tracking-wider text-base-content/50">
+                  <th class="px-4 py-2 font-semibold">Pregunta</th>
+                  <th class="px-4 py-2 font-semibold">Respuesta</th>
+                  <th class="px-4 py-2 font-semibold">Variantes</th>
+                  <th class="px-4 py-2 font-semibold">Actualizado</th>
+                  <th class="px-4 py-2 font-semibold text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-base-content/10">
+                <tr v-for="g in qnaByAgent[item.agentSlug]" :key="g.id" class="align-top hover:bg-base-200/40 transition-colors">
+                  <td class="px-4 py-2 max-w-xs">
+                    <p class="text-base-content font-medium" :title="g.canonicalQuestion">{{ g.canonicalQuestion }}</p>
+                  </td>
+                  <td class="px-4 py-2 text-xs text-base-content/70 max-w-md">
+                    <p class="line-clamp-3" :title="g.answer">{{ g.answer }}</p>
+                  </td>
+                  <td class="px-4 py-2 text-xs text-base-content/60 whitespace-nowrap" :title="g.questions.join(', ')">
+                    {{ g.questions.length }} variantes
+                  </td>
+                  <td class="px-4 py-2 text-xs text-base-content/50 whitespace-nowrap">{{ formatDate(g.updatedAt) }}</td>
+                  <td class="px-4 py-2 whitespace-nowrap text-right">
+                    <div class="inline-flex items-center gap-1">
+                      <button v-if="auth.hasPermission('preset_qna', 'update')" @click="refreshQna(item.agentSlug!, g)"
+                        :disabled="refreshingQnaId === g.id" title="Actualizar con el agente"
+                        class="p-1.5 rounded-lg hover:bg-base-100 text-base-content/70 hover:text-indigo-400 transition-colors disabled:opacity-50">
+                        <span class="mdi mdi-robot-outline" :class="refreshingQnaId === g.id ? 'mdi-spin' : ''"></span>
+                      </button>
+                      <button v-if="auth.hasPermission('preset_qna', 'delete')" @click="deleteQnaTarget = g" title="Eliminar"
+                        class="p-1.5 rounded-lg hover:bg-base-100 text-base-content/70 hover:text-rose-400 transition-colors">
+                        <span class="mdi mdi-trash-can-outline"></span>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -415,6 +539,29 @@ onMounted(async () => {
             class="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors disabled:opacity-50">
             <span v-if="saving" class="mdi mdi-loading mdi-spin mr-1"></span>
             {{ editing ? 'Guardar cambios' : 'Crear integración' }}
+          </button>
+        </div>
+      </template>
+    </AppModal>
+
+    <!-- ── Confirmar eliminación de respuesta preestablecida ──────────────── -->
+    <AppModal v-if="deleteQnaTarget" title="Eliminar respuesta preestablecida" @close="deleteQnaTarget = null">
+      <div class="px-6 py-5">
+        <p class="text-sm text-base-content/80">
+          ¿Eliminar este grupo de preguntas y su respuesta? El chat de esta integración dejará de responderlas de forma instantánea.
+        </p>
+        <p class="mt-2 text-sm font-medium text-base-content">{{ deleteQnaTarget.canonicalQuestion }}</p>
+      </div>
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <button @click="deleteQnaTarget = null"
+            class="px-4 py-2 rounded-lg text-base-content/60 hover:text-base-content hover:bg-base-200 text-sm transition-colors">
+            Cancelar
+          </button>
+          <button @click="confirmDeleteQna" :disabled="deletingQna"
+            class="px-5 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-sm font-medium transition-colors disabled:opacity-50">
+            <span v-if="deletingQna" class="mdi mdi-loading mdi-spin mr-1"></span>
+            {{ deletingQna ? 'Eliminando...' : 'Eliminar' }}
           </button>
         </div>
       </template>

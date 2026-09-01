@@ -4,9 +4,9 @@ import type { IPresetQnaRepository } from '@domain/repositories/preset-qna.repos
 export class ListPresetQnaUseCase {
 	constructor(private readonly repo: IPresetQnaRepository) {}
 
-	async execute(): Promise<{ success: true; data: PresetQnaRecord[] } | { success: false; error: string }> {
+	async execute(agentSlug?: string): Promise<{ success: true; data: PresetQnaRecord[] } | { success: false; error: string }> {
 		try {
-			const data = await this.repo.findAll()
+			const data = await this.repo.findAll(agentSlug)
 			return { success: true, data }
 		} catch (error) {
 			const message = error instanceof Error ? error.message : 'Error desconocido'
