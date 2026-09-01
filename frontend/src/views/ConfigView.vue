@@ -6,25 +6,31 @@ import SystemMetricsView from './SystemMetricsView.vue'
 import IntegrationsConfigView from './IntegrationsConfigView.vue'
 import TokensView from './TokensView.vue'
 import WebhooksConfigView from './WebhooksConfigView.vue'
+import UsersView from './UsersView.vue'
+import RolesView from './RolesView.vue'
+import McpCredentialsView from './McpCredentialsView.vue'
 
 const auth = useAuthStore()
 
 const allTabs = [
-	{ key: 'providers', label: 'Providers', icon: 'mdi-cog', resource: 'llm_tokens', accessMode: 'any', component: RefreshTokenView },
-	{ key: 'tokens', label: 'Tokens LLM', icon: 'mdi-counter', resource: 'llm_tokens', accessMode: 'any', component: TokensView },
-	{ key: 'system', label: 'Recursos', icon: 'mdi-chip', resource: 'system_metrics', accessMode: 'any', component: SystemMetricsView },
-	{ key: 'webhooks', label: 'Webhooks', icon: 'mdi-webhook', resource: 'webhooks', accessMode: 'any', component: WebhooksConfigView },
-	{
-		key: 'integrations',
-		label: 'Integraciones',
-		icon: 'mdi-puzzle',
-		resource: 'integrations',
-		accessMode: 'any',
-		component: IntegrationsConfigView
-	}
+  { key: 'users', label: 'Users', icon: 'mdi-account', resource: 'users', accessMode: 'manage', component: UsersView },
+  { key: 'roles', label: 'Roles', icon: 'mdi-shield-account', resource: 'roles', accessMode: 'manage', component: RolesView },
+  { key: 'credentials', label: 'Credenciales', icon: 'mdi-key', resource: 'mcp_credentials', component: McpCredentialsView },
+  { key: 'providers', label: 'Providers', icon: 'mdi-cog', resource: 'llm_tokens', accessMode: 'any', component: RefreshTokenView },
+  { key: 'tokens', label: 'Tokens LLM', icon: 'mdi-counter', resource: 'llm_tokens', accessMode: 'any', component: TokensView },
+  { key: 'system', label: 'Recursos', icon: 'mdi-chip', resource: 'system_metrics', accessMode: 'any', component: SystemMetricsView },
+  { key: 'webhooks', label: 'Webhooks', icon: 'mdi-webhook', resource: 'webhooks', accessMode: 'any', component: WebhooksConfigView },
+  {
+    key: 'integrations',
+    label: 'Integraciones',
+    icon: 'mdi-puzzle',
+    resource: 'integrations',
+    accessMode: 'any',
+    component: IntegrationsConfigView
+  }
 ]
 const tabs = computed(() =>
-	allTabs.filter((t) => (t.accessMode === 'manage' ? auth.hasResourceManageAccess(t.resource) : auth.hasResourceAccess(t.resource)))
+  allTabs.filter((t) => (t.accessMode === 'manage' ? auth.hasResourceManageAccess(t.resource) : auth.hasResourceAccess(t.resource)))
 )
 const activeTab = ref(tabs.value[0]?.key ?? allTabs[0].key)
 const activeComponent = computed(() => allTabs.find((t) => t.key === activeTab.value)?.component)
