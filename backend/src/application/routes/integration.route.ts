@@ -80,6 +80,9 @@ export function registerIntegrationRoutes(): void {
 				const integration = origin ? await container.integrationRepository.findByOrigin(origin) : null
 				const contextLines = [`Origen del sitio: ${origin || 'desconocido'}`]
 				if (integration?.scope?.length) contextLines.push(`Scope solicitado: ${integration.scope.join(', ')}`)
+				contextLines.push(
+					'El widget renderiza enlaces: usa markdown `[texto](https://...)` cuando quieras enviar al usuario a una página. Solo enlaces http/https y solo si conoces la URL real.'
+				)
 				const extraContext = contextLines.join('\n')
 
 				await container.integrationChatAnswerUseCase.execute(input.id, input.content, sendEvent, signal, extraContext)

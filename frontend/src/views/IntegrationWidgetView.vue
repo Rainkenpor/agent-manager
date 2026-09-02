@@ -343,23 +343,42 @@ function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
+const URL_PATTERN = /https?:\/\/[^\s<>()"']+/g
+
 function maskTokens(text: string): string {
+  // Las URLs no se enmascaran: sus segmentos largos dispararían el filtro de tokens y romperían el enlace.
+  const urls: string[] = []
+  text = text.replace(URL_PATTERN, (url) => `{{url:${urls.push(url) - 1}}}`)
   text = text.replace(/eyJ[a-zA-Z0-9+/_-]+=*\.[a-zA-Z0-9+/_-]+=*\.[a-zA-Z0-9+/_-]+=*/g, (m) => m.slice(0, 5) + '*****')
   text = text.replace(/\b(sk-|ghp_|ghs_|github_pat_|xoxb-|xoxp-|Bearer\s+)[a-zA-Z0-9+/_.-]{8,}/gi, (m) => m.slice(0, 5) + '*****')
   text = text.replace(/[a-zA-Z0-9+/_-]{25,}/g, (m) => {
     if (/[A-Z]/.test(m) && /[a-z]/.test(m) && /[0-9]/.test(m)) return m.slice(0, 5) + '*****'
     return m
   })
-  return text
+  return text.replace(/\{\{url:(\d+)\}\}/g, (_m, i) => urls[Number(i)])
+}
+
+const LINK_ATTRS = 'target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 break-all text-primary"'
+
+/** Convierte enlaces markdown `[texto](url)` y URLs sueltas en anclas que abren en una pestaña nueva. */
+function renderLinks(html: string): string {
+  return html
+    .replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, (_m, label, url) => `<a href="${url}" ${LINK_ATTRS}>${label}</a>`)
+    .replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g, (_m, prefix, url) => {
+      const trailing = url.match(/[.,;:!?]+$/)?.[0] ?? ''
+      const href = url.slice(0, url.length - trailing.length)
+      return `${prefix}<a href="${href}" ${LINK_ATTRS}>${href}</a>${trailing}`
+    })
 }
 
 function renderInlineMarkdown(text: string): string {
-  return text
+  const escaped = text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/`(.+?)`/g, '<code class="bg-base-100/80 px-1 rounded text-xs font-mono">$1</code>')
+  return renderLinks(escaped)
 }
 
 function renderMarkdown(text: string): string {
