@@ -81,6 +81,8 @@ const conversations = ref<Conversation[]>([])
 const activeConversation = ref<Conversation | null>(null)
 const messages = ref<DisplayMessage[]>([])
 
+const showSidebar = ref<boolean>(true)
+
 // ── Modo Proyectos (chat por interesado) ────────────────────────────────
 const sidebarMode = ref<'chats' | 'proyectos'>('chats')
 const misProyectos = ref<any[]>([])
@@ -1240,27 +1242,31 @@ onMounted(fetchInitialData)
   <div class="flex h-full overflow-hidden">
 
     <!-- Sidebar: conversation list -->
-    <div class="w-42 shrink-0 flex flex-col border-r border-base-300 bg-base-100 rounded-r-md">
+    <div class="shrink-0 flex flex-col border-r border-base-300 " :class="[showSidebar ? 'w-50' : 'w-7']">
       <div class="flex border-b border-base-300">
-        <button class="flex-1 py-2.5 text-xs font-semibold border-b-2 transition-colors"
+        <button v-if="showSidebar" class="flex-1 py-2.5 text-xs font-semibold border-b-2 transition-colors"
           :class="sidebarMode === 'chats' ? 'border-primary text-primary' : 'border-transparent text-base-content/50 hover:text-base-content'"
           @click="switchSidebarMode('chats')">
           <i class="mdi mdi-chat" /> Chats
         </button>
-        <button class="flex-1 py-2.5 text-xs font-semibold border-b-2 transition-colors"
+        <button v-if="showSidebar" class="flex-1 py-2.5 text-xs font-semibold border-b-2 transition-colors"
           :class="sidebarMode === 'proyectos' ? 'border-primary text-primary' : 'border-transparent text-base-content/50 hover:text-base-content'"
           @click="switchSidebarMode('proyectos')">
           <i class="mdi mdi-folder-multiple" /> Proyectos
         </button>
+        <button class="px-2 text-xs font-semibold transition-colors hover:text-primary cursor-pointer"
+          :class="[showSidebar ? 'h-auto' : 'h-17']" @click="showSidebar = !showSidebar">
+          <i class="mdi mdi-dock-left"></i>
+        </button>
       </div>
-      <div v-if="sidebarMode === 'chats'" class="px-1 py-2  flex items-center justify-between">
+      <div v-if="sidebarMode === 'chats' && showSidebar" class="px-1 py-2  flex items-center justify-between">
         <button class="btn btn-info btn-outline btn-sm w-full" @click="createConversation">
           + Nuevo Chat
         </button>
       </div>
 
       <!-- Projects mode -->
-      <div v-if="sidebarMode === 'proyectos'" class="flex-1 overflow-y-auto">
+      <div v-if="sidebarMode === 'proyectos' && showSidebar" class="flex-1 overflow-y-auto">
         <div v-if="loadingProyectos" class="flex justify-center py-8">
           <span class="loading loading-spinner loading-sm text-primary" />
         </div>
@@ -1299,7 +1305,7 @@ onMounted(fetchInitialData)
       </div>
 
       <!-- Conversation list -->
-      <div v-else class="flex-1 overflow-y-auto px-1">
+      <div v-else-if="showSidebar" class="flex-1 overflow-y-auto px-1">
         <!-- Traceability invitations -->
         <div v-if="invitations.length > 0" class="border-b border-base-300">
           <div
