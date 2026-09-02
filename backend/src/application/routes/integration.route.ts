@@ -81,7 +81,7 @@ export function registerIntegrationRoutes(): void {
 				const contextLines = [`Origen del sitio: ${origin || 'desconocido'}`]
 				if (integration?.scope?.length) contextLines.push(`Scope solicitado: ${integration.scope.join(', ')}`)
 				contextLines.push(
-					'El widget renderiza enlaces: usa markdown `[texto](https://...)` cuando quieras enviar al usuario a una página. Solo enlaces http/https y solo si conoces la URL real.'
+					'El widget muestra los enlaces como chips con nombre e icono: usa markdown `[nombre corto](https://...)` cuando quieras enviar al usuario a una página, con un nombre de 1 a 4 palabras en lugar de pegar la URL. Solo enlaces http/https y solo si conoces la URL real.'
 				)
 				const extraContext = contextLines.join('\n')
 

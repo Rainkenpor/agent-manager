@@ -358,16 +358,73 @@ function maskTokens(text: string): string {
   return text.replace(/\{\{url:(\d+)\}\}/g, (_m, i) => urls[Number(i)])
 }
 
-const LINK_ATTRS = 'target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 break-all text-primary"'
+const CHIP_CLASS =
+  'inline-flex max-w-full items-center gap-1 align-middle rounded-full border border-base-300 bg-base-200/70 px-2 py-0.5 text-xs font-medium text-base-content no-underline transition-colors hover:bg-base-300'
 
-/** Convierte enlaces markdown `[texto](url)` y URLs sueltas en anclas que abren en una pestaña nueva. */
+const HOST_ICONS: Array<[RegExp, string]> = [
+  [/atlassian\.net\/wiki|confluence/i, 'mdi-book-open-page-variant'],
+  [/atlassian\.net|\bjira\b/i, 'mdi-jira'],
+  [/github\./i, 'mdi-github'],
+  [/gitlab\./i, 'mdi-gitlab'],
+  [/youtube\.com|youtu\.be/i, 'mdi-youtube'],
+  [/sharepoint\./i, 'mdi-microsoft-sharepoint'],
+  [/teams\.microsoft\./i, 'mdi-microsoft-teams'],
+  [/office\.com|onedrive\.|live\.com/i, 'mdi-microsoft-office']
+]
+
+const EXT_ICONS: Record<string, string> = {
+  pdf: 'mdi-file-pdf-box',
+  doc: 'mdi-file-word-box',
+  docx: 'mdi-file-word-box',
+  xls: 'mdi-file-excel-box',
+  xlsx: 'mdi-file-excel-box',
+  csv: 'mdi-file-delimited',
+  ppt: 'mdi-file-powerpoint-box',
+  pptx: 'mdi-file-powerpoint-box',
+  png: 'mdi-file-image',
+  jpg: 'mdi-file-image',
+  jpeg: 'mdi-file-image',
+  gif: 'mdi-file-image',
+  svg: 'mdi-file-image',
+  webp: 'mdi-file-image',
+  zip: 'mdi-folder-zip',
+  rar: 'mdi-folder-zip'
+}
+
+/** Icono mdi del chip: por extensión del archivo si la hay, si no por el servicio del host. */
+function linkIcon(url: string): string {
+  const ext = url.split(/[?#]/)[0].split('/').pop()?.split('.').pop()?.toLowerCase()
+  if (ext && EXT_ICONS[ext]) return EXT_ICONS[ext]
+  for (const [pattern, icon] of HOST_ICONS) {
+    if (pattern.test(url)) return icon
+  }
+  return 'mdi-open-in-new'
+}
+
+/** Nombre del chip para una URL suelta: el archivo al que apunta o, si no hay, el dominio. */
+function linkLabel(url: string): string {
+  try {
+    const { pathname, hostname } = new URL(url)
+    const file = pathname.split('/').filter(Boolean).pop() ?? ''
+    if (/\.[a-z0-9]{2,5}$/i.test(file)) return decodeURIComponent(file)
+    return hostname.replace(/^www\./i, '')
+  } catch {
+    return url
+  }
+}
+
+function renderChip(href: string, label: string): string {
+  return `<a href="${href}" target="_blank" rel="noopener noreferrer" class="${CHIP_CLASS}"><i class="mdi ${linkIcon(href)} text-sm leading-none opacity-70"></i><span class="truncate">${label}</span></a>`
+}
+
+/** Convierte enlaces markdown `[texto](url)` y URLs sueltas en chips que abren en una pestaña nueva. */
 function renderLinks(html: string): string {
   return html
-    .replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, (_m, label, url) => `<a href="${url}" ${LINK_ATTRS}>${label}</a>`)
+    .replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, (_m, label, url) => renderChip(url, label))
     .replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g, (_m, prefix, url) => {
       const trailing = url.match(/[.,;:!?]+$/)?.[0] ?? ''
       const href = url.slice(0, url.length - trailing.length)
-      return `${prefix}<a href="${href}" ${LINK_ATTRS}>${href}</a>${trailing}`
+      return `${prefix}${renderChip(href, linkLabel(href))}${trailing}`
     })
 }
 
@@ -691,8 +748,8 @@ onBeforeUnmount(() => {
                   {{ msg.role === 'user' ? 'U' : 'A' }}
                 </div>
 
-                <div class="flex flex-col gap-1 max-w-[82%]" :style="msg.role === 'user' ? 'align-items:flex-end' : ''">
-                  <div class="rounded-2xl text-sm leading-relaxed px-3 py-2" :class="msg.role === 'user'
+                <div class="flex flex-col gap-1 max-w-[82%] min-w-0" :style="msg.role === 'user' ? 'align-items:flex-end' : ''">
+                  <div class="rounded-2xl text-sm leading-relaxed px-3 py-2 break-words" :class="msg.role === 'user'
                     ? 'text-white rounded-tr-sm'
                     : 'bg-base-100 text-base-content rounded-tl-sm border border-base-300'"
                     :style="msg.role === 'user' ? { backgroundColor: userBubbleColor } : undefined">
