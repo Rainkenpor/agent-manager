@@ -933,8 +933,8 @@ onBeforeUnmount(() => {
 
     <!-- Botón flotante -->
     <button type="button" @click="toggleOpen"
-      class="pointer-events-auto shrink-0 w-14 h-14 rounded-full  flex items-center justify-center transition-transform hover:scale-105 bg-white/30 backdrop-blur-md border border-white/20 shadow-lg text-white"
-      :title="open ? 'Cerrar chat' : 'Abrir chat'">
+      class="pointer-events-auto shrink-0 w-14 h-14 rounded-full  flex items-center justify-center transition-transform hover:scale-105 aura aura-dual shadow-lg  cursor-pointer"
+      :style="{ backgroundColor: buttonColor, color: iconColor }" :title="open ? 'Cerrar chat' : 'Abrir chat'">
       <span class="mdi text-2xl" :class="open ? 'mdi-close' : 'mdi-creation'"></span>
     </button>
 
