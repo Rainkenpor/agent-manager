@@ -748,7 +748,8 @@ onBeforeUnmount(() => {
                   {{ msg.role === 'user' ? 'U' : 'A' }}
                 </div>
 
-                <div class="flex flex-col gap-1 max-w-[82%] min-w-0" :style="msg.role === 'user' ? 'align-items:flex-end' : ''">
+                <div class="flex flex-col gap-1 max-w-[82%] min-w-0"
+                  :style="msg.role === 'user' ? 'align-items:flex-end' : ''">
                   <div class="rounded-2xl text-sm leading-relaxed px-3 py-2 break-words" :class="msg.role === 'user'
                     ? 'text-white rounded-tr-sm'
                     : 'bg-base-100 text-base-content rounded-tl-sm border border-base-300'"
@@ -762,7 +763,8 @@ onBeforeUnmount(() => {
                     </div>
 
                     <!-- ── Formulario de solicitud activo ── -->
-                    <template v-if="getRequestQuestions(msg) && !submittedForms.includes(msg.id) && formAnswers[msg.id]">
+                    <template
+                      v-if="getRequestQuestions(msg) && !submittedForms.includes(msg.id) && formAnswers[msg.id]">
                       <p v-if="getContentBeforeRequest(msg.content)" class="whitespace-pre-wrap mb-2 text-base-content"
                         v-html="renderMarkdown(getContentBeforeRequest(msg.content))" />
 
@@ -787,7 +789,8 @@ onBeforeUnmount(() => {
                                 class="mt-0.5 shrink-0 rounded border-base-content/20 bg-base-200 accent-indigo-500 cursor-pointer" />
                               <span class="text-xs text-base-content leading-snug">
                                 {{ opt.label }}
-                                <span v-if="opt.description" class="text-base-content/70"> — {{ opt.description }}</span>
+                                <span v-if="opt.description" class="text-base-content/70"> — {{ opt.description
+                                }}</span>
                               </span>
                             </label>
                           </div>
@@ -831,7 +834,8 @@ onBeforeUnmount(() => {
                                 class="mt-0.5 shrink-0 border-base-content/20 bg-base-200 accent-indigo-500 cursor-pointer" />
                               <span class="text-xs text-base-content leading-snug">
                                 {{ opt.label }}
-                                <span v-if="opt.description" class="text-base-content/70"> — {{ opt.description }}</span>
+                                <span v-if="opt.description" class="text-base-content/70"> — {{ opt.description
+                                }}</span>
                               </span>
                             </label>
                           </div>
@@ -858,7 +862,8 @@ onBeforeUnmount(() => {
 
                     <!-- ── Formulario enviado ── -->
                     <template v-else-if="getRequestQuestions(msg)">
-                      <p v-if="getContentBeforeRequest(msg.content)" class="whitespace-pre-wrap mb-1.5 text-base-content"
+                      <p v-if="getContentBeforeRequest(msg.content)"
+                        class="whitespace-pre-wrap mb-1.5 text-base-content"
                         v-html="renderMarkdown(getContentBeforeRequest(msg.content))" />
                       <span class="inline-flex items-center gap-1.5 text-[11px] text-base-content/50">
                         <span class="mdi mdi-check text-green-400"></span>
@@ -928,9 +933,9 @@ onBeforeUnmount(() => {
 
     <!-- Botón flotante -->
     <button type="button" @click="toggleOpen"
-      class="pointer-events-auto shrink-0 w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-transform hover:scale-105"
-      :style="{ backgroundColor: buttonColor, color: iconColor }" :title="open ? 'Cerrar chat' : 'Abrir chat'">
-      <span class="mdi text-2xl" :class="open ? 'mdi-close' : 'mdi-chat-processing'"></span>
+      class="pointer-events-auto shrink-0 w-14 h-14 rounded-full  flex items-center justify-center transition-transform hover:scale-105 bg-white/30 backdrop-blur-md border border-white/20 shadow-lg text-white"
+      :title="open ? 'Cerrar chat' : 'Abrir chat'">
+      <span class="mdi text-2xl" :class="open ? 'mdi-close' : 'mdi-creation'"></span>
     </button>
 
     <MermaidRenderer ref="mermaidRenderer" :container="messagesContainer" />

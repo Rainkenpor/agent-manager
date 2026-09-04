@@ -394,11 +394,14 @@ onMounted(async () => {
 
         <!-- ── Respuestas preestablecidas del agente de esta integración ────── -->
         <div v-if="expandedQnaId === item.id && item.agentSlug" class="mt-4 pt-4 border-t border-base-content/10">
-          <div v-if="qnaLoading && !qnaByAgent[item.agentSlug]" class="flex items-center gap-2 text-sm text-base-content/60 py-4">
+          <div v-if="qnaLoading && !qnaByAgent[item.agentSlug]"
+            class="flex items-center gap-2 text-sm text-base-content/60 py-4">
             <span class="mdi mdi-loading mdi-spin"></span> Cargando respuestas...
           </div>
           <p v-else-if="!(qnaByAgent[item.agentSlug] ?? []).length" class="text-sm text-base-content/50 italic py-4">
-            Aún no hay respuestas preestablecidas para esta integración. Se generan automáticamente cuando el chat responde preguntas nuevas.
+            Aún no hay respuestas preestablecidas para esta integración. Se generan automáticamente cuando el chat
+            responde
+            preguntas nuevas.
           </p>
           <div v-else class="overflow-x-auto rounded-lg border border-base-content/10">
             <table class="w-full text-sm">
@@ -412,7 +415,8 @@ onMounted(async () => {
                 </tr>
               </thead>
               <tbody class="divide-y divide-base-content/10">
-                <tr v-for="g in qnaByAgent[item.agentSlug]" :key="g.id" class="align-top hover:bg-base-200/40 transition-colors">
+                <tr v-for="g in qnaByAgent[item.agentSlug]" :key="g.id"
+                  class="align-top hover:bg-base-200/40 transition-colors">
                   <td class="px-4 py-2 max-w-xs">
                     <p class="text-base-content font-medium" :title="g.canonicalQuestion">{{ g.canonicalQuestion }}</p>
                   </td>
@@ -422,7 +426,8 @@ onMounted(async () => {
                   <td class="px-4 py-2 text-xs text-base-content/60 whitespace-nowrap" :title="g.questions.join(', ')">
                     {{ g.questions.length }} variantes
                   </td>
-                  <td class="px-4 py-2 text-xs text-base-content/50 whitespace-nowrap">{{ formatDate(g.updatedAt) }}</td>
+                  <td class="px-4 py-2 text-xs text-base-content/50 whitespace-nowrap">{{ formatDate(g.updatedAt) }}
+                  </td>
                   <td class="px-4 py-2 whitespace-nowrap text-right">
                     <div class="inline-flex items-center gap-1">
                       <button v-if="auth.hasPermission('preset_qna', 'update')" @click="refreshQna(item.agentSlug!, g)"
@@ -430,7 +435,8 @@ onMounted(async () => {
                         class="p-1.5 rounded-lg hover:bg-base-100 text-base-content/70 hover:text-indigo-400 transition-colors disabled:opacity-50">
                         <span class="mdi mdi-robot-outline" :class="refreshingQnaId === g.id ? 'mdi-spin' : ''"></span>
                       </button>
-                      <button v-if="auth.hasPermission('preset_qna', 'delete')" @click="deleteQnaTarget = g" title="Eliminar"
+                      <button v-if="auth.hasPermission('preset_qna', 'delete')" @click="deleteQnaTarget = g"
+                        title="Eliminar"
                         class="p-1.5 rounded-lg hover:bg-base-100 text-base-content/70 hover:text-rose-400 transition-colors">
                         <span class="mdi mdi-trash-can-outline"></span>
                       </button>
@@ -512,9 +518,9 @@ onMounted(async () => {
 
           <!-- Vista previa -->
           <div class="mt-3 flex items-center gap-3">
-            <div class="w-11 h-11 rounded-full shadow flex items-center justify-center"
-              :style="{ backgroundColor: form.buttonColor }">
-              <span class="mdi mdi-chat-processing text-xl" :style="{ color: form.iconColor }"></span>
+            <div
+              class="w-11 h-11 rounded-xl  flex items-center justify-center bg-white/30 backdrop-blur-md border border-white/20 shadow-lg">
+              <span class="mdi mdi-creation chat-processing text-xl" :style="{ color: form.iconColor }"></span>
             </div>
             <div class="px-3 py-2 rounded-2xl rounded-tr-sm text-sm text-white"
               :style="{ backgroundColor: form.userBubbleColor }">
@@ -548,7 +554,8 @@ onMounted(async () => {
     <AppModal v-if="deleteQnaTarget" title="Eliminar respuesta preestablecida" @close="deleteQnaTarget = null">
       <div class="px-6 py-5">
         <p class="text-sm text-base-content/80">
-          ¿Eliminar este grupo de preguntas y su respuesta? El chat de esta integración dejará de responderlas de forma instantánea.
+          ¿Eliminar este grupo de preguntas y su respuesta? El chat de esta integración dejará de responderlas de forma
+          instantánea.
         </p>
         <p class="mt-2 text-sm font-medium text-base-content">{{ deleteQnaTarget.canonicalQuestion }}</p>
       </div>
